@@ -1,0 +1,2799 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ScholarFlow 科研智能体工作台交互演示">
+  <title>ScholarFlow · Research Workspace</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #6b7280;
+      --subtle: #9399a7;
+      --line: #e4e7ec;
+      --line-strong: #d4d8df;
+      --surface: #ffffff;
+      --canvas: #f5f6f8;
+      --panel: #fafbfc;
+      --nav: #111827;
+      --nav-soft: #1f2937;
+      --accent: #625bd6;
+      --accent-soft: #eeedff;
+      --teal: #0f8f83;
+      --teal-soft: #e5f6f3;
+      --amber: #a96716;
+      --amber-soft: #fff4dc;
+      --danger: #c24152;
+      --shadow: 0 14px 40px rgba(21, 31, 50, 0.12);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--accent) 68%, transparent);
+      outline-offset: 2px;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 58px 260px minmax(520px, 1fr) 372px;
+      grid-template-rows: 58px minmax(0, 1fr) 26px;
+      width: 100vw;
+      height: 100vh;
+      background: var(--surface);
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 20;
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 318px minmax(260px, 620px) 1fr;
+      align-items: center;
+      gap: 22px;
+      min-width: 0;
+      padding: 0 16px 0 14px;
+      color: #f9fafb;
+      background: var(--nav);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-project {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 31px;
+      height: 31px;
+      flex: 0 0 auto;
+      color: white;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.05em;
+      background: linear-gradient(145deg, #7770ea, #4e47bd);
+      border-radius: 9px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .project-switcher {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      max-width: 250px;
+      padding: 7px 9px;
+      color: #f9fafb;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .project-switcher:hover,
+    .top-icon:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .project-dot {
+      width: 9px;
+      height: 9px;
+      flex: 0 0 auto;
+      background: #7c74ef;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(124, 116, 239, 0.18);
+    }
+
+    .project-copy {
+      min-width: 0;
+      text-align: left;
+    }
+
+    .project-eyebrow {
+      display: block;
+      margin-bottom: 1px;
+      color: #9ca3af;
+      font-size: 9px;
+      line-height: 1;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .project-name {
+      display: block;
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 620;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .chevron {
+      width: 13px;
+      height: 13px;
+      margin-left: auto;
+      color: #9ca3af;
+    }
+
+    .project-menu {
+      position: absolute;
+      top: 45px;
+      left: 38px;
+      display: none;
+      width: 310px;
+      padding: 8px;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .project-menu.open {
+      display: block;
+      animation: reveal 140ms ease-out;
+    }
+
+    .menu-label {
+      padding: 8px 10px 6px;
+      color: var(--subtle);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .project-option {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .project-option:hover {
+      background: var(--canvas);
+    }
+
+    .project-option.active {
+      background: var(--accent-soft);
+    }
+
+    .project-avatar {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      color: white;
+      font-size: 11px;
+      font-weight: 750;
+      background: var(--project-color, var(--accent));
+      border-radius: 9px;
+    }
+
+    .option-title {
+      display: block;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .option-meta {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .project-check {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .new-project {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 650;
+      background: transparent;
+      border: 0;
+      border-top: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .global-search {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: min(100%, 620px);
+      height: 34px;
+      padding: 0 11px;
+      color: #9ca3af;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .global-search:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .global-search span {
+      overflow: hidden;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .global-search kbd {
+      margin-left: auto;
+      padding: 2px 6px;
+      color: #9ca3af;
+      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sync-state {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 8px;
+      color: #aeb4c0;
+      font-size: 10px;
+    }
+
+    .sync-state::before {
+      width: 6px;
+      height: 6px;
+      content: "";
+      background: #4cc38a;
+      border-radius: 50%;
+    }
+
+    .top-icon {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      color: #c4c8d0;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      margin-left: 4px;
+      color: white;
+      font-size: 10px;
+      font-weight: 750;
+      background: linear-gradient(145deg, #3b8799, #24576e);
+      border-radius: 8px;
+    }
+
+    .activity-bar {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 0;
+      padding: 10px 0;
+      color: #8f97a6;
+      background: var(--nav);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .activity-button {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      margin: 2px 0;
+      color: inherit;
+      background: transparent;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .activity-button:hover {
+      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .activity-button.active {
+      color: white;
+      background: rgba(98, 91, 214, 0.28);
+    }
+
+    .activity-button.active::before {
+      position: absolute;
+      left: -8px;
+      width: 3px;
+      height: 24px;
+      content: "";
+      background: #8c85ff;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .activity-button .icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .activity-spacer {
+      flex: 1;
+    }
+
+    .nav-sidebar {
+      grid-column: 2;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+
+    .sidebar-section {
+      display: none;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .sidebar-section.active {
+      display: flex;
+      flex-direction: column;
+      animation: fadeIn 120ms ease-out;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 52px;
+      padding: 0 14px 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .ghost-icon {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .ghost-icon:hover {
+      color: var(--ink);
+      background: #eceef2;
+    }
+
+    .sidebar-body {
+      padding: 12px 10px 24px;
+    }
+
+    .sidebar-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 12px 7px 6px;
+      color: var(--subtle);
+      font-size: 9px;
+      font-weight: 750;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-label:first-child {
+      margin-top: 2px;
+    }
+
+    .nav-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      min-height: 34px;
+      padding: 7px 9px;
+      color: #4b5563;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .nav-row:hover {
+      color: var(--ink);
+      background: #eef0f3;
+    }
+
+    .nav-row.active {
+      color: #393388;
+      font-weight: 620;
+      background: var(--accent-soft);
+    }
+
+    .nav-row .icon {
+      width: 15px;
+      height: 15px;
+      color: #7c8492;
+    }
+
+    .nav-row.active .icon {
+      color: var(--accent);
+    }
+
+    .nav-row-title {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      font-size: 11px;
+      line-height: 1.35;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-count {
+      color: var(--subtle);
+      font-size: 9px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tree-indent {
+      padding-left: 25px;
+    }
+
+    .paper-mini {
+      display: block;
+      width: 100%;
+      margin: 4px 0;
+      padding: 9px 9px 9px 10px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .paper-mini:hover,
+    .paper-mini.active {
+      background: #eef0f3;
+    }
+
+    .paper-mini.active {
+      box-shadow: inset 2px 0 0 var(--accent);
+    }
+
+    .paper-mini strong,
+    .paper-mini span {
+      display: block;
+    }
+
+    .paper-mini strong {
+      overflow: hidden;
+      color: #374151;
+      font-size: 10px;
+      font-weight: 620;
+      line-height: 1.4;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .paper-mini span {
+      margin-top: 3px;
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 3px 7px;
+    }
+
+    .small-tag {
+      padding: 4px 7px;
+      color: #646b78;
+      font-size: 9px;
+      background: #eceef2;
+      border-radius: 5px;
+    }
+
+    .main-area {
+      grid-column: 3;
+      grid-row: 2;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--canvas);
+    }
+
+    .editor-tabs {
+      display: flex;
+      align-items: end;
+      height: 42px;
+      overflow-x: auto;
+      background: #f0f1f4;
+      border-bottom: 1px solid var(--line);
+      scrollbar-width: none;
+    }
+
+    .editor-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .editor-tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 132px;
+      max-width: 210px;
+      height: 36px;
+      padding: 0 11px;
+      color: #717784;
+      background: transparent;
+      border: 0;
+      border-right: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .editor-tab.active {
+      color: var(--ink);
+      background: var(--surface);
+      box-shadow: inset 0 2px 0 var(--accent);
+    }
+
+    .editor-tab .icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .tab-label {
+      flex: 1;
+      overflow: hidden;
+      font-size: 10px;
+      text-align: left;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab-close {
+      visibility: hidden;
+      color: var(--subtle);
+      font-size: 14px;
+    }
+
+    .editor-tab:hover .tab-close,
+    .editor-tab.active .tab-close {
+      visibility: visible;
+    }
+
+    .view-stage {
+      height: calc(100% - 42px);
+      min-width: 0;
+      overflow: auto;
+    }
+
+    .workspace-view {
+      display: none;
+      min-height: 100%;
+      background: var(--surface);
+    }
+
+    .workspace-view.active {
+      display: block;
+      animation: fadeIn 160ms ease-out;
+    }
+
+    .view-container {
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      padding: 28px 30px 48px;
+    }
+
+    .view-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    .view-heading h1 {
+      margin-bottom: 6px;
+      font-family: Georgia, "Noto Serif SC", serif;
+      font-size: clamp(25px, 2.3vw, 34px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .view-subtitle {
+      max-width: 680px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 11px;
+      font-weight: 650;
+      background: var(--surface);
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .button:hover {
+      background: var(--panel);
+      border-color: #c4c8d1;
+    }
+
+    .button.primary {
+      color: white;
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 4px 12px rgba(98, 91, 214, 0.2);
+    }
+
+    .button.primary:hover {
+      background: #544dc5;
+    }
+
+    .button .icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .overview-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 24px 26px;
+      color: white;
+      background: linear-gradient(130deg, #232449 0%, #3e3a88 60%, #615ad2 100%);
+      border-radius: 16px;
+      box-shadow: 0 14px 34px rgba(43, 42, 91, 0.18);
+    }
+
+    .overview-hero::after {
+      position: absolute;
+      top: -85px;
+      right: -50px;
+      width: 230px;
+      height: 230px;
+      content: "";
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 50%;
+      box-shadow: 0 0 0 32px rgba(255, 255, 255, 0.035), 0 0 0 66px rgba(255, 255, 255, 0.025);
+    }
+
+    .hero-label {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 10px;
+      color: #c5c2ff;
+      font-size: 9px;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .overview-hero h2 {
+      position: relative;
+      z-index: 1;
+      max-width: 660px;
+      margin-bottom: 9px;
+      font-family: Georgia, "Noto Serif SC", serif;
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .overview-hero p {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+      margin-bottom: 19px;
+      color: #d9daf0;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .hero-meta {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      gap: 18px;
+      color: #d3d3e8;
+      font-size: 10px;
+    }
+
+    .hero-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 14px 0 22px;
+    }
+
+    .stat-card {
+      padding: 15px 16px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 11px;
+    }
+
+    .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .stat-icon {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 7px;
+    }
+
+    .stat-value {
+      margin-right: 5px;
+      font-family: Georgia, serif;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .stat-delta {
+      color: var(--teal);
+      font-size: 9px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+      gap: 14px;
+    }
+
+    .panel-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .text-button {
+      padding: 4px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 650;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .continue-list {
+      padding: 4px 8px 8px;
+    }
+
+    .continue-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 8px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .continue-row:hover {
+      background: var(--panel);
+    }
+
+    .file-tile {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 40px;
+      color: var(--tile-color, var(--accent));
+      font-size: 8px;
+      font-weight: 800;
+      background: color-mix(in srgb, var(--tile-color, var(--accent)) 10%, white);
+      border: 1px solid color-mix(in srgb, var(--tile-color, var(--accent)) 20%, white);
+      border-radius: 7px;
+    }
+
+    .continue-copy {
+      min-width: 0;
+    }
+
+    .continue-title {
+      display: block;
+      overflow: hidden;
+      margin-bottom: 3px;
+      font-size: 11px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .continue-meta {
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .continue-time {
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .milestone-list {
+      padding: 8px 14px 12px;
+    }
+
+    .milestone {
+      position: relative;
+      display: grid;
+      grid-template-columns: 21px 1fr;
+      gap: 9px;
+      padding: 8px 0;
+    }
+
+    .milestone:not(:last-child)::after {
+      position: absolute;
+      top: 28px;
+      bottom: -5px;
+      left: 10px;
+      width: 1px;
+      content: "";
+      background: var(--line);
+    }
+
+    .milestone-mark {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      width: 21px;
+      height: 21px;
+      color: white;
+      font-size: 9px;
+      background: var(--teal);
+      border-radius: 50%;
+    }
+
+    .milestone.pending .milestone-mark {
+      color: var(--subtle);
+      background: white;
+      border: 1px solid var(--line-strong);
+    }
+
+    .milestone strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 10px;
+    }
+
+    .milestone span {
+      color: var(--subtle);
+      font-size: 9px;
+      line-height: 1.4;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .filter-input {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 190px;
+      height: 34px;
+      padding: 0 10px;
+      background: white;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+    }
+
+    .filter-input input {
+      width: 100%;
+      font-size: 10px;
+      background: transparent;
+      border: 0;
+      outline: 0;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .table-card {
+      overflow: hidden;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      padding: 10px 12px;
+      color: var(--subtle);
+      font-size: 9px;
+      font-weight: 750;
+      text-align: left;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    td {
+      padding: 13px 12px;
+      color: #4b5563;
+      font-size: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background: #fafaff;
+    }
+
+    .paper-title-cell {
+      max-width: 420px;
+    }
+
+    .paper-title-cell strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .paper-title-cell span {
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 7px;
+      color: var(--teal);
+      font-size: 9px;
+      font-weight: 650;
+      background: var(--teal-soft);
+      border-radius: 999px;
+    }
+
+    .status-pill::before {
+      width: 5px;
+      height: 5px;
+      content: "";
+      background: currentColor;
+      border-radius: 50%;
+    }
+
+    .status-pill.amber {
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .reading-view {
+      height: 100%;
+      background: #e9eaed;
+    }
+
+    .reading-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      min-height: 45px;
+      padding: 0 15px;
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    .reading-title {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      font-size: 10px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .page-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 18px;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .pdf-stage {
+      padding: 22px 34px 48px;
+    }
+
+    .pdf-page {
+      position: relative;
+      width: min(100%, 750px);
+      min-height: 860px;
+      margin: 0 auto;
+      padding: 58px 68px;
+      color: #25272d;
+      background: white;
+      box-shadow: 0 3px 20px rgba(32, 37, 45, 0.12);
+    }
+
+    .paper-kicker {
+      margin-bottom: 14px;
+      color: #6d7080;
+      font: 8px ui-sans-serif, sans-serif;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .pdf-page h1 {
+      max-width: 600px;
+      margin: 0 auto 14px;
+      font-family: Georgia, serif;
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.22;
+      text-align: center;
+    }
+
+    .authors {
+      margin-bottom: 28px;
+      color: #636773;
+      font: 10px Georgia, serif;
+      text-align: center;
+    }
+
+    .paper-columns {
+      column-count: 2;
+      column-gap: 34px;
+      font: 10px/1.65 Georgia, "Noto Serif SC", serif;
+      text-align: justify;
+    }
+
+    .paper-columns h2 {
+      margin: 15px 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      break-after: avoid;
+    }
+
+    .paper-columns h2:first-child {
+      margin-top: 0;
+    }
+
+    .paper-columns p {
+      margin-bottom: 10px;
+    }
+
+    .paper-highlight {
+      padding: 1px 2px;
+      background: #fff1a8;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+    }
+
+    .paper-note {
+      display: block;
+      margin: 10px 0;
+      padding: 9px 10px;
+      color: #4a438e;
+      font: 9px/1.55 ui-sans-serif, sans-serif;
+      background: #f1f0ff;
+      border-left: 2px solid var(--accent);
+      break-inside: avoid;
+    }
+
+    .page-number {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      width: 100%;
+      color: #898d98;
+      font: 9px Georgia, serif;
+      text-align: center;
+    }
+
+    .notes-layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      min-height: calc(100vh - 126px);
+    }
+
+    .note-list {
+      padding: 15px 10px;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+
+    .note-list-title {
+      margin: 0 7px 10px;
+      color: var(--subtle);
+      font-size: 9px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .note-card {
+      width: 100%;
+      margin-bottom: 5px;
+      padding: 10px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .note-card:hover,
+    .note-card.active {
+      background: white;
+      box-shadow: 0 1px 4px rgba(26, 33, 46, 0.07);
+    }
+
+    .note-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 10px;
+    }
+
+    .note-card span {
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .note-editor {
+      width: min(100%, 820px);
+      padding: 35px 44px 80px;
+    }
+
+    .note-editor h1 {
+      margin-bottom: 9px;
+      font-family: Georgia, "Noto Serif SC", serif;
+      font-size: 29px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .note-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      color: var(--subtle);
+      font-size: 9px;
+    }
+
+    .note-editor h2 {
+      margin: 25px 0 9px;
+      font-size: 14px;
+    }
+
+    .note-editor p,
+    .note-editor li {
+      color: #4b5563;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+
+    .evidence-callout {
+      margin: 18px 0;
+      padding: 13px 15px;
+      color: #444075;
+      font-size: 10px;
+      line-height: 1.65;
+      background: var(--accent-soft);
+      border: 1px solid #dcd9ff;
+      border-radius: 9px;
+    }
+
+    .citation-link {
+      color: var(--accent);
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .evidence-table td:first-child {
+      width: 27%;
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .confidence {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .confidence-bar {
+      width: 42px;
+      height: 4px;
+      overflow: hidden;
+      background: #e5e7eb;
+      border-radius: 999px;
+    }
+
+    .confidence-bar::after {
+      display: block;
+      width: var(--confidence, 80%);
+      height: 100%;
+      content: "";
+      background: var(--teal);
+    }
+
+    .experiment-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap: 14px;
+    }
+
+    .run-card {
+      padding: 17px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .run-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .run-header h3 {
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .run-header p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      padding: 10px;
+      background: var(--panel);
+      border-radius: 8px;
+    }
+
+    .metric span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--subtle);
+      font-size: 8px;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      font: 18px Georgia, serif;
+    }
+
+    .chart {
+      display: flex;
+      align-items: end;
+      gap: 14px;
+      height: 145px;
+      padding: 14px 16px 0;
+      border-left: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .bar-group {
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      gap: 4px;
+      min-width: 42px;
+      height: 100%;
+      flex: 1;
+    }
+
+    .bar {
+      width: 14px;
+      height: var(--bar-height);
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+    }
+
+    .bar.baseline {
+      background: #c7cbd4;
+    }
+
+    .chart-labels {
+      display: flex;
+      padding: 7px 16px 0;
+      color: var(--subtle);
+      font-size: 8px;
+      text-align: center;
+    }
+
+    .chart-labels span {
+      flex: 1;
+    }
+
+    .run-history {
+      padding: 7px;
+    }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .history-row:hover {
+      background: var(--panel);
+    }
+
+    .history-dot {
+      width: 7px;
+      height: 7px;
+      background: var(--teal);
+      border-radius: 50%;
+    }
+
+    .history-dot.failed {
+      background: var(--danger);
+    }
+
+    .history-copy {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .history-copy strong,
+    .history-copy span {
+      display: block;
+    }
+
+    .history-copy strong {
+      margin-bottom: 2px;
+      font-size: 9px;
+    }
+
+    .history-copy span {
+      color: var(--subtle);
+      font-size: 8px;
+    }
+
+    .console {
+      grid-column: 1 / -1;
+      min-height: 160px;
+      padding: 13px 15px;
+      overflow: auto;
+      color: #cbd5e1;
+      font: 9px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+      background: #151a24;
+      border-radius: 11px;
+    }
+
+    .console-line {
+      white-space: pre-wrap;
+    }
+
+    .console-line.success {
+      color: #6ee7b7;
+    }
+
+    .console-line.info {
+      color: #a5b4fc;
+    }
+
+    .agent-panel {
+      grid-column: 4;
+      grid-row: 2;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      min-width: 0;
+      min-height: 0;
+      background: white;
+      border-left: 1px solid var(--line);
+    }
+
+    .agent-header {
+      display: flex;
+      align-items: center;
+      min-height: 52px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .agent-symbol {
+      display: grid;
+      place-items: center;
+      width: 27px;
+      height: 27px;
+      margin-right: 9px;
+      color: white;
+      background: linear-gradient(145deg, #7069e4, #4a469e);
+      border-radius: 8px;
+    }
+
+    .agent-symbol .icon {
+      width: 14px;
+      height: 14px;
+    }
+
+    .agent-title {
+      flex: 1;
+    }
+
+    .agent-title strong,
+    .agent-title span {
+      display: block;
+    }
+
+    .agent-title strong {
+      font-size: 11px;
+    }
+
+    .agent-title span {
+      margin-top: 2px;
+      color: var(--subtle);
+      font-size: 8px;
+    }
+
+    .model-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 7px;
+      color: #5f6673;
+      font-size: 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+
+    .context-strip {
+      padding: 9px 12px;
+      background: #fafaff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .context-heading {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: var(--subtle);
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .context-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .context-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 7px;
+      color: #514b98;
+      font-size: 8px;
+      font-weight: 620;
+      background: var(--accent-soft);
+      border: 1px solid #dddafe;
+      border-radius: 6px;
+    }
+
+    .context-chip .remove {
+      padding: 0;
+      color: #8781c5;
+      font-size: 11px;
+      line-height: 1;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+
+    .agent-thread {
+      min-height: 0;
+      padding: 16px 14px 22px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .thread-date {
+      margin: 0 0 16px;
+      color: var(--subtle);
+      font-size: 8px;
+      text-align: center;
+    }
+
+    .message {
+      margin-bottom: 17px;
+    }
+
+    .message-role {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 7px;
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .message-role::before {
+      display: grid;
+      place-items: center;
+      width: 19px;
+      height: 19px;
+      content: "S";
+      color: white;
+      font-size: 8px;
+      background: var(--accent);
+      border-radius: 6px;
+    }
+
+    .message.user .message-role::before {
+      content: "你";
+      background: #3b8799;
+    }
+
+    .message-content {
+      color: #414958;
+      font-size: 10px;
+      line-height: 1.68;
+    }
+
+    .message-content p {
+      margin-bottom: 8px;
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message.user .message-content {
+      margin-left: 25px;
+      padding: 9px 11px;
+      background: #f2f4f7;
+      border-radius: 4px 10px 10px 10px;
+    }
+
+    .task-card {
+      margin: 10px 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+    }
+
+    .task-card-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 10px;
+      color: #4c5260;
+      font-size: 9px;
+      font-weight: 650;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .pulse {
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(98, 91, 214, 0.12);
+    }
+
+    .task-list {
+      padding: 5px 10px;
+    }
+
+    .task-step {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 0;
+      color: var(--muted);
+      font-size: 8px;
+    }
+
+    .step-check {
+      display: grid;
+      place-items: center;
+      width: 14px;
+      height: 14px;
+      color: white;
+      font-size: 8px;
+      background: var(--teal);
+      border-radius: 50%;
+    }
+
+    .citation-card {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 9px;
+      margin: 9px 0;
+      padding: 9px;
+      color: inherit;
+      text-align: left;
+      background: #fafaff;
+      border: 1px solid #e4e2ff;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .citation-card:hover {
+      background: var(--accent-soft);
+    }
+
+    .citation-page {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 38px;
+      color: var(--accent);
+      font-size: 8px;
+      font-weight: 750;
+      background: white;
+      border: 1px solid #dddafe;
+      border-radius: 5px;
+    }
+
+    .citation-card strong,
+    .citation-card span {
+      display: block;
+    }
+
+    .citation-card strong {
+      margin-bottom: 3px;
+      font-size: 9px;
+      line-height: 1.45;
+    }
+
+    .citation-card span {
+      color: var(--subtle);
+      font-size: 8px;
+    }
+
+    .agent-composer {
+      padding: 10px 12px 12px;
+      background: white;
+      border-top: 1px solid var(--line);
+    }
+
+    .quick-prompts {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .quick-prompts::-webkit-scrollbar {
+      display: none;
+    }
+
+    .quick-prompt {
+      flex: 0 0 auto;
+      padding: 5px 7px;
+      color: #666d7a;
+      font-size: 8px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .quick-prompt:hover {
+      color: var(--accent);
+      border-color: #cfccf7;
+    }
+
+    .composer-box {
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(22, 30, 46, 0.05);
+    }
+
+    .composer-box:focus-within {
+      border-color: #aaa5e8;
+      box-shadow: 0 0 0 3px rgba(98, 91, 214, 0.08);
+    }
+
+    .composer-box textarea {
+      display: block;
+      width: 100%;
+      height: 54px;
+      padding: 10px 11px 4px;
+      resize: none;
+      color: var(--ink);
+      font-size: 10px;
+      line-height: 1.45;
+      background: transparent;
+      border: 0;
+      outline: 0;
+    }
+
+    .composer-actions {
+      display: flex;
+      align-items: center;
+      padding: 4px 6px 6px;
+    }
+
+    .composer-tool {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .composer-tool:hover {
+      background: var(--panel);
+    }
+
+    .send-button {
+      display: grid;
+      place-items: center;
+      width: 27px;
+      height: 27px;
+      margin-left: auto;
+      color: white;
+      background: var(--accent);
+      border: 0;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .send-button:hover {
+      background: #514abb;
+    }
+
+    .composer-hint {
+      margin: 6px 2px 0;
+      color: var(--subtle);
+      font-size: 7px;
+      text-align: center;
+    }
+
+    .statusbar {
+      z-index: 10;
+      grid-column: 1 / -1;
+      grid-row: 3;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 0 10px;
+      color: #c7cad1;
+      font-size: 8px;
+      background: #171c27;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-item .icon {
+      width: 11px;
+      height: 11px;
+    }
+
+    .status-right {
+      display: flex;
+      gap: 15px;
+      margin-left: auto;
+    }
+
+    .command-overlay {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 12vh;
+      background: rgba(13, 18, 28, 0.3);
+      backdrop-filter: blur(2px);
+    }
+
+    .command-overlay.open {
+      display: flex;
+    }
+
+    .command-box {
+      width: min(620px, calc(100vw - 40px));
+      overflow: hidden;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      box-shadow: 0 22px 65px rgba(14, 21, 34, 0.25);
+      animation: commandIn 150ms ease-out;
+    }
+
+    .command-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .command-input {
+      width: 100%;
+      height: 48px;
+      color: var(--ink);
+      font-size: 12px;
+      background: transparent;
+      border: 0;
+      outline: 0;
+    }
+
+    .command-results {
+      padding: 7px;
+    }
+
+    .command-result {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .command-result:hover {
+      background: var(--accent-soft);
+    }
+
+    .command-result span {
+      font-size: 10px;
+    }
+
+    .command-result small {
+      margin-left: auto;
+      color: var(--subtle);
+      font-size: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 150;
+      right: 18px;
+      bottom: 40px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      max-width: 330px;
+      padding: 11px 13px;
+      color: white;
+      font-size: 10px;
+      background: #202735;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 9px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 180ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes commandIn {
+      from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @media (max-width: 1240px) {
+      .app-shell {
+        grid-template-columns: 54px 226px minmax(480px, 1fr) 330px;
+      }
+
+      .topbar {
+        grid-template-columns: 280px minmax(220px, 520px) 1fr;
+      }
+
+      .view-container {
+        padding-right: 22px;
+        padding-left: 22px;
+      }
+
+      .pdf-page {
+        padding-right: 48px;
+        padding-left: 48px;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .app-shell {
+        grid-template-columns: 54px 220px minmax(0, 1fr);
+      }
+
+      .agent-panel {
+        display: none;
+      }
+
+      .topbar {
+        grid-template-columns: 274px minmax(220px, 1fr) auto;
+      }
+
+      .sync-state {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-project">
+        <div class="brand-mark" aria-label="ScholarFlow">SF</div>
+        <button class="project-switcher" id="projectSwitcher" type="button" aria-haspopup="menu" aria-expanded="false">
+          <span class="project-dot" id="projectDot"></span>
+          <span class="project-copy">
+            <span class="project-eyebrow">Research Project</span>
+            <span class="project-name" id="projectName">多模态医学影像分割</span>
+          </span>
+          <svg class="icon chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+        </button>
+
+        <div class="project-menu" id="projectMenu" role="menu">
+          <div class="menu-label">最近的项目</div>
+          <button class="project-option active" type="button" role="menuitem" data-project="medical" style="--project-color:#625bd6">
+            <span class="project-avatar">MI</span>
+            <span><span class="option-title">多模态医学影像分割</span><span class="option-meta">24 篇论文 · 6 个实验</span></span>
+            <span class="project-check">✓</span>
+          </button>
+          <button class="project-option" type="button" role="menuitem" data-project="llm" style="--project-color:#0f8f83">
+            <span class="project-avatar">LL</span>
+            <span><span class="option-title">高效大模型推理</span><span class="option-meta">17 篇论文 · 3 个实验</span></span>
+            <span class="project-check"></span>
+          </button>
+          <button class="project-option" type="button" role="menuitem" data-project="urban" style="--project-color:#b36a24">
+            <span class="project-avatar">UH</span>
+            <span><span class="option-title">城市热岛效应评估</span><span class="option-meta">9 篇论文 · 12 个数据集</span></span>
+            <span class="project-check"></span>
+          </button>
+          <button class="new-project" type="button" data-toast="新建项目流程将在正式版本中开放">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            创建新的 Research Project
+          </button>
+        </div>
+      </div>
+
+      <button class="global-search" id="globalSearch" type="button">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>搜索论文、笔记、代码或运行记录…</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+
+      <div class="top-actions">
+        <span class="sync-state">所有内容已保存到本地</span>
+        <button class="top-icon" type="button" aria-label="通知" data-toast="当前没有新的通知">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        </button>
+        <button class="top-icon" type="button" aria-label="设置" data-toast="设置面板为 Demo 占位">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.94 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.57 15 1.7 1.7 0 0 0 3 14H3v-4h.08A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88L4.2 7l2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.57 1.7 1.7 0 0 0 10 3V3h4v.08A1.7 1.7 0 0 0 15.06 4.6a1.7 1.7 0 0 0 1.88-.34L17 4.2 19.83 7l-.06.06A1.7 1.7 0 0 0 19.43 9 1.7 1.7 0 0 0 21 10h.08v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        </button>
+        <div class="avatar" title="Jiang">J</div>
+      </div>
+    </header>
+
+    <nav class="activity-bar" aria-label="项目工作区">
+      <button class="activity-button active" type="button" aria-label="项目概览" title="项目概览" data-section="overview">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </button>
+      <button class="activity-button" type="button" aria-label="文献" title="文献" data-section="sources">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M8 7h8M8 11h6"/></svg>
+      </button>
+      <button class="activity-button" type="button" aria-label="阅读" title="阅读" data-section="reading">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5v-16ZM21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"/></svg>
+      </button>
+      <button class="activity-button" type="button" aria-label="笔记" title="笔记" data-section="notes">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M14 3v5h5M8 12h8M8 16h6"/></svg>
+      </button>
+      <button class="activity-button" type="button" aria-label="证据" title="证据" data-section="evidence">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM4 10h16M10 5v14"/></svg>
+      </button>
+      <button class="activity-button" type="button" aria-label="实验" title="实验" data-section="experiments">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>
+      </button>
+      <div class="activity-spacer"></div>
+      <button class="activity-button" type="button" aria-label="账户" title="账户" data-toast="账户管理为 Demo 占位">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      </button>
+    </nav>
+
+    <aside class="nav-sidebar">
+      <section class="sidebar-section active" data-sidebar="overview">
+        <div class="sidebar-header"><span class="sidebar-title">Project</span><button class="ghost-icon" type="button" aria-label="更多" data-toast="项目菜单为 Demo 占位">•••</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">概览</div>
+          <button class="nav-row active" type="button" data-open-view="overview" data-label="项目概览">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+            <span class="nav-row-title">项目概览</span>
+          </button>
+          <button class="nav-row" type="button" data-toast="研究时间线为 Demo 占位">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="nav-row-title">研究时间线</span>
+          </button>
+          <div class="sidebar-label">快捷入口</div>
+          <button class="nav-row" type="button" data-open-view="sources" data-label="全部文献">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/></svg>
+            <span class="nav-row-title">全部文献</span><span class="nav-count">24</span>
+          </button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="研究笔记">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 8h8M8 12h8M8 16h5"/></svg>
+            <span class="nav-row-title">研究笔记</span><span class="nav-count">8</span>
+          </button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="实验运行">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/></svg>
+            <span class="nav-row-title">实验运行</span><span class="nav-count">6</span>
+          </button>
+          <div class="sidebar-label">项目文件</div>
+          <button class="nav-row" type="button" data-toast="已定位到项目的 papers 文件夹">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></svg>
+            <span class="nav-row-title">papers</span>
+          </button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="研究笔记">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></svg>
+            <span class="nav-row-title">notes</span>
+          </button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="实验运行">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></svg>
+            <span class="nav-row-title">experiments</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="sidebar-section" data-sidebar="sources">
+        <div class="sidebar-header"><span class="sidebar-title">Sources</span><button class="ghost-icon" type="button" aria-label="添加文献" data-toast="已打开文献导入入口">＋</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">文献库</div>
+          <button class="nav-row active" type="button" data-open-view="sources" data-label="全部文献"><span class="nav-row-title">全部文献</span><span class="nav-count">24</span></button>
+          <button class="nav-row" type="button" data-open-view="sources" data-label="最近添加"><span class="nav-row-title">最近添加</span><span class="nav-count">7</span></button>
+          <button class="nav-row" type="button" data-open-view="sources" data-label="待读"><span class="nav-row-title">待读</span><span class="nav-count">11</span></button>
+          <button class="nav-row" type="button" data-open-view="sources" data-label="已精读"><span class="nav-row-title">已精读</span><span class="nav-count">8</span></button>
+          <div class="sidebar-label">Collections</div>
+          <button class="nav-row tree-indent" type="button" data-open-view="sources" data-label="多模态融合"><span class="nav-row-title">多模态融合</span><span class="nav-count">9</span></button>
+          <button class="nav-row tree-indent" type="button" data-open-view="sources" data-label="弱监督学习"><span class="nav-row-title">弱监督学习</span><span class="nav-count">6</span></button>
+          <button class="nav-row tree-indent" type="button" data-open-view="sources" data-label="Baseline"><span class="nav-row-title">Baseline</span><span class="nav-count">4</span></button>
+          <div class="sidebar-label">Tags</div>
+          <div class="tag-list"><span class="small-tag">#segmentation</span><span class="small-tag">#MRI</span><span class="small-tag">#fusion</span><span class="small-tag">#review</span></div>
+        </div>
+      </section>
+
+      <section class="sidebar-section" data-sidebar="reading">
+        <div class="sidebar-header"><span class="sidebar-title">Reading</span><button class="ghost-icon" type="button" aria-label="阅读设置" data-toast="阅读设置为 Demo 占位">•••</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">正在阅读</div>
+          <button class="paper-mini active" type="button" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><strong>UniSeg: A Unified Multi-modal Framework</strong><span>Wang et al. · 2025 · 第 4 页</span></button>
+          <button class="paper-mini" type="button" data-open-view="reading" data-label="Modality-Aware Feature Fusion"><strong>Modality-Aware Feature Fusion for MRI</strong><span>Chen et al. · 2024 · 第 7 页</span></button>
+          <button class="paper-mini" type="button" data-open-view="reading" data-label="Missing Modality Robustness"><strong>Robust Learning with Missing Modalities</strong><span>Patel et al. · 2024 · 第 2 页</span></button>
+          <div class="sidebar-label">本篇内容</div>
+          <button class="nav-row" type="button" data-toast="已定位到摘要"><span class="nav-row-title">Abstract</span></button>
+          <button class="nav-row" type="button" data-toast="已定位到方法章节"><span class="nav-row-title">2. Method</span></button>
+          <button class="nav-row" type="button" data-toast="已定位到实验章节"><span class="nav-row-title">3. Experiments</span></button>
+          <button class="nav-row" type="button" data-toast="已定位到局限章节"><span class="nav-row-title">4. Limitations</span></button>
+          <div class="sidebar-label">批注</div>
+          <button class="nav-row" type="button" data-toast="已定位到黄色高亮"><span class="nav-row-title">关键实验结论</span><span class="nav-count">p.4</span></button>
+          <button class="nav-row" type="button" data-toast="已定位到紫色批注"><span class="nav-row-title">待验证：缺失模态</span><span class="nav-count">p.4</span></button>
+        </div>
+      </section>
+
+      <section class="sidebar-section" data-sidebar="notes">
+        <div class="sidebar-header"><span class="sidebar-title">Notes</span><button class="ghost-icon" type="button" aria-label="新建笔记" data-toast="已创建一篇空白笔记（Mock）">＋</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">研究笔记</div>
+          <button class="nav-row active" type="button" data-open-view="notes" data-label="研究假设与当前结论"><span class="nav-row-title">研究假设与当前结论</span></button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="文献阅读日志"><span class="nav-row-title">文献阅读日志</span></button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="实验计划"><span class="nav-row-title">实验计划</span></button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="组会纪要 09-12"><span class="nav-row-title">组会纪要 09-12</span></button>
+          <div class="sidebar-label">Agent 生成</div>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="多模态方法综述"><span class="nav-row-title">多模态方法综述</span></button>
+          <button class="nav-row" type="button" data-open-view="notes" data-label="潜在 Research Gaps"><span class="nav-row-title">潜在 Research Gaps</span></button>
+        </div>
+      </section>
+
+      <section class="sidebar-section" data-sidebar="evidence">
+        <div class="sidebar-header"><span class="sidebar-title">Evidence</span><button class="ghost-icon" type="button" aria-label="新建证据" data-toast="已打开证据采集入口">＋</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">证据视图</div>
+          <button class="nav-row active" type="button" data-open-view="evidence" data-label="方法对比矩阵"><span class="nav-row-title">方法对比矩阵</span></button>
+          <button class="nav-row" type="button" data-open-view="evidence" data-label="数据集与指标"><span class="nav-row-title">数据集与指标</span></button>
+          <button class="nav-row" type="button" data-open-view="evidence" data-label="支持与反对证据"><span class="nav-row-title">支持与反对证据</span></button>
+          <div class="sidebar-label">按主题</div>
+          <button class="nav-row" type="button" data-open-view="evidence" data-label="缺失模态鲁棒性"><span class="nav-row-title">缺失模态鲁棒性</span><span class="nav-count">12</span></button>
+          <button class="nav-row" type="button" data-open-view="evidence" data-label="跨模态注意力"><span class="nav-row-title">跨模态注意力</span><span class="nav-count">8</span></button>
+          <button class="nav-row" type="button" data-open-view="evidence" data-label="泛化能力"><span class="nav-row-title">泛化能力</span><span class="nav-count">5</span></button>
+        </div>
+      </section>
+
+      <section class="sidebar-section" data-sidebar="experiments">
+        <div class="sidebar-header"><span class="sidebar-title">Experiments</span><button class="ghost-icon" type="button" aria-label="新建实验" data-toast="新建实验向导为 Demo 占位">＋</button></div>
+        <div class="sidebar-body">
+          <div class="sidebar-label">实验集合</div>
+          <button class="nav-row active" type="button" data-open-view="experiments" data-label="实验概览"><span class="nav-row-title">实验概览</span></button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="Baseline 复现"><span class="nav-row-title">Baseline 复现</span><span class="nav-count">3</span></button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="消融实验"><span class="nav-row-title">消融实验</span><span class="nav-count">2</span></button>
+          <div class="sidebar-label">最近运行</div>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="run-006"><span class="status-pill">成功</span><span class="nav-row-title">run-006</span></button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="run-005"><span class="status-pill">成功</span><span class="nav-row-title">run-005</span></button>
+          <button class="nav-row" type="button" data-open-view="experiments" data-label="run-004"><span class="status-pill amber">中断</span><span class="nav-row-title">run-004</span></button>
+          <div class="sidebar-label">项目目录</div>
+          <button class="nav-row" type="button" data-toast="已定位到 src 目录"><span class="nav-row-title">▸ src</span></button>
+          <button class="nav-row" type="button" data-toast="已定位到 configs 目录"><span class="nav-row-title">▸ configs</span></button>
+          <button class="nav-row" type="button" data-toast="已打开 train.py"><span class="nav-row-title"># train.py</span></button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main-area">
+      <div class="editor-tabs">
+        <button class="editor-tab active" type="button" data-tab-view="overview">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+          <span class="tab-label">项目概览</span><span class="tab-close">×</span>
+        </button>
+        <button class="editor-tab" id="contextTab" type="button" data-tab-view="reading">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5zM14 3v5h5"/></svg>
+          <span class="tab-label" id="contextTabLabel">UniSeg…pdf</span><span class="tab-close">×</span>
+        </button>
+      </div>
+
+      <div class="view-stage">
+        <section class="workspace-view active" data-view="overview">
+          <div class="view-container">
+            <div class="view-heading">
+              <div><p class="eyebrow">Research Project</p><h1 id="overviewTitle">多模态医学影像分割</h1><p class="view-subtitle" id="overviewSubtitle">探索在模态缺失条件下仍具备稳定泛化能力的医学图像分割方法。</p></div>
+              <div class="button-row"><button class="button" type="button" data-toast="项目分享将在后续版本中开放">分享</button><button class="button primary" type="button" data-agent-prompt="请根据当前项目材料，梳理今天最值得推进的三项研究任务。">继续研究</button></div>
+            </div>
+
+            <div class="overview-hero">
+              <div class="hero-label">Current research question</div>
+              <h2 id="researchQuestion">如何在缺失部分 MRI 模态时保持肿瘤分割性能？</h2>
+              <p>Agent 已基于 24 篇论文、18 条证据和 6 次实验形成项目上下文。最近一次分析指出，模态 dropout 与不确定性估计的组合值得进一步验证。</p>
+              <div class="hero-meta"><span>◉ 上次活动：今天 14:32</span><span>⌁ 本地工作目录</span><span>✓ 索引已更新</span></div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-top"><span class="stat-label">项目文献</span><span class="stat-icon">P</span></div><span class="stat-value" data-stat="papers">24</span><span class="stat-delta">+3 本周</span></div>
+              <div class="stat-card"><div class="stat-top"><span class="stat-label">证据卡片</span><span class="stat-icon">E</span></div><span class="stat-value" data-stat="evidence">18</span><span class="stat-delta">已验证 14</span></div>
+              <div class="stat-card"><div class="stat-top"><span class="stat-label">研究笔记</span><span class="stat-icon">N</span></div><span class="stat-value" data-stat="notes">8</span><span class="stat-delta">最近更新 2</span></div>
+              <div class="stat-card"><div class="stat-top"><span class="stat-label">实验运行</span><span class="stat-icon">R</span></div><span class="stat-value" data-stat="runs">6</span><span class="stat-delta">5 次成功</span></div>
+            </div>
+
+            <div class="dashboard-grid">
+              <div class="panel-card">
+                <div class="panel-header"><h3 class="panel-title">继续你的研究</h3><button class="text-button" type="button" data-open-view="sources" data-label="全部文献">查看全部</button></div>
+                <div class="continue-list">
+                  <button class="continue-row" type="button" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><span class="file-tile" style="--tile-color:#c24152">PDF</span><span class="continue-copy"><span class="continue-title">UniSeg: A Unified Multi-modal Framework</span><span class="continue-meta">阅读到第 4 页 · 3 条批注</span></span><span class="continue-time">12 分钟前</span></button>
+                  <button class="continue-row" type="button" data-open-view="notes" data-label="研究假设与当前结论"><span class="file-tile" style="--tile-color:#625bd6">MD</span><span class="continue-copy"><span class="continue-title">研究假设与当前结论</span><span class="continue-meta">由你和 Scholar Agent 共同编辑</span></span><span class="continue-time">昨天</span></button>
+                  <button class="continue-row" type="button" data-open-view="experiments" data-label="Experiment run-006"><span class="file-tile" style="--tile-color:#0f8f83">RUN</span><span class="continue-copy"><span class="continue-title">run-006 · modality_dropout=0.3</span><span class="continue-meta">Dice 0.842 · 已完成</span></span><span class="continue-time">2 天前</span></button>
+                </div>
+              </div>
+
+              <div class="panel-card">
+                <div class="panel-header"><h3 class="panel-title">研究进展</h3><button class="text-button" type="button" data-toast="进展编辑为 Demo 占位">编辑</button></div>
+                <div class="milestone-list">
+                  <div class="milestone"><span class="milestone-mark">✓</span><div><strong>明确研究问题</strong><span>聚焦缺失模态鲁棒性</span></div></div>
+                  <div class="milestone"><span class="milestone-mark">✓</span><div><strong>完成核心文献梳理</strong><span>已精读 8 / 12 篇</span></div></div>
+                  <div class="milestone"><span class="milestone-mark">✓</span><div><strong>复现基线方法</strong><span>Dice 0.831</span></div></div>
+                  <div class="milestone pending"><span class="milestone-mark">4</span><div><strong>完成消融实验</strong><span>进行中 · 2 / 5</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view="sources">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Sources</p><h1>项目文献</h1><p class="view-subtitle">搜索、导入并管理当前 Research Project 的论文与研究材料。</p></div><div class="button-row"><button class="button" type="button" data-toast="已打开本地 PDF 选择器（Mock）">导入 PDF</button><button class="button primary" type="button" data-agent-prompt="请围绕缺失模态医学图像分割搜索近三年的高相关论文。">搜索论文</button></div></div>
+            <div class="toolbar"><label class="filter-input"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="paperFilter" type="search" placeholder="筛选当前项目文献"></label><button class="button" type="button" data-toast="年份筛选为 Demo 占位">年份：全部</button><button class="button" type="button" data-toast="标签筛选为 Demo 占位">标签</button><span class="spacer"></span><button class="button" type="button" data-toast="已准备导出 24 条 BibTeX（Mock）">导出 BibTeX</button></div>
+            <div class="table-card">
+              <table aria-label="项目文献列表">
+                <thead><tr><th>论文</th><th>年份</th><th>来源</th><th>状态</th></tr></thead>
+                <tbody id="paperTable">
+                  <tr data-paper-title="UniSeg unified multi-modal medical image segmentation" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><td class="paper-title-cell"><strong>UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</strong><span>L. Wang, J. Li, M. Zhou · 14 条项目引用</span></td><td>2025</td><td>arXiv</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Modality-aware feature fusion MRI segmentation"><td class="paper-title-cell"><strong>Modality-Aware Feature Fusion for Robust MRI Segmentation</strong><span>Y. Chen, R. Gupta · 8 条项目引用</span></td><td>2024</td><td>MICCAI</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Robust learning missing modalities brain tumor"><td class="paper-title-cell"><strong>Robust Learning with Missing Modalities for Brain Tumor Segmentation</strong><span>A. Patel, S. Kim · 5 条项目引用</span></td><td>2024</td><td>TMI</td><td><span class="status-pill amber">阅读中</span></td></tr>
+                  <tr data-paper-title="HeMIS heterogeneous modality medical image segmentation"><td class="paper-title-cell"><strong>HeMIS: Hetero-Modal Image Segmentation</strong><span>M. Havaei et al. · 3 条项目引用</span></td><td>2016</td><td>MICCAI</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Latent correlation representation learning missing MRI"><td class="paper-title-cell"><strong>Latent Correlation Representation Learning for Brain Tumor Segmentation</strong><span>Z. Ding et al. · 尚未创建证据</span></td><td>2023</td><td>CVPR</td><td><span class="status-pill amber">待读</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace-view reading-view" data-view="reading">
+          <div class="reading-toolbar"><span class="reading-title">UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</span><div class="page-control"><button class="ghost-icon" type="button" data-toast="上一页">‹</button><span>4 / 12</span><button class="ghost-icon" type="button" data-toast="下一页">›</button></div><button class="ghost-icon" type="button" aria-label="添加批注" data-toast="已进入批注模式">＋</button><button class="ghost-icon" type="button" aria-label="更多">•••</button></div>
+          <div class="pdf-stage">
+            <article class="pdf-page">
+              <div class="paper-kicker">Preprint · Mock document for ScholarFlow demo</div>
+              <h1>UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</h1>
+              <div class="authors">Lina Wang · Jun Li · Ming Zhou · Institute of Intelligent Medicine</div>
+              <div class="paper-columns">
+                <h2>Abstract</h2>
+                <p>Multi-modal imaging provides complementary information for clinical segmentation. However, real-world datasets frequently contain missing modalities, causing substantial degradation in models trained under complete observations.</p>
+                <p>We introduce UniSeg, a unified framework that combines modality-aware feature fusion with uncertainty-guided regularization. The model is trained with stochastic modality dropout and requires no separate network for each missing pattern.</p>
+                <h2>2. Method</h2>
+                <p>Given a set of available modalities, each modality is first encoded independently. A shared fusion module then aggregates features using learned reliability estimates. During training, subsets of modalities are randomly masked.</p>
+                <span class="paper-note">Scholar Agent 批注：这里的随机模态遮蔽与项目当前的 modality dropout 实验直接相关，可以作为 run-007 的参数依据。</span>
+                <p>The uncertainty branch estimates voxel-level confidence and penalizes inconsistent predictions across modality subsets. This encourages stable representations when input availability changes.</p>
+                <h2>3. Experiments</h2>
+                <p>We evaluate the proposed method on the BraTS benchmark using Dice and Hausdorff Distance. All models are trained for 300 epochs with identical data augmentation and preprocessing.</p>
+                <p><span class="paper-highlight">Under the single-missing-modality setting, UniSeg retains 96.4% of the complete-modality Dice score and outperforms the strongest baseline by 2.1 percentage points.</span></p>
+                <p>The improvement is most pronounced when the T1ce modality is unavailable. Ablation results indicate that modality dropout contributes 1.3 points, while uncertainty regularization contributes an additional 0.8 points.</p>
+                <h2>4. Limitations</h2>
+                <p>The current study is limited to MRI sequences from a single benchmark. Generalization to multi-center clinical data and other imaging modalities remains unexplored.</p>
+              </div>
+              <div class="page-number">4</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view="notes">
+          <div class="notes-layout">
+            <aside class="note-list"><p class="note-list-title">当前项目 · 8 篇</p><button class="note-card active" type="button"><strong>研究假设与当前结论</strong><span>刚刚更新 · 6 条引用</span></button><button class="note-card" type="button"><strong>文献阅读日志</strong><span>昨天 · 14 条引用</span></button><button class="note-card" type="button"><strong>实验计划</strong><span>9 月 13 日 · 3 项待办</span></button><button class="note-card" type="button"><strong>多模态方法综述</strong><span>Agent 生成 · 待审阅</span></button></aside>
+            <article class="note-editor">
+              <h1>研究假设与当前结论</h1>
+              <div class="note-meta"><span>最后编辑：今天 15:06</span><span>·</span><span>由你和 Scholar Agent 共同编辑</span><span class="status-pill">6 条已验证引用</span></div>
+              <p>当前研究聚焦于医学图像分割中的模态缺失问题。初步文献和实验结果支持以下研究假设：</p>
+              <div class="evidence-callout"><strong>核心假设</strong><br>在训练阶段联合使用随机模态遮蔽与不确定性约束，可以减少模型对单一高信息量模态的依赖，并提高缺失模态下的稳定性。</div>
+              <h2>已有证据</h2>
+              <ul><li>UniSeg 在单模态缺失设置下保留完整模态性能的 96.4%，其中模态 dropout 带来 1.3 Dice 提升。<a class="citation-link" href="#" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation">[Wang et al., 2025, p.4]</a></li><li>已有方法在 T1ce 缺失时普遍出现更明显的性能下降，说明模型仍高度依赖增强肿瘤区域信息。<a class="citation-link" href="#">[Chen et al., 2024, p.7]</a></li><li>当前 run-006 的结果与文献趋势一致，但跨随机种子的方差仍需进一步验证。</li></ul>
+              <h2>下一步</h2>
+              <p>运行不同 dropout 比例的消融实验，并加入三个随机种子。随后比较完整模态、单模态缺失和双模态缺失条件下的 Dice 与 HD95。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view="evidence">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Evidence</p><h1>缺失模态方法对比</h1><p class="view-subtitle">每条结论都保留原文位置，区分来源事实、Agent 综合与尚待验证的推断。</p></div><div class="button-row"><button class="button" type="button" data-toast="已准备导出 CSV（Mock）">导出 CSV</button><button class="button primary" type="button" data-agent-prompt="请检查当前证据表中的冲突和证据缺口。">检查证据缺口</button></div></div>
+            <div class="table-card evidence-table"><table><thead><tr><th>方法</th><th>缺失模态策略</th><th>关键结果</th><th>来源</th><th>可信度</th></tr></thead><tbody>
+              <tr data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><td>UniSeg</td><td>Modality dropout + uncertainty</td><td>保留完整模态性能的 96.4%</td><td><a class="citation-link" href="#">p.4 §3.2</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:94%"></span>高</span></td></tr>
+              <tr><td>HeMIS</td><td>统计矩融合</td><td>对任意模态组合保持兼容</td><td><a class="citation-link" href="#">p.5 §4.1</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:88%"></span>高</span></td></tr>
+              <tr><td>RFNet</td><td>区域感知融合</td><td>T1ce 缺失时 Dice 下降 4.8</td><td><a class="citation-link" href="#">p.7 Table 3</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:82%"></span>中高</span></td></tr>
+              <tr><td>当前方法</td><td>Dropout + feature consistency</td><td>run-006 达到 Dice 0.842</td><td><a class="citation-link" href="#" data-open-view="experiments" data-label="Experiment run-006">run-006</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:62%"></span>待复验</span></td></tr>
+            </tbody></table></div>
+          </div>
+        </section>
+
+        <section class="workspace-view" data-view="experiments">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Experiments</p><h1>实验运行</h1><p class="view-subtitle">代码、参数、日志与结果共同构成一次可追溯的 Experiment Run。</p></div><div class="button-row"><button class="button" type="button" data-toast="已打开 configs/ablation.yaml（Mock）">编辑配置</button><button class="button primary" id="runExperiment" type="button"><svg class="icon" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg>运行实验</button></div></div>
+            <div class="experiment-grid">
+              <div class="run-card"><div class="run-header"><div><h3>run-006 · Modality Dropout Ablation</h3><p>commit a18d2ef · configs/ablation.yaml · 2 天前</p></div><span class="status-pill">已完成</span></div><div class="metric-row"><div class="metric"><span>Dice</span><strong>0.842</strong></div><div class="metric"><span>HD95</span><strong>6.28</strong></div><div class="metric"><span>训练时间</span><strong>3h 42m</strong></div></div><div class="chart"><div class="bar-group"><span class="bar baseline" style="--bar-height:72%"></span><span class="bar" style="--bar-height:78%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:68%"></span><span class="bar" style="--bar-height:84%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:55%"></span><span class="bar" style="--bar-height:72%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:41%"></span><span class="bar" style="--bar-height:61%"></span></div></div><div class="chart-labels"><span>完整模态</span><span>缺 T1</span><span>缺 T1ce</span><span>缺 FLAIR</span></div></div>
+              <div class="panel-card"><div class="panel-header"><h3 class="panel-title">运行历史</h3><button class="text-button" type="button" data-toast="运行筛选为 Demo 占位">筛选</button></div><div class="run-history"><button class="history-row" type="button"><span class="history-dot"></span><span class="history-copy"><strong>run-006</strong><span>dropout 0.3 · Dice 0.842</span></span><span class="continue-time">2d</span></button><button class="history-row" type="button"><span class="history-dot"></span><span class="history-copy"><strong>run-005</strong><span>dropout 0.2 · Dice 0.837</span></span><span class="continue-time">3d</span></button><button class="history-row" type="button"><span class="history-dot failed"></span><span class="history-copy"><strong>run-004</strong><span>CUDA OOM · 已中断</span></span><span class="continue-time">3d</span></button><button class="history-row" type="button"><span class="history-dot"></span><span class="history-copy"><strong>run-003</strong><span>baseline · Dice 0.831</span></span><span class="continue-time">5d</span></button></div></div>
+              <div class="console" id="experimentConsole"><div class="console-line info">$ scholarflow run configs/ablation.yaml</div><div class="console-line">[14:02:11] Environment: python 3.11 · torch 2.4 · cuda 12.1</div><div class="console-line">[14:02:12] Dataset: BraTS mock split · train=834 · val=208</div><div class="console-line">[17:43:49] epoch 300/300 · val_dice=0.8421 · val_hd95=6.28</div><div class="console-line success">[17:44:03] Run completed. 4 artifacts saved to experiments/run-006/</div></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <aside class="agent-panel">
+      <div class="agent-header"><div class="agent-symbol"><svg class="icon" viewBox="0 0 24 24"><path d="m12 3 1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3ZM18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></svg></div><div class="agent-title"><strong>Scholar Agent</strong><span>Project-scoped session · Ready</span></div><button class="model-pill" type="button" data-toast="当前使用 Balanced 模式">Balanced⌄</button></div>
+      <div class="context-strip"><div class="context-heading"><span>当前上下文</span><span id="contextCount">3 个来源</span></div><div class="context-chips" id="contextChips"><span class="context-chip">整个项目 <button class="remove" type="button" aria-label="移除上下文">×</button></span><span class="context-chip">UniSeg.pdf <button class="remove" type="button" aria-label="移除上下文">×</button></span><span class="context-chip">run-006 <button class="remove" type="button" aria-label="移除上下文">×</button></span></div></div>
+      <div class="agent-thread" id="agentThread">
+        <div class="thread-date">今天 · Project Session</div>
+        <div class="message user"><div class="message-role">你</div><div class="message-content">结合当前论文和最近一次实验，下一步最值得验证什么？</div></div>
+        <div class="message"><div class="message-role">Scholar Agent</div><div class="message-content"><p>我建议优先验证 <strong>modality dropout 比例与缺失模式之间的关系</strong>。当前结果只覆盖比例 0.2 和 0.3，还不足以判断提升来自正则化还是特定缺失组合。</p><div class="task-card"><div class="task-card-header"><span class="pulse"></span>已完成上下文分析</div><div class="task-list"><div class="task-step"><span class="step-check">✓</span>读取 UniSeg 实验设置</div><div class="task-step"><span class="step-check">✓</span>比较 run-005 与 run-006</div><div class="task-step"><span class="step-check">✓</span>检查当前实验计划</div></div></div><p>建议新增 0.1、0.4、0.5 三组比例，每组使用三个随机种子，并重点记录 T1ce 缺失条件。</p><button class="citation-card" type="button" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><span class="citation-page">p.4</span><span><strong>UniSeg 的模态 dropout 消融结果</strong><span>Wang et al., 2025 · Section 3.2</span></span></button></div></div>
+      </div>
+      <form class="agent-composer" id="agentForm"><div class="quick-prompts"><button class="quick-prompt" type="button" data-agent-prompt="总结当前论文的贡献与局限">总结当前论文</button><button class="quick-prompt" type="button" data-agent-prompt="比较当前选择的论文并生成证据表">生成证据表</button><button class="quick-prompt" type="button" data-agent-prompt="分析最近一次实验结果并给出下一步建议">分析实验结果</button></div><div class="composer-box"><textarea id="agentInput" placeholder="询问项目，或让 Agent 执行任务…" aria-label="向 Scholar Agent 提问"></textarea><div class="composer-actions"><button class="composer-tool" type="button" aria-label="添加上下文" data-toast="上下文选择器为 Demo 占位">＋</button><button class="composer-tool" type="button" aria-label="选择工具" data-toast="已启用文献、笔记与实验工具">⌘</button><button class="send-button" type="submit" aria-label="发送"><svg class="icon" viewBox="0 0 24 24"><path d="m5 12 14-7-4 14-3-6-7-1Z"/><path d="m12 13 7-8"/></svg></button></div></div><p class="composer-hint">Agent 的回答可能有误，请检查引用和实验操作</p></form>
+    </aside>
+
+    <footer class="statusbar"><span class="status-item"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h6l2 2h8v10H4z"/></svg><span id="statusProject">多模态医学影像分割</span></span><span class="status-item">main*</span><span class="status-item">✓ 本地索引就绪</span><div class="status-right"><span>Pi Runtime · connected</span><span>UTF-8</span><span>Mock data</span></div></footer>
+  </div>
+
+  <div class="command-overlay" id="commandOverlay" role="dialog" aria-modal="true" aria-label="全局搜索与命令">
+    <div class="command-box"><label class="command-input-wrap"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="command-input" id="commandInput" placeholder="搜索项目内容或输入命令…"></label><div class="command-results"><button class="command-result" type="button" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><svg class="icon" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/></svg><span>打开 UniSeg: Unified Medical Image Segmentation</span><small>论文</small></button><button class="command-result" type="button" data-open-view="evidence" data-label="方法对比矩阵"><svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M10 5v14"/></svg><span>打开方法对比矩阵</span><small>证据</small></button><button class="command-result" type="button" data-open-view="experiments" data-label="Experiment run-006"><svg class="icon" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/></svg><span>打开 Experiment run-006</span><small>实验</small></button><button class="command-result" type="button" data-agent-prompt="请搜索当前项目中与 missing modality 相关的所有材料"><svg class="icon" viewBox="0 0 24 24"><path d="m12 3 1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3Z"/></svg><span>让 Agent 搜索项目材料</span><small>命令</small></button></div></div>
+  </div>
+
+  <div class="toast" id="toast"><span>✓</span><span id="toastText">操作完成</span></div>
+
+  <script>
+    const projectData = {
+      medical: {
+        name: '多模态医学影像分割',
+        color: '#625bd6',
+        subtitle: '探索在模态缺失条件下仍具备稳定泛化能力的医学图像分割方法。',
+        question: '如何在缺失部分 MRI 模态时保持肿瘤分割性能？',
+        stats: { papers: 24, evidence: 18, notes: 8, runs: 6 }
+      },
+      llm: {
+        name: '高效大模型推理',
+        color: '#0f8f83',
+        subtitle: '研究在有限显存环境下兼顾延迟、吞吐量与生成质量的推理优化方法。',
+        question: '量化与推测解码如何组合以降低长文本生成延迟？',
+        stats: { papers: 17, evidence: 12, notes: 6, runs: 3 }
+      },
+      urban: {
+        name: '城市热岛效应评估',
+        color: '#b36a24',
+        subtitle: '结合遥感影像与城市形态数据，评估不同空间尺度上的热岛效应。',
+        question: '城市绿地结构对夏季地表温度的影响具有怎样的尺度差异？',
+        stats: { papers: 9, evidence: 15, notes: 5, runs: 4 }
+      }
+    };
+
+    const viewSectionMap = {
+      overview: 'overview',
+      sources: 'sources',
+      reading: 'reading',
+      notes: 'notes',
+      evidence: 'evidence',
+      experiments: 'experiments'
+    };
+
+    const viewLabels = {
+      overview: '项目概览',
+      sources: '全部文献',
+      reading: 'UniSeg…pdf',
+      notes: '研究假设与当前结论',
+      evidence: '方法对比矩阵',
+      experiments: 'Experiment run-006'
+    };
+
+    const projectSwitcher = document.getElementById('projectSwitcher');
+    const projectMenu = document.getElementById('projectMenu');
+    const commandOverlay = document.getElementById('commandOverlay');
+    const commandInput = document.getElementById('commandInput');
+    const agentThread = document.getElementById('agentThread');
+    const agentInput = document.getElementById('agentInput');
+    const contextTab = document.getElementById('contextTab');
+    const contextTabLabel = document.getElementById('contextTabLabel');
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+    let toastTimer;
+
+    function showToast(message) {
+      toastText.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+
+    function setSection(section) {
+      document.querySelectorAll('.activity-button[data-section]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.section === section);
+      });
+      document.querySelectorAll('.sidebar-section').forEach((sidebar) => {
+        sidebar.classList.toggle('active', sidebar.dataset.sidebar === section);
+      });
+    }
+
+    function openView(view, label) {
+      const target = document.querySelector(`[data-view="${view}"]`);
+      if (!target) return;
+
+      document.querySelectorAll('.workspace-view').forEach((panel) => panel.classList.remove('active'));
+      target.classList.add('active');
+      setSection(viewSectionMap[view] || 'overview');
+
+      document.querySelectorAll('.editor-tab').forEach((tab) => tab.classList.remove('active'));
+      if (view === 'overview') {
+        document.querySelector('[data-tab-view="overview"]').classList.add('active');
+      } else {
+        contextTab.dataset.tabView = view;
+        contextTabLabel.textContent = label || viewLabels[view] || view;
+        contextTab.classList.add('active');
+      }
+
+      commandOverlay.classList.remove('open');
+      projectMenu.classList.remove('open');
+    }
+
+    function escapeHtml(value) {
+      const element = document.createElement('div');
+      element.textContent = value;
+      return element.innerHTML;
+    }
+
+    function addAgentMessage(prompt) {
+      if (!prompt.trim()) return;
+
+      const userMessage = document.createElement('div');
+      userMessage.className = 'message user';
+      userMessage.innerHTML = `<div class="message-role">你</div><div class="message-content">${escapeHtml(prompt)}</div>`;
+      agentThread.appendChild(userMessage);
+
+      const thinking = document.createElement('div');
+      thinking.className = 'message';
+      thinking.innerHTML = '<div class="message-role">Scholar Agent</div><div class="message-content"><p>正在检查当前上下文与可用工具…</p></div>';
+      agentThread.appendChild(thinking);
+      agentThread.scrollTop = agentThread.scrollHeight;
+
+      setTimeout(() => {
+        let response = '我已收到任务。这个 Demo 会在这里展示 Pi Runtime 的流式输出、工具调用过程、引用以及最终生成的项目资产。';
+        if (prompt.includes('证据')) response = '我会先读取所选论文的原文片段，再按照方法、数据集、指标和结论建立证据表。所有结论都会附带论文与页码位置。';
+        if (prompt.includes('实验')) response = '最近一次 run-006 的 Dice 为 0.842，高于 baseline 的 0.831。下一步建议增加三个随机种子，并优先验证 T1ce 缺失场景。';
+        if (prompt.includes('总结') || prompt.includes('贡献')) response = '当前论文的主要贡献是将模态感知融合与不确定性约束统一到一个模型中。局限在于只使用单一 MRI 数据集，跨中心泛化尚未得到验证。';
+        thinking.querySelector('.message-content').innerHTML = `<p>${response}</p><div class="task-card"><div class="task-card-header"><span class="pulse"></span>Mock 工具执行完成</div><div class="task-list"><div class="task-step"><span class="step-check">✓</span>读取当前 Project 上下文</div><div class="task-step"><span class="step-check">✓</span>检查相关 Artifact</div><div class="task-step"><span class="step-check">✓</span>生成可保存的回答</div></div></div>`;
+        agentThread.scrollTop = agentThread.scrollHeight;
+      }, 650);
+    }
+
+    projectSwitcher.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const isOpen = projectMenu.classList.toggle('open');
+      projectSwitcher.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!projectMenu.contains(event.target) && !projectSwitcher.contains(event.target)) {
+        projectMenu.classList.remove('open');
+        projectSwitcher.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    document.querySelectorAll('.project-option').forEach((option) => {
+      option.addEventListener('click', () => {
+        const project = projectData[option.dataset.project];
+        document.getElementById('projectName').textContent = project.name;
+        document.getElementById('overviewTitle').textContent = project.name;
+        document.getElementById('overviewSubtitle').textContent = project.subtitle;
+        document.getElementById('researchQuestion').textContent = project.question;
+        document.getElementById('statusProject').textContent = project.name;
+        document.getElementById('projectDot').style.background = project.color;
+        document.querySelectorAll('[data-stat]').forEach((stat) => {
+          stat.textContent = project.stats[stat.dataset.stat];
+        });
+        document.querySelectorAll('.project-option').forEach((item) => {
+          const active = item === option;
+          item.classList.toggle('active', active);
+          item.querySelector('.project-check').textContent = active ? '✓' : '';
+        });
+        openView('overview', '项目概览');
+        addAgentMessage(`切换到项目「${project.name}」`);
+        showToast(`已切换到：${project.name}`);
+      });
+    });
+
+    document.querySelectorAll('.activity-button[data-section]').forEach((button) => {
+      button.addEventListener('click', () => openView(button.dataset.section, viewLabels[button.dataset.section]));
+    });
+
+    document.querySelectorAll('[data-open-view]').forEach((element) => {
+      element.addEventListener('click', (event) => {
+        if (element.tagName === 'A') event.preventDefault();
+        openView(element.dataset.openView, element.dataset.label);
+      });
+    });
+
+    document.querySelectorAll('.editor-tab').forEach((tab) => {
+      tab.addEventListener('click', () => openView(tab.dataset.tabView, tab.querySelector('.tab-label').textContent));
+    });
+
+    document.querySelectorAll('[data-toast]').forEach((button) => {
+      button.addEventListener('click', () => showToast(button.dataset.toast));
+    });
+
+    document.querySelectorAll('[data-agent-prompt]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const prompt = button.dataset.agentPrompt;
+        agentInput.value = '';
+        addAgentMessage(prompt);
+        commandOverlay.classList.remove('open');
+      });
+    });
+
+    document.getElementById('agentForm').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const prompt = agentInput.value;
+      agentInput.value = '';
+      addAgentMessage(prompt);
+    });
+
+    agentInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        document.getElementById('agentForm').requestSubmit();
+      }
+    });
+
+    document.querySelectorAll('.context-chip .remove').forEach((button) => {
+      button.addEventListener('click', () => {
+        button.closest('.context-chip').remove();
+        const count = document.querySelectorAll('.context-chip').length;
+        document.getElementById('contextCount').textContent = `${count} 个来源`;
+      });
+    });
+
+    document.getElementById('paperFilter').addEventListener('input', (event) => {
+      const query = event.target.value.trim().toLowerCase();
+      document.querySelectorAll('#paperTable tr').forEach((row) => {
+        row.style.display = row.dataset.paperTitle.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    function openCommandPalette() {
+      commandOverlay.classList.add('open');
+      setTimeout(() => commandInput.focus(), 0);
+    }
+
+    document.getElementById('globalSearch').addEventListener('click', openCommandPalette);
+    commandOverlay.addEventListener('click', (event) => {
+      if (event.target === commandOverlay) commandOverlay.classList.remove('open');
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        openCommandPalette();
+      }
+      if (event.key === 'Escape') {
+        commandOverlay.classList.remove('open');
+        projectMenu.classList.remove('open');
+      }
+    });
+
+    document.getElementById('runExperiment').addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      const consoleBox = document.getElementById('experimentConsole');
+      button.disabled = true;
+      button.textContent = '运行中…';
+      consoleBox.innerHTML = '<div class="console-line info">$ scholarflow run configs/ablation.yaml --seed 42</div><div class="console-line">[18:21:04] 正在创建隔离运行环境…</div>';
+      const lines = [
+        '[18:21:05] 已验证代码版本与实验配置',
+        '[18:21:06] Dataset: BraTS mock split · train=834 · val=208',
+        '[18:21:07] epoch 1/300 · loss=0.924 · val_dice=0.418',
+        '[18:21:08] Demo 加速：已跳过中间训练轮次',
+        '[18:21:09] epoch 300/300 · val_dice=0.845 · val_hd95=6.14'
+      ];
+      lines.forEach((line, index) => {
+        setTimeout(() => {
+          const item = document.createElement('div');
+          item.className = 'console-line';
+          item.textContent = line;
+          consoleBox.appendChild(item);
+          consoleBox.scrollTop = consoleBox.scrollHeight;
+          if (index === lines.length - 1) {
+            const success = document.createElement('div');
+            success.className = 'console-line success';
+            success.textContent = '[18:21:10] Mock run-007 完成，产物已保存。';
+            consoleBox.appendChild(success);
+            button.disabled = false;
+            button.textContent = '再次运行';
+            showToast('Mock 实验 run-007 已完成');
+          }
+        }, 420 * (index + 1));
+      });
+    });
+  </script>
+</body>
+</html>
