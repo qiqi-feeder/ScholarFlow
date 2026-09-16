@@ -35,7 +35,10 @@ MVP 采用 **桌面端优先、本地优先** 的产品形态，建议使用 Ele
 | Research Project | 最高级别的数据、权限和 Agent 上下文边界 |
 | Project View | 文献、阅读、笔记、证据、实验等功能视图 |
 | Artifact | 论文、笔记、代码、数据集、图表或实验结果 |
+| Agent Profile | 面向某类任务的角色、工具权限和上下文策略，如 Reader、Writer、Reviewer、Experimenter |
+| Skill | 可按任务加载的专业方法与执行规范，如 Nature Writing |
 | Agent Session | 围绕一个具体科研任务展开的对话与执行历史 |
+| Context Handoff | 在不同 Session 之间传递的结构化目标、假设、约束与资产引用 |
 | Experiment Run | 一次可追溯的实验执行记录 |
 
 一个 Project 可以包含多个 Agent Session。Session 可以共享项目资产，但保持各自的任务上下文和历史记录。
@@ -127,6 +130,42 @@ ScholarFlow 自身负责以下业务能力：
 - UI 状态、权限、同步、协作和后续计费能力。
 
 Pi Session 不能作为 ScholarFlow 的业务数据库；所有需要查询、关联、导出和长期保存的数据都应进入 ScholarFlow 的领域数据层。
+
+### 7.1 Agent 动态组合
+
+用户在同一个 Agent 面板中连续对话，但一个 UI Conversation 可以包含多个任务级 Pi Session。工作区只提供默认路由，不与 Agent 一一绑定：阅读任务默认使用 Reader，论文撰写默认使用 Writer，独立审查使用 Reviewer，代码和实验任务使用 Experimenter。
+
+一次任务由以下部分动态组合：
+
+- ScholarFlow 全局安全与科研诚信规则。
+- 当前 Research Project 的目标与项目规范。
+- Agent Profile 定义的角色、上下文策略和工具权限。
+- 按任务加载的 Skills，例如 Nature Writing 或 Citation Audit。
+- 当前选中的论文、笔记、证据、代码或实验结果。
+
+相同 Profile、权限和任务范围内的连续消息可以复用 Session；Profile、工具权限或任务目标明显变化时，应创建新的 Session。用户显式选择优先于自动路由，MVP 提供 Auto、Writer、Reviewer、Experimenter 等模式。
+
+论文写作与排版需要分开处理：Skill 负责结构、论证、语言和期刊规范，LaTeX、Word、引用校验与编译等确定性工作由专用工具完成。
+
+### 7.2 上下文隔离与交接
+
+上下文分为三层：
+
+| 类型 | 范围 | 主要内容 |
+| --- | --- | --- |
+| Project Context | 项目内共享 | 项目目标、已确认事实、Artifact、证据和实验结果 |
+| Session Context | 当前任务私有 | 对话消息、工具调用、临时计划和调试过程 |
+| Context Handoff | Session 间显式传递 | 目标、假设、决定、约束、待解决问题和 Artifact 引用 |
+
+用户仅切换工作区时不创建 Session；当用户在新工作区发起任务时，系统再决定复用、分支或创建新的 Session。Reader、Writer 与 Experimenter 之间切换时，默认不复制完整聊天记录，而是生成可检查的 Context Handoff，只传递与新任务相关的内容。
+
+上下文切换支持三种模式：
+
+- **Clean**：新任务与前文无关，仅加载 Project Context 和当前选择。
+- **Handoff**：将前序讨论中的目标、假设、约束和资产引用传递给新 Session，作为默认模式。
+- **Fork**：任务本质未变化，只需延续现有推理或增加相近能力时，从原 Session 分支。
+
+Session 完成后，应将稳定结论写回 Evidence、Note、Experiment Run 或其他 Project Artifact。后续 Session 优先读取这些可追溯资产，而不是依赖完整聊天历史；上下文不足时，可以通过受限工具按需查询同一 Project 的历史内容。
 
 参考：[Pi SDK 官方文档](https://pi.dev/docs/latest/sdk)
 
