@@ -1,0 +1,23 @@
+{
+  "figma": {
+    "fileKey": "rQ8doN3vOtVhHFFrhhPxFp",
+    "screenNode": "10:2",
+    "designUrl": "https://www.figma.com/design/rQ8doN3vOtVhHFFrhhPxFp?node-id=10-2",
+    "exportMethod": "get_design_context asset exports; unmodified vectors, recolored with CSS masks"
+  },
+  "font": {
+    "repository": "https://github.com/vercel/geist-font",
+    "commit": "10dc7658f13c38a474cde201bb09a4617267545b",
+    "path": "fonts/Geist/webfonts/Geist[wght].woff2",
+    "licensePath": "OFL.txt"
+  },
+  "files": [
+    {"name":"document.svg","figmaNode":"11:7","sha256":"326b8e6511a855e1762d7a4c2911762b00e5f27472fc99bbd85b9d76986ce7c6"},
+    {"name":"experiment.svg","figmaNode":"12:22","sha256":"3e73e25d8a0f5951e721cb39028e0f74d72003e8d3c36a0fac14e2e1f14ba555"},
+    {"name":"folder.svg","figmaNode":"11:10","sha256":"81303be84bb1e5d3d465a154871cfdca478ef3f78c6675be95c2aeda85af5df3"},
+    {"name":"geist-variable.woff2","sha256":"2ffebe993e969069a9789d15164b7715d42491b5835516c5e3b935d5f81b05f1"},
+    {"name":"matrix.svg","figmaNode":"11:13","sha256":"b063f13e37ab50b729923b4b5bdc25b4df862220daa5f2f1227f73d3961ac95f"},
+    {"name":"OFL.txt","sha256":"c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90"},
+    {"name":"reading.svg","figmaNode":"12:19","sha256":"d6547eeee3217494a815ed26e02129c873e24693b2fac014bcaeb7f3e695db07"}
+  ]
+}
