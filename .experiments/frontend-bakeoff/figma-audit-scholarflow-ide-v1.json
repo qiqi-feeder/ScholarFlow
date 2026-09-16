@@ -1,0 +1,3665 @@
+{
+  "schemaVersion": 1,
+  "fileKey": "rQ8doN3vOtVhHFFrhhPxFp",
+  "workspaceRootId": "10:2",
+  "qa": {
+    "rootId": "10:2",
+    "width": 1440,
+    "height": 900,
+    "textCount": 87,
+    "instanceCount": 43,
+    "fontOffenders": [],
+    "unboundPaints": [],
+    "overflow": [],
+    "contrastFailures": [],
+    "minimumTextContrast": 4.788,
+    "textContrast": [
+      {
+        "id": "12:7",
+        "name": "App identity",
+        "ratio": 14.986,
+        "pass": true
+      },
+      {
+        "id": "12:8",
+        "name": "Back / Forward",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "12:14",
+        "name": "Local project",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "12:15",
+        "name": "Window controls",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "15:112",
+        "name": "Branch",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "15:113",
+        "name": "Project status",
+        "ratio": 7.043,
+        "pass": true
+      },
+      {
+        "id": "15:114",
+        "name": "Environment",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "15:116",
+        "name": "File mode",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "12:11",
+        "name": "Search prompt",
+        "ratio": 6.993,
+        "pass": true
+      },
+      {
+        "id": "12:12",
+        "name": "Keyboard hint",
+        "ratio": 6.993,
+        "pass": true
+      },
+      {
+        "id": "13:39",
+        "name": "Initials",
+        "ratio": 9.975,
+        "pass": true
+      },
+      {
+        "id": "13:41",
+        "name": "Heading",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "13:42",
+        "name": "More",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "13:50",
+        "name": "Project name",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "13:51",
+        "name": "Project directory",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "13:143",
+        "name": "Label",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "13:144",
+        "name": "Status",
+        "ratio": 6.526,
+        "pass": true
+      },
+      {
+        "id": "12:37",
+        "name": "Location",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "14:119",
+        "name": "Title",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "14:120",
+        "name": "Controls",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "14:122",
+        "name": "Context title",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "14:123",
+        "name": "Context summary",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "14:157",
+        "name": "Context hint",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "14:165",
+        "name": "Keyboard hint",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "I13:53;11:35",
+        "name": "label",
+        "ratio": 9.975,
+        "pass": true
+      },
+      {
+        "id": "I13:61;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:61;11:26",
+        "name": "meta",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "I13:69;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:77;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:85;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:85;11:26",
+        "name": "meta",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "I13:93;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:101;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:109;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:109;11:26",
+        "name": "meta",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "I13:117;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:125;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I13:125;11:26",
+        "name": "meta",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "I13:133;11:25",
+        "name": "label",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "I12:26;11:48",
+        "name": "label",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "I12:26;11:49",
+        "name": "close",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I12:30;11:45",
+        "name": "label",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "I12:30;11:46",
+        "name": "close",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "I12:33;11:45",
+        "name": "label",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "I12:33;11:46",
+        "name": "close",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "13:150",
+        "name": "Inline project context",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "13:152",
+        "name": "Section label",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "13:153",
+        "name": "Question",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "13:154",
+        "name": "Current direction",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "14:111",
+        "name": "Label",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "14:112",
+        "name": "Title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "14:113",
+        "name": "Description",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "14:115",
+        "name": "Tabs",
+        "ratio": 8.349,
+        "pass": true
+      },
+      {
+        "id": "14:117",
+        "name": "Log",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "14:127",
+        "name": "Sender",
+        "ratio": 6.993,
+        "pass": true
+      },
+      {
+        "id": "14:128",
+        "name": "Request",
+        "ratio": 12.553,
+        "pass": true
+      },
+      {
+        "id": "14:151",
+        "name": "Recommendation",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "14:152",
+        "name": "Reason and experiment",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "14:153",
+        "name": "Evidence label",
+        "ratio": 7.735,
+        "pass": true
+      },
+      {
+        "id": "14:154",
+        "name": "Citations",
+        "ratio": 4.788,
+        "pass": true
+      },
+      {
+        "id": "14:159",
+        "name": "Placeholder",
+        "ratio": 6.993,
+        "pass": true
+      },
+      {
+        "id": "13:147",
+        "name": "Document title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "14:87",
+        "name": "Title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "14:88",
+        "name": "Action",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "14:131",
+        "name": "Name",
+        "ratio": 13.885,
+        "pass": true
+      },
+      {
+        "id": "14:132",
+        "name": "Agent status",
+        "ratio": 6.526,
+        "pass": true
+      },
+      {
+        "id": "14:134",
+        "name": "Trace heading",
+        "ratio": 8.924,
+        "pass": true
+      },
+      {
+        "id": "I14:155;11:61",
+        "name": "label",
+        "ratio": 12.553,
+        "pass": true
+      },
+      {
+        "id": "14:162",
+        "name": "Attachments",
+        "ratio": 6.993,
+        "pass": true
+      },
+      {
+        "id": "I13:148;11:57",
+        "name": "label",
+        "ratio": 5.662,
+        "pass": true
+      },
+      {
+        "id": "I14:90;11:70",
+        "name": "index",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I14:90;11:74",
+        "name": "state",
+        "ratio": 5.515,
+        "pass": true
+      },
+      {
+        "id": "I14:96;11:70",
+        "name": "index",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I14:96;11:74",
+        "name": "state",
+        "ratio": 5.515,
+        "pass": true
+      },
+      {
+        "id": "I14:102;11:70",
+        "name": "index",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I14:102;11:74",
+        "name": "state",
+        "ratio": 4.884,
+        "pass": true
+      },
+      {
+        "id": "I14:135;11:25",
+        "name": "label",
+        "ratio": 16.019,
+        "pass": true
+      },
+      {
+        "id": "I14:135;11:26",
+        "name": "meta",
+        "ratio": 8.924,
+        "pass": true
+      },
+      {
+        "id": "I14:143;11:25",
+        "name": "label",
+        "ratio": 16.019,
+        "pass": true
+      },
+      {
+        "id": "I14:143;11:26",
+        "name": "meta",
+        "ratio": 8.924,
+        "pass": true
+      },
+      {
+        "id": "I14:163;11:57",
+        "name": "label",
+        "ratio": 5.662,
+        "pass": true
+      },
+      {
+        "id": "I14:90;11:72",
+        "name": "title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "I14:90;11:73",
+        "name": "source",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I14:96;11:72",
+        "name": "title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "I14:96;11:73",
+        "name": "source",
+        "ratio": 4.925,
+        "pass": true
+      },
+      {
+        "id": "I14:102;11:72",
+        "name": "title",
+        "ratio": 18.126,
+        "pass": true
+      },
+      {
+        "id": "I14:102;11:73",
+        "name": "source",
+        "ratio": 4.925,
+        "pass": true
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "11:7",
+      "name": "Icon/Document",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {}
+    },
+    {
+      "id": "11:10",
+      "name": "Icon/Folder",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {}
+    },
+    {
+      "id": "11:13",
+      "name": "Icon/Matrix",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {}
+    },
+    {
+      "id": "12:19",
+      "name": "Icon/Reading",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {}
+    },
+    {
+      "id": "12:22",
+      "name": "Icon/Experiment",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {}
+    },
+    {
+      "id": "11:39",
+      "name": "Tree Row",
+      "type": "COMPONENT_SET",
+      "variantCount": 3,
+      "axes": {
+        "State": {
+          "values": [
+            "Default",
+            "Hover",
+            "Selected"
+          ]
+        }
+      },
+      "properties": {
+        "Label#11:0": {
+          "type": "TEXT",
+          "defaultValue": "研究概览"
+        },
+        "Meta#11:4": {
+          "type": "TEXT",
+          "defaultValue": "12"
+        },
+        "Show Meta#11:8": {
+          "type": "BOOLEAN",
+          "defaultValue": false
+        },
+        "Icon#11:12": {
+          "type": "INSTANCE_SWAP",
+          "defaultValue": "11:7",
+          "preferredValues": []
+        },
+        "State": {
+          "type": "VARIANT",
+          "defaultValue": "Default",
+          "variantOptions": [
+            "Default",
+            "Hover",
+            "Selected"
+          ]
+        }
+      }
+    },
+    {
+      "id": "11:51",
+      "name": "Editor Tab",
+      "type": "COMPONENT_SET",
+      "variantCount": 2,
+      "axes": {
+        "State": {
+          "values": [
+            "Inactive",
+            "Active"
+          ]
+        }
+      },
+      "properties": {
+        "Label#11:16": {
+          "type": "TEXT",
+          "defaultValue": "研究概览"
+        },
+        "Show Close#11:19": {
+          "type": "BOOLEAN",
+          "defaultValue": true
+        },
+        "State": {
+          "type": "VARIANT",
+          "defaultValue": "Inactive",
+          "variantOptions": [
+            "Inactive",
+            "Active"
+          ]
+        }
+      }
+    },
+    {
+      "id": "11:64",
+      "name": "Workspace Button",
+      "type": "COMPONENT_SET",
+      "variantCount": 4,
+      "axes": {
+        "Style": {
+          "values": [
+            "Primary",
+            "Neutral"
+          ]
+        },
+        "State": {
+          "values": [
+            "Default",
+            "Hover"
+          ]
+        }
+      },
+      "properties": {
+        "Label#11:22": {
+          "type": "TEXT",
+          "defaultValue": "继续研究"
+        },
+        "Style": {
+          "type": "VARIANT",
+          "defaultValue": "Primary",
+          "variantOptions": [
+            "Primary",
+            "Neutral"
+          ]
+        },
+        "State": {
+          "type": "VARIANT",
+          "defaultValue": "Default",
+          "variantOptions": [
+            "Default",
+            "Hover"
+          ]
+        }
+      }
+    },
+    {
+      "id": "11:69",
+      "name": "Research Object Row",
+      "type": "COMPONENT",
+      "variantCount": 1,
+      "axes": {},
+      "properties": {
+        "Index#11:27": {
+          "type": "TEXT",
+          "defaultValue": "01"
+        },
+        "Title#11:28": {
+          "type": "TEXT",
+          "defaultValue": "UniSeg: A Unified Multi-Modal Segmentation Framework"
+        },
+        "Source#11:29": {
+          "type": "TEXT",
+          "defaultValue": "CVPR 2025 · Chen et al. · 12 pages"
+        },
+        "Reading State#11:30": {
+          "type": "TEXT",
+          "defaultValue": "精读中"
+        }
+      }
+    },
+    {
+      "id": "12:6",
+      "name": "Activity Item",
+      "type": "COMPONENT_SET",
+      "variantCount": 2,
+      "axes": {
+        "State": {
+          "values": [
+            "Inactive",
+            "Active"
+          ]
+        }
+      },
+      "properties": {
+        "Icon#12:0": {
+          "type": "INSTANCE_SWAP",
+          "defaultValue": "11:10",
+          "preferredValues": []
+        },
+        "State": {
+          "type": "VARIANT",
+          "defaultValue": "Inactive",
+          "variantOptions": [
+            "Inactive",
+            "Active"
+          ]
+        }
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "0:1",
+      "name": "Cover"
+    },
+    {
+      "id": "8:2",
+      "name": "Getting Started"
+    },
+    {
+      "id": "8:3",
+      "name": "Foundations"
+    },
+    {
+      "id": "8:4",
+      "name": "--- Components ---"
+    },
+    {
+      "id": "8:5",
+      "name": "Components"
+    },
+    {
+      "id": "8:6",
+      "name": "--- Utilities ---"
+    },
+    {
+      "id": "8:7",
+      "name": "Utilities"
+    },
+    {
+      "id": "8:8",
+      "name": "Workspace"
+    },
+    {
+      "id": "11:6",
+      "name": "Icons"
+    },
+    {
+      "id": "11:16",
+      "name": "Tree Row"
+    },
+    {
+      "id": "11:40",
+      "name": "Editor Tab"
+    },
+    {
+      "id": "11:52",
+      "name": "Workspace Button"
+    },
+    {
+      "id": "11:65",
+      "name": "Research Object Row"
+    },
+    {
+      "id": "11:75",
+      "name": "Activity Item"
+    }
+  ],
+  "collections": [
+    {
+      "id": "VariableCollectionId:4:2",
+      "name": "Primitives",
+      "modes": [
+        {
+          "name": "Default",
+          "modeId": "4:0"
+        }
+      ]
+    },
+    {
+      "id": "VariableCollectionId:4:3",
+      "name": "Semantic",
+      "modes": [
+        {
+          "name": "Default",
+          "modeId": "4:1"
+        }
+      ]
+    },
+    {
+      "id": "VariableCollectionId:4:4",
+      "name": "Size",
+      "modes": [
+        {
+          "name": "Default",
+          "modeId": "4:2"
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "VariableID:4:5",
+      "name": "graphite/950",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.06666667014360428,
+          "g": 0.07450980693101883,
+          "b": 0.08627451211214066,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-950)"
+    },
+    {
+      "id": "VariableID:4:6",
+      "name": "graphite/900",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.0941176488995552,
+          "g": 0.10196078568696976,
+          "b": 0.12156862765550613,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-900)"
+    },
+    {
+      "id": "VariableID:4:7",
+      "name": "graphite/850",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.11764705926179886,
+          "g": 0.12941177189350128,
+          "b": 0.15294118225574493,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-850)"
+    },
+    {
+      "id": "VariableID:4:8",
+      "name": "graphite/800",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.14509804546833038,
+          "g": 0.16078431904315948,
+          "b": 0.1921568661928177,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-800)"
+    },
+    {
+      "id": "VariableID:4:9",
+      "name": "graphite/700",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.20392157137393951,
+          "g": 0.2235294133424759,
+          "b": 0.26274511218070984,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-700)"
+    },
+    {
+      "id": "VariableID:4:10",
+      "name": "graphite/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.40784314274787903,
+          "g": 0.43529412150382996,
+          "b": 0.48627451062202454,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-500)"
+    },
+    {
+      "id": "VariableID:4:11",
+      "name": "graphite/300",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.6823529601097107,
+          "g": 0.7058823704719543,
+          "b": 0.7450980544090271,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-300)"
+    },
+    {
+      "id": "VariableID:4:12",
+      "name": "graphite/200",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.8392156958580017,
+          "g": 0.8549019694328308,
+          "b": 0.8784313797950745,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-200)"
+    },
+    {
+      "id": "VariableID:4:13",
+      "name": "graphite/100",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.9254902005195618,
+          "g": 0.9333333373069763,
+          "b": 0.9490196108818054,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-graphite-100)"
+    },
+    {
+      "id": "VariableID:4:14",
+      "name": "paper/white",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.9882352948188782,
+          "g": 0.9882352948188782,
+          "b": 0.9843137264251709,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-paper-white)"
+    },
+    {
+      "id": "VariableID:4:15",
+      "name": "white/1000",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 1,
+          "g": 1,
+          "b": 1,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-white-1000)"
+    },
+    {
+      "id": "VariableID:4:16",
+      "name": "blue/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.27843138575553894,
+          "g": 0.5333333611488342,
+          "b": 1,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-blue-500)"
+    },
+    {
+      "id": "VariableID:4:17",
+      "name": "blue/100",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.8666666746139526,
+          "g": 0.9137254953384399,
+          "b": 1,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-blue-100)"
+    },
+    {
+      "id": "VariableID:4:18",
+      "name": "teal/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.1764705926179886,
+          "g": 0.7215686440467834,
+          "b": 0.6392157077789307,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-teal-500)"
+    },
+    {
+      "id": "VariableID:4:19",
+      "name": "amber/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.9098039269447327,
+          "g": 0.6392157077789307,
+          "b": 0.23137255012989044,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-amber-500)"
+    },
+    {
+      "id": "VariableID:4:20",
+      "name": "red/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.9372549057006836,
+          "g": 0.4156862795352936,
+          "b": 0.4156862795352936,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-red-500)"
+    },
+    {
+      "id": "VariableID:4:21",
+      "name": "violet/500",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.545098066329956,
+          "g": 0.48627451062202454,
+          "b": 0.9647058844566345,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-violet-500)"
+    },
+    {
+      "id": "VariableID:4:22",
+      "name": "color/bg/app",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:5"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-app)"
+    },
+    {
+      "id": "VariableID:4:23",
+      "name": "color/bg/titlebar",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:6"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-titlebar)"
+    },
+    {
+      "id": "VariableID:4:24",
+      "name": "color/bg/activity",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:6"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-activity)"
+    },
+    {
+      "id": "VariableID:4:25",
+      "name": "color/bg/sidebar",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:7"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-sidebar)"
+    },
+    {
+      "id": "VariableID:4:26",
+      "name": "color/bg/hover",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:8"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-hover)"
+    },
+    {
+      "id": "VariableID:4:27",
+      "name": "color/bg/selected",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:9"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-selected)"
+    },
+    {
+      "id": "VariableID:4:28",
+      "name": "color/bg/editor",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:14"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-editor)"
+    },
+    {
+      "id": "VariableID:4:29",
+      "name": "color/bg/panel",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:15"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-panel)"
+    },
+    {
+      "id": "VariableID:4:30",
+      "name": "color/bg/accent",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:16:2"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-accent)"
+    },
+    {
+      "id": "VariableID:4:31",
+      "name": "color/bg/accent-subtle",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:17"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-accent-subtle)"
+    },
+    {
+      "id": "VariableID:4:32",
+      "name": "color/border/dark",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:9"
+        }
+      ],
+      "scopes": [
+        "STROKE_COLOR"
+      ],
+      "css": "var(--sf-color-border-dark)"
+    },
+    {
+      "id": "VariableID:4:33",
+      "name": "color/border/light",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:12"
+        }
+      ],
+      "scopes": [
+        "STROKE_COLOR"
+      ],
+      "css": "var(--sf-color-border-light)"
+    },
+    {
+      "id": "VariableID:4:34",
+      "name": "color/text/on-dark",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:13"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-on-dark)"
+    },
+    {
+      "id": "VariableID:4:35",
+      "name": "color/text/on-dark-muted",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:11"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-on-dark-muted)"
+    },
+    {
+      "id": "VariableID:4:36",
+      "name": "color/text/primary",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:5"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-primary)"
+    },
+    {
+      "id": "VariableID:4:37",
+      "name": "color/text/secondary",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:10"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-secondary)"
+    },
+    {
+      "id": "VariableID:4:38",
+      "name": "color/text/accent",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:16:2"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-accent)"
+    },
+    {
+      "id": "VariableID:4:39",
+      "name": "color/icon/on-dark",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:11"
+        }
+      ],
+      "scopes": [
+        "SHAPE_FILL",
+        "STROKE_COLOR"
+      ],
+      "css": "var(--sf-color-icon-on-dark)"
+    },
+    {
+      "id": "VariableID:4:40",
+      "name": "color/icon/default",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:10"
+        }
+      ],
+      "scopes": [
+        "SHAPE_FILL",
+        "STROKE_COLOR"
+      ],
+      "css": "var(--sf-color-icon-default)"
+    },
+    {
+      "id": "VariableID:4:41",
+      "name": "color/status/positive",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:18"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL",
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-status-positive)"
+    },
+    {
+      "id": "VariableID:4:42",
+      "name": "color/status/warning",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:19"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL",
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-status-warning)"
+    },
+    {
+      "id": "VariableID:4:43",
+      "name": "color/status/danger",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:20"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL",
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-status-danger)"
+    },
+    {
+      "id": "VariableID:4:44",
+      "name": "color/status/agent",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:21"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL",
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-status-agent)"
+    },
+    {
+      "id": "VariableID:4:45",
+      "name": "spacing/2xs",
+      "type": "FLOAT",
+      "values": [
+        2
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-2xs)"
+    },
+    {
+      "id": "VariableID:4:46",
+      "name": "spacing/xs",
+      "type": "FLOAT",
+      "values": [
+        4
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-xs)"
+    },
+    {
+      "id": "VariableID:4:47",
+      "name": "spacing/sm",
+      "type": "FLOAT",
+      "values": [
+        6
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-sm)"
+    },
+    {
+      "id": "VariableID:4:48",
+      "name": "spacing/md",
+      "type": "FLOAT",
+      "values": [
+        8
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-md)"
+    },
+    {
+      "id": "VariableID:4:49",
+      "name": "spacing/lg",
+      "type": "FLOAT",
+      "values": [
+        12
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-lg)"
+    },
+    {
+      "id": "VariableID:4:50",
+      "name": "spacing/xl",
+      "type": "FLOAT",
+      "values": [
+        16
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-xl)"
+    },
+    {
+      "id": "VariableID:4:51",
+      "name": "spacing/2xl",
+      "type": "FLOAT",
+      "values": [
+        20
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-2xl)"
+    },
+    {
+      "id": "VariableID:4:52",
+      "name": "spacing/3xl",
+      "type": "FLOAT",
+      "values": [
+        24
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-3xl)"
+    },
+    {
+      "id": "VariableID:4:53",
+      "name": "spacing/4xl",
+      "type": "FLOAT",
+      "values": [
+        32
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-4xl)"
+    },
+    {
+      "id": "VariableID:4:54",
+      "name": "radius/sm",
+      "type": "FLOAT",
+      "values": [
+        3
+      ],
+      "scopes": [
+        "CORNER_RADIUS"
+      ],
+      "css": "var(--sf-radius-sm)"
+    },
+    {
+      "id": "VariableID:4:55",
+      "name": "radius/md",
+      "type": "FLOAT",
+      "values": [
+        6
+      ],
+      "scopes": [
+        "CORNER_RADIUS"
+      ],
+      "css": "var(--sf-radius-md)"
+    },
+    {
+      "id": "VariableID:4:56",
+      "name": "radius/full",
+      "type": "FLOAT",
+      "values": [
+        999
+      ],
+      "scopes": [
+        "CORNER_RADIUS"
+      ],
+      "css": "var(--sf-radius-full)"
+    },
+    {
+      "id": "VariableID:11:2",
+      "name": "spacing/none",
+      "type": "FLOAT",
+      "values": [
+        0
+      ],
+      "scopes": [
+        "GAP"
+      ],
+      "css": "var(--sf-spacing-none)"
+    },
+    {
+      "id": "VariableID:11:3",
+      "name": "radius/none",
+      "type": "FLOAT",
+      "values": [
+        0
+      ],
+      "scopes": [
+        "CORNER_RADIUS"
+      ],
+      "css": "var(--sf-radius-none)"
+    },
+    {
+      "id": "VariableID:11:4",
+      "name": "stroke/hairline",
+      "type": "FLOAT",
+      "values": [
+        1
+      ],
+      "scopes": [
+        "STROKE_FLOAT"
+      ],
+      "css": "var(--sf-stroke-hairline)"
+    },
+    {
+      "id": "VariableID:11:5",
+      "name": "color/text/on-accent",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:15"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-on-accent)"
+    },
+    {
+      "id": "VariableID:16:2",
+      "name": "blue/700",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.1568627506494522,
+          "g": 0.3843137323856354,
+          "b": 0.800000011920929,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-blue-700)"
+    },
+    {
+      "id": "VariableID:16:3",
+      "name": "blue/600",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.18039216101169586,
+          "g": 0.4274509847164154,
+          "b": 0.8588235378265381,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-blue-600)"
+    },
+    {
+      "id": "VariableID:16:4",
+      "name": "teal/700",
+      "type": "COLOR",
+      "values": [
+        {
+          "r": 0.0784313753247261,
+          "g": 0.4901960790157318,
+          "b": 0.4313725531101227,
+          "a": 1
+        }
+      ],
+      "scopes": [],
+      "css": "var(--sf-teal-700)"
+    },
+    {
+      "id": "VariableID:16:5",
+      "name": "color/text/accent-on-dark",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:4:16"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-text-accent-on-dark)"
+    },
+    {
+      "id": "VariableID:16:6",
+      "name": "color/status/positive-on-light",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:16:4"
+        }
+      ],
+      "scopes": [
+        "TEXT_FILL"
+      ],
+      "css": "var(--sf-color-status-positive-on-light)"
+    },
+    {
+      "id": "VariableID:16:7",
+      "name": "color/bg/accent-hover",
+      "type": "COLOR",
+      "values": [
+        {
+          "alias": "VariableID:16:3"
+        }
+      ],
+      "scopes": [
+        "FRAME_FILL",
+        "SHAPE_FILL"
+      ],
+      "css": "var(--sf-color-bg-accent-hover)"
+    }
+  ],
+  "nodeInventory": [
+    [
+      "10:2",
+      "FRAME",
+      "ScholarFlow / Research Workspace",
+      "8:8"
+    ],
+    [
+      "10:3",
+      "FRAME",
+      "Titlebar",
+      "10:2"
+    ],
+    [
+      "10:4",
+      "FRAME",
+      "Workbench / Panes",
+      "10:2"
+    ],
+    [
+      "10:9",
+      "FRAME",
+      "Statusbar",
+      "10:2"
+    ],
+    [
+      "12:7",
+      "TEXT",
+      "App identity",
+      "10:3"
+    ],
+    [
+      "12:8",
+      "TEXT",
+      "Back / Forward",
+      "10:3"
+    ],
+    [
+      "12:9",
+      "FRAME",
+      "Flexible space / left",
+      "10:3"
+    ],
+    [
+      "12:10",
+      "FRAME",
+      "Command Search",
+      "10:3"
+    ],
+    [
+      "12:13",
+      "FRAME",
+      "Flexible space / right",
+      "10:3"
+    ],
+    [
+      "12:14",
+      "TEXT",
+      "Local project",
+      "10:3"
+    ],
+    [
+      "12:15",
+      "TEXT",
+      "Window controls",
+      "10:3"
+    ],
+    [
+      "10:5",
+      "FRAME",
+      "Activity Rail",
+      "10:4"
+    ],
+    [
+      "10:6",
+      "FRAME",
+      "Project Explorer",
+      "10:4"
+    ],
+    [
+      "10:7",
+      "FRAME",
+      "Research Editor",
+      "10:4"
+    ],
+    [
+      "10:8",
+      "FRAME",
+      "Agent Panel",
+      "10:4"
+    ],
+    [
+      "15:112",
+      "TEXT",
+      "Branch",
+      "10:9"
+    ],
+    [
+      "15:113",
+      "TEXT",
+      "Project status",
+      "10:9"
+    ],
+    [
+      "15:114",
+      "TEXT",
+      "Environment",
+      "10:9"
+    ],
+    [
+      "15:115",
+      "FRAME",
+      "Status Flexible space",
+      "10:9"
+    ],
+    [
+      "15:116",
+      "TEXT",
+      "File mode",
+      "10:9"
+    ],
+    [
+      "12:11",
+      "TEXT",
+      "Search prompt",
+      "12:10"
+    ],
+    [
+      "12:12",
+      "TEXT",
+      "Keyboard hint",
+      "12:10"
+    ],
+    [
+      "13:9",
+      "INSTANCE",
+      "Activity / Explorer",
+      "10:5"
+    ],
+    [
+      "13:17",
+      "INSTANCE",
+      "Activity / Reading",
+      "10:5"
+    ],
+    [
+      "13:25",
+      "INSTANCE",
+      "Activity / Evidence",
+      "10:5"
+    ],
+    [
+      "13:31",
+      "INSTANCE",
+      "Activity / Experiments",
+      "10:5"
+    ],
+    [
+      "13:37",
+      "FRAME",
+      "Flexible space",
+      "10:5"
+    ],
+    [
+      "13:38",
+      "FRAME",
+      "Account",
+      "10:5"
+    ],
+    [
+      "13:40",
+      "FRAME",
+      "Explorer Heading",
+      "10:6"
+    ],
+    [
+      "13:49",
+      "FRAME",
+      "Project Identity",
+      "10:6"
+    ],
+    [
+      "13:52",
+      "FRAME",
+      "Project Files",
+      "10:6"
+    ],
+    [
+      "13:141",
+      "FRAME",
+      "Flexible space",
+      "10:6"
+    ],
+    [
+      "13:142",
+      "FRAME",
+      "Index Status",
+      "10:6"
+    ],
+    [
+      "12:25",
+      "FRAME",
+      "Open Research Objects",
+      "10:7"
+    ],
+    [
+      "12:36",
+      "FRAME",
+      "Breadcrumb",
+      "10:7"
+    ],
+    [
+      "12:38",
+      "FRAME",
+      "Document Canvas",
+      "10:7"
+    ],
+    [
+      "12:39",
+      "FRAME",
+      "Research Output Panel",
+      "10:7"
+    ],
+    [
+      "14:118",
+      "FRAME",
+      "Agent Heading",
+      "10:8"
+    ],
+    [
+      "14:121",
+      "FRAME",
+      "Agent Project Context",
+      "10:8"
+    ],
+    [
+      "14:124",
+      "FRAME",
+      "Agent Conversation",
+      "10:8"
+    ],
+    [
+      "14:125",
+      "FRAME",
+      "Agent Composer Area",
+      "10:8"
+    ],
+    [
+      "I13:9;11:84",
+      "INSTANCE",
+      "Icon/Folder",
+      "13:9"
+    ],
+    [
+      "I13:17;11:80",
+      "INSTANCE",
+      "icon",
+      "13:17"
+    ],
+    [
+      "I13:25;11:80",
+      "INSTANCE",
+      "icon",
+      "13:25"
+    ],
+    [
+      "I13:31;11:80",
+      "INSTANCE",
+      "icon",
+      "13:31"
+    ],
+    [
+      "13:39",
+      "TEXT",
+      "Initials",
+      "13:38"
+    ],
+    [
+      "13:41",
+      "TEXT",
+      "Heading",
+      "13:40"
+    ],
+    [
+      "13:42",
+      "TEXT",
+      "More",
+      "13:40"
+    ],
+    [
+      "13:50",
+      "TEXT",
+      "Project name",
+      "13:49"
+    ],
+    [
+      "13:51",
+      "TEXT",
+      "Project directory",
+      "13:49"
+    ],
+    [
+      "13:53",
+      "INSTANCE",
+      "Selected / research.md",
+      "13:52"
+    ],
+    [
+      "13:61",
+      "INSTANCE",
+      "Folder / papers",
+      "13:52"
+    ],
+    [
+      "13:69",
+      "INSTANCE",
+      "File / UniSeg.pdf",
+      "13:52"
+    ],
+    [
+      "13:77",
+      "INSTANCE",
+      "File / Modality-Fusion.pdf",
+      "13:52"
+    ],
+    [
+      "13:85",
+      "INSTANCE",
+      "Folder / notes",
+      "13:52"
+    ],
+    [
+      "13:93",
+      "INSTANCE",
+      "Resource / hypothesis.md",
+      "13:52"
+    ],
+    [
+      "13:101",
+      "INSTANCE",
+      "Resource / reading-log.md",
+      "13:52"
+    ],
+    [
+      "13:109",
+      "INSTANCE",
+      "Resource / evidence",
+      "13:52"
+    ],
+    [
+      "13:117",
+      "INSTANCE",
+      "Resource / method.matrix",
+      "13:52"
+    ],
+    [
+      "13:125",
+      "INSTANCE",
+      "Resource / experiments",
+      "13:52"
+    ],
+    [
+      "13:133",
+      "INSTANCE",
+      "Resource / run-006",
+      "13:52"
+    ],
+    [
+      "13:143",
+      "TEXT",
+      "Label",
+      "13:142"
+    ],
+    [
+      "13:144",
+      "TEXT",
+      "Status",
+      "13:142"
+    ],
+    [
+      "12:26",
+      "INSTANCE",
+      "Active / research.md",
+      "12:25"
+    ],
+    [
+      "12:30",
+      "INSTANCE",
+      "Inactive / UniSeg.pdf",
+      "12:25"
+    ],
+    [
+      "12:33",
+      "INSTANCE",
+      "Inactive / evidence.matrix",
+      "12:25"
+    ],
+    [
+      "12:37",
+      "TEXT",
+      "Location",
+      "12:36"
+    ],
+    [
+      "13:145",
+      "FRAME",
+      "Research Document / Heading",
+      "12:38"
+    ],
+    [
+      "13:151",
+      "FRAME",
+      "Current Research Question",
+      "12:38"
+    ],
+    [
+      "14:85",
+      "FRAME",
+      "Resume Work",
+      "12:38"
+    ],
+    [
+      "14:110",
+      "FRAME",
+      "Next Research Step",
+      "12:38"
+    ],
+    [
+      "14:114",
+      "FRAME",
+      "Output Tabs",
+      "12:39"
+    ],
+    [
+      "14:116",
+      "FRAME",
+      "Output Events",
+      "12:39"
+    ],
+    [
+      "14:119",
+      "TEXT",
+      "Title",
+      "14:118"
+    ],
+    [
+      "14:120",
+      "TEXT",
+      "Controls",
+      "14:118"
+    ],
+    [
+      "14:122",
+      "TEXT",
+      "Context title",
+      "14:121"
+    ],
+    [
+      "14:123",
+      "TEXT",
+      "Context summary",
+      "14:121"
+    ],
+    [
+      "14:126",
+      "FRAME",
+      "User Message",
+      "14:124"
+    ],
+    [
+      "14:129",
+      "FRAME",
+      "Agent Reply",
+      "14:124"
+    ],
+    [
+      "14:157",
+      "TEXT",
+      "Context hint",
+      "14:125"
+    ],
+    [
+      "14:158",
+      "FRAME",
+      "Agent Input",
+      "14:125"
+    ],
+    [
+      "14:165",
+      "TEXT",
+      "Keyboard hint",
+      "14:125"
+    ],
+    [
+      "I13:9;11:84;11:11",
+      "FRAME",
+      "vector",
+      "I13:9;11:84"
+    ],
+    [
+      "I13:17;11:80;12:20",
+      "FRAME",
+      "vector",
+      "I13:17;11:80"
+    ],
+    [
+      "I13:25;11:80;11:14",
+      "FRAME",
+      "vector",
+      "I13:25;11:80"
+    ],
+    [
+      "I13:31;11:80;12:23",
+      "FRAME",
+      "vector",
+      "I13:31;11:80"
+    ],
+    [
+      "I13:53;11:34",
+      "INSTANCE",
+      "Icon/Document",
+      "13:53"
+    ],
+    [
+      "I13:53;11:35",
+      "TEXT",
+      "label",
+      "13:53"
+    ],
+    [
+      "I13:61;11:22",
+      "INSTANCE",
+      "icon",
+      "13:61"
+    ],
+    [
+      "I13:61;11:25",
+      "TEXT",
+      "label",
+      "13:61"
+    ],
+    [
+      "I13:61;11:26",
+      "TEXT",
+      "meta",
+      "13:61"
+    ],
+    [
+      "I13:69;11:22",
+      "INSTANCE",
+      "Icon/Document",
+      "13:69"
+    ],
+    [
+      "I13:69;11:25",
+      "TEXT",
+      "label",
+      "13:69"
+    ],
+    [
+      "I13:77;11:22",
+      "INSTANCE",
+      "Icon/Document",
+      "13:77"
+    ],
+    [
+      "I13:77;11:25",
+      "TEXT",
+      "label",
+      "13:77"
+    ],
+    [
+      "I13:85;11:22",
+      "INSTANCE",
+      "icon",
+      "13:85"
+    ],
+    [
+      "I13:85;11:25",
+      "TEXT",
+      "label",
+      "13:85"
+    ],
+    [
+      "I13:85;11:26",
+      "TEXT",
+      "meta",
+      "13:85"
+    ],
+    [
+      "I13:93;11:22",
+      "INSTANCE",
+      "Icon/Document",
+      "13:93"
+    ],
+    [
+      "I13:93;11:25",
+      "TEXT",
+      "label",
+      "13:93"
+    ],
+    [
+      "I13:101;11:22",
+      "INSTANCE",
+      "Icon/Document",
+      "13:101"
+    ],
+    [
+      "I13:101;11:25",
+      "TEXT",
+      "label",
+      "13:101"
+    ],
+    [
+      "I13:109;11:22",
+      "INSTANCE",
+      "icon",
+      "13:109"
+    ],
+    [
+      "I13:109;11:25",
+      "TEXT",
+      "label",
+      "13:109"
+    ],
+    [
+      "I13:109;11:26",
+      "TEXT",
+      "meta",
+      "13:109"
+    ],
+    [
+      "I13:117;11:22",
+      "INSTANCE",
+      "icon",
+      "13:117"
+    ],
+    [
+      "I13:117;11:25",
+      "TEXT",
+      "label",
+      "13:117"
+    ],
+    [
+      "I13:125;11:22",
+      "INSTANCE",
+      "icon",
+      "13:125"
+    ],
+    [
+      "I13:125;11:25",
+      "TEXT",
+      "label",
+      "13:125"
+    ],
+    [
+      "I13:125;11:26",
+      "TEXT",
+      "meta",
+      "13:125"
+    ],
+    [
+      "I13:133;11:22",
+      "INSTANCE",
+      "icon",
+      "13:133"
+    ],
+    [
+      "I13:133;11:25",
+      "TEXT",
+      "label",
+      "13:133"
+    ],
+    [
+      "I12:26;11:48",
+      "TEXT",
+      "label",
+      "12:26"
+    ],
+    [
+      "I12:26;11:49",
+      "TEXT",
+      "close",
+      "12:26"
+    ],
+    [
+      "I12:26;11:50",
+      "RECTANGLE",
+      "active-edge",
+      "12:26"
+    ],
+    [
+      "I12:30;11:45",
+      "TEXT",
+      "label",
+      "12:30"
+    ],
+    [
+      "I12:30;11:46",
+      "TEXT",
+      "close",
+      "12:30"
+    ],
+    [
+      "I12:33;11:45",
+      "TEXT",
+      "label",
+      "12:33"
+    ],
+    [
+      "I12:33;11:46",
+      "TEXT",
+      "close",
+      "12:33"
+    ],
+    [
+      "13:146",
+      "FRAME",
+      "Title and Next Action",
+      "13:145"
+    ],
+    [
+      "13:150",
+      "TEXT",
+      "Inline project context",
+      "13:145"
+    ],
+    [
+      "13:152",
+      "TEXT",
+      "Section label",
+      "13:151"
+    ],
+    [
+      "13:153",
+      "TEXT",
+      "Question",
+      "13:151"
+    ],
+    [
+      "13:154",
+      "TEXT",
+      "Current direction",
+      "13:151"
+    ],
+    [
+      "14:86",
+      "FRAME",
+      "Resume Heading",
+      "14:85"
+    ],
+    [
+      "14:89",
+      "FRAME",
+      "Open Research Queue",
+      "14:85"
+    ],
+    [
+      "14:111",
+      "TEXT",
+      "Label",
+      "14:110"
+    ],
+    [
+      "14:112",
+      "TEXT",
+      "Title",
+      "14:110"
+    ],
+    [
+      "14:113",
+      "TEXT",
+      "Description",
+      "14:110"
+    ],
+    [
+      "14:115",
+      "TEXT",
+      "Tabs",
+      "14:114"
+    ],
+    [
+      "14:117",
+      "TEXT",
+      "Log",
+      "14:116"
+    ],
+    [
+      "14:127",
+      "TEXT",
+      "Sender",
+      "14:126"
+    ],
+    [
+      "14:128",
+      "TEXT",
+      "Request",
+      "14:126"
+    ],
+    [
+      "14:130",
+      "FRAME",
+      "Agent Identity",
+      "14:129"
+    ],
+    [
+      "14:133",
+      "FRAME",
+      "Agent Tool Trace",
+      "14:129"
+    ],
+    [
+      "14:151",
+      "TEXT",
+      "Recommendation",
+      "14:129"
+    ],
+    [
+      "14:152",
+      "TEXT",
+      "Reason and experiment",
+      "14:129"
+    ],
+    [
+      "14:153",
+      "TEXT",
+      "Evidence label",
+      "14:129"
+    ],
+    [
+      "14:154",
+      "TEXT",
+      "Citations",
+      "14:129"
+    ],
+    [
+      "14:155",
+      "INSTANCE",
+      "Action / Create Experiment Plan",
+      "14:129"
+    ],
+    [
+      "14:159",
+      "TEXT",
+      "Placeholder",
+      "14:158"
+    ],
+    [
+      "14:160",
+      "FRAME",
+      "Input Flexible space",
+      "14:158"
+    ],
+    [
+      "14:161",
+      "FRAME",
+      "Input Controls",
+      "14:158"
+    ],
+    [
+      "I13:9;11:84;11:12",
+      "VECTOR",
+      "Vector",
+      "I13:9;11:84;11:11"
+    ],
+    [
+      "I13:17;11:80;12:21",
+      "VECTOR",
+      "Vector",
+      "I13:17;11:80;12:20"
+    ],
+    [
+      "I13:25;11:80;11:15",
+      "VECTOR",
+      "Vector",
+      "I13:25;11:80;11:14"
+    ],
+    [
+      "I13:31;11:80;12:24",
+      "VECTOR",
+      "Vector",
+      "I13:31;11:80;12:23"
+    ],
+    [
+      "I13:53;11:34;11:8",
+      "FRAME",
+      "vector",
+      "I13:53;11:34"
+    ],
+    [
+      "I13:61;11:22;11:11",
+      "FRAME",
+      "vector",
+      "I13:61;11:22"
+    ],
+    [
+      "I13:69;11:22;11:8",
+      "FRAME",
+      "vector",
+      "I13:69;11:22"
+    ],
+    [
+      "I13:77;11:22;11:8",
+      "FRAME",
+      "vector",
+      "I13:77;11:22"
+    ],
+    [
+      "I13:85;11:22;11:11",
+      "FRAME",
+      "vector",
+      "I13:85;11:22"
+    ],
+    [
+      "I13:93;11:22;11:8",
+      "FRAME",
+      "vector",
+      "I13:93;11:22"
+    ],
+    [
+      "I13:101;11:22;11:8",
+      "FRAME",
+      "vector",
+      "I13:101;11:22"
+    ],
+    [
+      "I13:109;11:22;11:11",
+      "FRAME",
+      "vector",
+      "I13:109;11:22"
+    ],
+    [
+      "I13:117;11:22;11:14",
+      "FRAME",
+      "vector",
+      "I13:117;11:22"
+    ],
+    [
+      "I13:125;11:22;11:11",
+      "FRAME",
+      "vector",
+      "I13:125;11:22"
+    ],
+    [
+      "I13:133;11:22;12:23",
+      "FRAME",
+      "vector",
+      "I13:133;11:22"
+    ],
+    [
+      "13:147",
+      "TEXT",
+      "Document title",
+      "13:146"
+    ],
+    [
+      "13:148",
+      "INSTANCE",
+      "Primary / Continue Research",
+      "13:146"
+    ],
+    [
+      "14:87",
+      "TEXT",
+      "Title",
+      "14:86"
+    ],
+    [
+      "14:88",
+      "TEXT",
+      "Action",
+      "14:86"
+    ],
+    [
+      "14:90",
+      "INSTANCE",
+      "Resume / UniSeg: A Unified Multi-modal Framework",
+      "14:89"
+    ],
+    [
+      "14:96",
+      "INSTANCE",
+      "Resume / 研究假设与当前结论",
+      "14:89"
+    ],
+    [
+      "14:102",
+      "INSTANCE",
+      "Resume / run-006 · modality_dropout=0.3",
+      "14:89"
+    ],
+    [
+      "14:131",
+      "TEXT",
+      "Name",
+      "14:130"
+    ],
+    [
+      "14:132",
+      "TEXT",
+      "Agent status",
+      "14:130"
+    ],
+    [
+      "14:134",
+      "TEXT",
+      "Trace heading",
+      "14:133"
+    ],
+    [
+      "14:135",
+      "INSTANCE",
+      "Tool / 检索文献与证据",
+      "14:133"
+    ],
+    [
+      "14:143",
+      "INSTANCE",
+      "Tool / 读取实验结果",
+      "14:133"
+    ],
+    [
+      "I14:155;11:61",
+      "TEXT",
+      "label",
+      "14:155"
+    ],
+    [
+      "14:162",
+      "TEXT",
+      "Attachments",
+      "14:161"
+    ],
+    [
+      "14:163",
+      "INSTANCE",
+      "Primary / Send",
+      "14:161"
+    ],
+    [
+      "I13:53;11:34;11:9",
+      "VECTOR",
+      "Vector",
+      "I13:53;11:34;11:8"
+    ],
+    [
+      "I13:61;11:22;11:12",
+      "VECTOR",
+      "Vector",
+      "I13:61;11:22;11:11"
+    ],
+    [
+      "I13:69;11:22;11:9",
+      "VECTOR",
+      "Vector",
+      "I13:69;11:22;11:8"
+    ],
+    [
+      "I13:77;11:22;11:9",
+      "VECTOR",
+      "Vector",
+      "I13:77;11:22;11:8"
+    ],
+    [
+      "I13:85;11:22;11:12",
+      "VECTOR",
+      "Vector",
+      "I13:85;11:22;11:11"
+    ],
+    [
+      "I13:93;11:22;11:9",
+      "VECTOR",
+      "Vector",
+      "I13:93;11:22;11:8"
+    ],
+    [
+      "I13:101;11:22;11:9",
+      "VECTOR",
+      "Vector",
+      "I13:101;11:22;11:8"
+    ],
+    [
+      "I13:109;11:22;11:12",
+      "VECTOR",
+      "Vector",
+      "I13:109;11:22;11:11"
+    ],
+    [
+      "I13:117;11:22;11:15",
+      "VECTOR",
+      "Vector",
+      "I13:117;11:22;11:14"
+    ],
+    [
+      "I13:125;11:22;11:12",
+      "VECTOR",
+      "Vector",
+      "I13:125;11:22;11:11"
+    ],
+    [
+      "I13:133;11:22;12:24",
+      "VECTOR",
+      "Vector",
+      "I13:133;11:22;12:23"
+    ],
+    [
+      "I13:148;11:57",
+      "TEXT",
+      "label",
+      "13:148"
+    ],
+    [
+      "I14:90;11:70",
+      "TEXT",
+      "index",
+      "14:90"
+    ],
+    [
+      "I14:90;11:71",
+      "FRAME",
+      "content",
+      "14:90"
+    ],
+    [
+      "I14:90;11:74",
+      "TEXT",
+      "state",
+      "14:90"
+    ],
+    [
+      "I14:96;11:70",
+      "TEXT",
+      "index",
+      "14:96"
+    ],
+    [
+      "I14:96;11:71",
+      "FRAME",
+      "content",
+      "14:96"
+    ],
+    [
+      "I14:96;11:74",
+      "TEXT",
+      "state",
+      "14:96"
+    ],
+    [
+      "I14:102;11:70",
+      "TEXT",
+      "index",
+      "14:102"
+    ],
+    [
+      "I14:102;11:71",
+      "FRAME",
+      "content",
+      "14:102"
+    ],
+    [
+      "I14:102;11:74",
+      "TEXT",
+      "state",
+      "14:102"
+    ],
+    [
+      "I14:135;11:22",
+      "INSTANCE",
+      "icon",
+      "14:135"
+    ],
+    [
+      "I14:135;11:25",
+      "TEXT",
+      "label",
+      "14:135"
+    ],
+    [
+      "I14:135;11:26",
+      "TEXT",
+      "meta",
+      "14:135"
+    ],
+    [
+      "I14:143;11:22",
+      "INSTANCE",
+      "icon",
+      "14:143"
+    ],
+    [
+      "I14:143;11:25",
+      "TEXT",
+      "label",
+      "14:143"
+    ],
+    [
+      "I14:143;11:26",
+      "TEXT",
+      "meta",
+      "14:143"
+    ],
+    [
+      "I14:163;11:57",
+      "TEXT",
+      "label",
+      "14:163"
+    ],
+    [
+      "I14:90;11:72",
+      "TEXT",
+      "title",
+      "I14:90;11:71"
+    ],
+    [
+      "I14:90;11:73",
+      "TEXT",
+      "source",
+      "I14:90;11:71"
+    ],
+    [
+      "I14:96;11:72",
+      "TEXT",
+      "title",
+      "I14:96;11:71"
+    ],
+    [
+      "I14:96;11:73",
+      "TEXT",
+      "source",
+      "I14:96;11:71"
+    ],
+    [
+      "I14:102;11:72",
+      "TEXT",
+      "title",
+      "I14:102;11:71"
+    ],
+    [
+      "I14:102;11:73",
+      "TEXT",
+      "source",
+      "I14:102;11:71"
+    ],
+    [
+      "I14:135;11:22;11:11",
+      "FRAME",
+      "vector",
+      "I14:135;11:22"
+    ],
+    [
+      "I14:143;11:22;12:23",
+      "FRAME",
+      "vector",
+      "I14:143;11:22"
+    ],
+    [
+      "I14:135;11:22;11:12",
+      "VECTOR",
+      "Vector",
+      "I14:135;11:22;11:11"
+    ],
+    [
+      "I14:143;11:22;12:24",
+      "VECTOR",
+      "Vector",
+      "I14:143;11:22;12:23"
+    ],
+    [
+      "9:2",
+      "FRAME",
+      "ScholarFlow / Cover",
+      "0:1"
+    ],
+    [
+      "9:6",
+      "FRAME",
+      "Getting Started / Guide",
+      "8:2"
+    ],
+    [
+      "10:10",
+      "FRAME",
+      "Foundations / Reference",
+      "8:3"
+    ],
+    [
+      "17:2",
+      "FRAME",
+      "Components / Catalog",
+      "8:5"
+    ],
+    [
+      "17:7",
+      "FRAME",
+      "Utilities / Implementation Notes",
+      "8:7"
+    ],
+    [
+      "12:16",
+      "FRAME",
+      "Icons / Documentation",
+      "11:6"
+    ],
+    [
+      "11:7",
+      "COMPONENT",
+      "Icon/Document",
+      "11:6"
+    ],
+    [
+      "11:10",
+      "COMPONENT",
+      "Icon/Folder",
+      "11:6"
+    ],
+    [
+      "11:13",
+      "COMPONENT",
+      "Icon/Matrix",
+      "11:6"
+    ],
+    [
+      "12:19",
+      "COMPONENT",
+      "Icon/Reading",
+      "11:6"
+    ],
+    [
+      "12:22",
+      "COMPONENT",
+      "Icon/Experiment",
+      "11:6"
+    ],
+    [
+      "11:17",
+      "FRAME",
+      "Tree Row / Documentation",
+      "11:16"
+    ],
+    [
+      "11:39",
+      "COMPONENT_SET",
+      "Tree Row",
+      "11:16"
+    ],
+    [
+      "11:41",
+      "FRAME",
+      "Editor Tab / Documentation",
+      "11:40"
+    ],
+    [
+      "11:51",
+      "COMPONENT_SET",
+      "Editor Tab",
+      "11:40"
+    ],
+    [
+      "11:53",
+      "FRAME",
+      "Workspace Button / Documentation",
+      "11:52"
+    ],
+    [
+      "11:64",
+      "COMPONENT_SET",
+      "Workspace Button",
+      "11:52"
+    ],
+    [
+      "11:66",
+      "FRAME",
+      "Research Object Row / Documentation",
+      "11:65"
+    ],
+    [
+      "11:69",
+      "COMPONENT",
+      "Research Object Row",
+      "11:65"
+    ],
+    [
+      "11:76",
+      "FRAME",
+      "Activity Item / Documentation",
+      "11:75"
+    ],
+    [
+      "12:6",
+      "COMPONENT_SET",
+      "Activity Item",
+      "11:75"
+    ],
+    [
+      "9:3",
+      "TEXT",
+      "Title",
+      "9:2"
+    ],
+    [
+      "9:4",
+      "TEXT",
+      "Direction",
+      "9:2"
+    ],
+    [
+      "9:5",
+      "TEXT",
+      "Version",
+      "9:2"
+    ],
+    [
+      "9:7",
+      "TEXT",
+      "Title",
+      "9:6"
+    ],
+    [
+      "9:8",
+      "TEXT",
+      "Scope",
+      "9:6"
+    ],
+    [
+      "9:9",
+      "TEXT",
+      "Navigate",
+      "9:6"
+    ],
+    [
+      "9:10",
+      "TEXT",
+      "Review",
+      "9:6"
+    ],
+    [
+      "10:11",
+      "TEXT",
+      "Title",
+      "10:10"
+    ],
+    [
+      "10:12",
+      "TEXT",
+      "Color system",
+      "10:10"
+    ],
+    [
+      "10:13",
+      "TEXT",
+      "Color usage",
+      "10:10"
+    ],
+    [
+      "10:14",
+      "TEXT",
+      "Typography",
+      "10:10"
+    ],
+    [
+      "10:15",
+      "TEXT",
+      "Type scale",
+      "10:10"
+    ],
+    [
+      "10:16",
+      "TEXT",
+      "Spacing",
+      "10:10"
+    ],
+    [
+      "10:17",
+      "TEXT",
+      "Spacing reference",
+      "10:10"
+    ],
+    [
+      "17:3",
+      "TEXT",
+      "Title",
+      "17:2"
+    ],
+    [
+      "17:4",
+      "TEXT",
+      "Description",
+      "17:2"
+    ],
+    [
+      "17:5",
+      "TEXT",
+      "Catalog",
+      "17:2"
+    ],
+    [
+      "17:6",
+      "TEXT",
+      "Use",
+      "17:2"
+    ],
+    [
+      "17:8",
+      "TEXT",
+      "Title",
+      "17:7"
+    ],
+    [
+      "17:9",
+      "TEXT",
+      "Layout",
+      "17:7"
+    ],
+    [
+      "17:10",
+      "TEXT",
+      "Interactions",
+      "17:7"
+    ],
+    [
+      "17:11",
+      "TEXT",
+      "Scope",
+      "17:7"
+    ],
+    [
+      "12:17",
+      "TEXT",
+      "Title",
+      "12:16"
+    ],
+    [
+      "12:18",
+      "TEXT",
+      "Description",
+      "12:16"
+    ],
+    [
+      "11:8",
+      "FRAME",
+      "vector",
+      "11:7"
+    ],
+    [
+      "11:11",
+      "FRAME",
+      "vector",
+      "11:10"
+    ],
+    [
+      "11:14",
+      "FRAME",
+      "vector",
+      "11:13"
+    ],
+    [
+      "12:20",
+      "FRAME",
+      "vector",
+      "12:19"
+    ],
+    [
+      "12:23",
+      "FRAME",
+      "vector",
+      "12:22"
+    ],
+    [
+      "11:18",
+      "TEXT",
+      "Title",
+      "11:17"
+    ],
+    [
+      "11:19",
+      "TEXT",
+      "Description",
+      "11:17"
+    ],
+    [
+      "11:20",
+      "TEXT",
+      "Spec",
+      "11:17"
+    ],
+    [
+      "11:21",
+      "COMPONENT",
+      "State=Default",
+      "11:39"
+    ],
+    [
+      "11:27",
+      "COMPONENT",
+      "State=Hover",
+      "11:39"
+    ],
+    [
+      "11:33",
+      "COMPONENT",
+      "State=Selected",
+      "11:39"
+    ],
+    [
+      "11:42",
+      "TEXT",
+      "Title",
+      "11:41"
+    ],
+    [
+      "11:43",
+      "TEXT",
+      "Description",
+      "11:41"
+    ],
+    [
+      "11:44",
+      "COMPONENT",
+      "State=Inactive",
+      "11:51"
+    ],
+    [
+      "11:47",
+      "COMPONENT",
+      "State=Active",
+      "11:51"
+    ],
+    [
+      "11:54",
+      "TEXT",
+      "Title",
+      "11:53"
+    ],
+    [
+      "11:55",
+      "TEXT",
+      "Description",
+      "11:53"
+    ],
+    [
+      "11:56",
+      "COMPONENT",
+      "Style=Primary, State=Default",
+      "11:64"
+    ],
+    [
+      "11:58",
+      "COMPONENT",
+      "Style=Primary, State=Hover",
+      "11:64"
+    ],
+    [
+      "11:60",
+      "COMPONENT",
+      "Style=Neutral, State=Default",
+      "11:64"
+    ],
+    [
+      "11:62",
+      "COMPONENT",
+      "Style=Neutral, State=Hover",
+      "11:64"
+    ],
+    [
+      "11:67",
+      "TEXT",
+      "Title",
+      "11:66"
+    ],
+    [
+      "11:68",
+      "TEXT",
+      "Description",
+      "11:66"
+    ],
+    [
+      "11:70",
+      "TEXT",
+      "index",
+      "11:69"
+    ],
+    [
+      "11:71",
+      "FRAME",
+      "content",
+      "11:69"
+    ],
+    [
+      "11:74",
+      "TEXT",
+      "state",
+      "11:69"
+    ],
+    [
+      "11:77",
+      "TEXT",
+      "Title",
+      "11:76"
+    ],
+    [
+      "11:78",
+      "TEXT",
+      "Description",
+      "11:76"
+    ],
+    [
+      "11:79",
+      "COMPONENT",
+      "State=Inactive",
+      "12:6"
+    ],
+    [
+      "11:83",
+      "COMPONENT",
+      "State=Active",
+      "12:6"
+    ],
+    [
+      "11:9",
+      "VECTOR",
+      "Vector",
+      "11:8"
+    ],
+    [
+      "11:12",
+      "VECTOR",
+      "Vector",
+      "11:11"
+    ],
+    [
+      "11:15",
+      "VECTOR",
+      "Vector",
+      "11:14"
+    ],
+    [
+      "12:21",
+      "VECTOR",
+      "Vector",
+      "12:20"
+    ],
+    [
+      "12:24",
+      "VECTOR",
+      "Vector",
+      "12:23"
+    ],
+    [
+      "11:22",
+      "INSTANCE",
+      "icon",
+      "11:21"
+    ],
+    [
+      "11:25",
+      "TEXT",
+      "label",
+      "11:21"
+    ],
+    [
+      "11:26",
+      "TEXT",
+      "meta",
+      "11:21"
+    ],
+    [
+      "11:28",
+      "INSTANCE",
+      "icon",
+      "11:27"
+    ],
+    [
+      "11:29",
+      "TEXT",
+      "label",
+      "11:27"
+    ],
+    [
+      "11:30",
+      "TEXT",
+      "meta",
+      "11:27"
+    ],
+    [
+      "11:34",
+      "INSTANCE",
+      "icon",
+      "11:33"
+    ],
+    [
+      "11:35",
+      "TEXT",
+      "label",
+      "11:33"
+    ],
+    [
+      "11:36",
+      "TEXT",
+      "meta",
+      "11:33"
+    ],
+    [
+      "11:45",
+      "TEXT",
+      "label",
+      "11:44"
+    ],
+    [
+      "11:46",
+      "TEXT",
+      "close",
+      "11:44"
+    ],
+    [
+      "11:48",
+      "TEXT",
+      "label",
+      "11:47"
+    ],
+    [
+      "11:49",
+      "TEXT",
+      "close",
+      "11:47"
+    ],
+    [
+      "11:50",
+      "RECTANGLE",
+      "active-edge",
+      "11:47"
+    ],
+    [
+      "11:57",
+      "TEXT",
+      "label",
+      "11:56"
+    ],
+    [
+      "11:59",
+      "TEXT",
+      "label",
+      "11:58"
+    ],
+    [
+      "11:61",
+      "TEXT",
+      "label",
+      "11:60"
+    ],
+    [
+      "11:63",
+      "TEXT",
+      "label",
+      "11:62"
+    ],
+    [
+      "11:72",
+      "TEXT",
+      "title",
+      "11:71"
+    ],
+    [
+      "11:73",
+      "TEXT",
+      "source",
+      "11:71"
+    ],
+    [
+      "11:80",
+      "INSTANCE",
+      "icon",
+      "11:79"
+    ],
+    [
+      "11:84",
+      "INSTANCE",
+      "icon",
+      "11:83"
+    ],
+    [
+      "I11:22;11:8",
+      "FRAME",
+      "vector",
+      "11:22"
+    ],
+    [
+      "I11:28;11:8",
+      "FRAME",
+      "vector",
+      "11:28"
+    ],
+    [
+      "I11:34;11:8",
+      "FRAME",
+      "vector",
+      "11:34"
+    ],
+    [
+      "I11:80;11:11",
+      "FRAME",
+      "vector",
+      "11:80"
+    ],
+    [
+      "I11:84;11:11",
+      "FRAME",
+      "vector",
+      "11:84"
+    ],
+    [
+      "I11:22;11:9",
+      "VECTOR",
+      "Vector",
+      "I11:22;11:8"
+    ],
+    [
+      "I11:28;11:9",
+      "VECTOR",
+      "Vector",
+      "I11:28;11:8"
+    ],
+    [
+      "I11:34;11:9",
+      "VECTOR",
+      "Vector",
+      "I11:34;11:8"
+    ],
+    [
+      "I11:80;11:12",
+      "VECTOR",
+      "Vector",
+      "I11:80;11:11"
+    ],
+    [
+      "I11:84;11:12",
+      "VECTOR",
+      "Vector",
+      "I11:84;11:11"
+    ]
+  ]
+}
