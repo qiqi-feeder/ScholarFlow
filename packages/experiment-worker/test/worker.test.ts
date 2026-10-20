@@ -467,6 +467,11 @@ test("the worker also runs as an independent process against the shared database
     assert.equal(run.status, "succeeded");
     assert.match(readFileSync(run.logPath, "utf8"), /experiment stdout/);
     assert.ok(existsSync(path.join(root, "runs", "run_process", "snapshot.json")));
+
+    // The standalone worker must remain alive after draining the queue so later
+    // approvals are still picked up without a manual restart.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    assert.equal(child.exitCode, null, "idle worker exited instead of waiting for the next run");
   } finally {
     if (child && child.exitCode === null) {
       if (process.platform === "win32") {

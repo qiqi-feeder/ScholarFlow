@@ -93,8 +93,9 @@ export class ExperimentWorker {
 
   private sleep(): Promise<void> {
     return new Promise((resolve) => {
+      // Keep the idle poll timer referenced. Otherwise a standalone worker exits
+      // as soon as its queue is empty, leaving queued runs with no owner.
       this.timer = setTimeout(resolve, this.pollMs);
-      this.timer.unref?.();
       this.wakeResolver = () => {
         if (this.timer) clearTimeout(this.timer);
         resolve();
