@@ -88,6 +88,15 @@ function Assert-ProjectOrganization([string]$text) {
 }
 Assert-ProjectOrganization $discovery
 
+# Preserve the difference between an integration proposal and implemented value.
+function Assert-PiPositioning([string]$text) {
+    $section = [regex]::Match($text, '(?s)### 3\.7 Pi 底座、第三方 Skill 与工作台价值\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if ($section -notmatch '(?m)^状态：候选定位解释，尚未确认') { throw 'Pi positioning lost its candidate status.' }
+    if (-not $section.Contains('尚未实现本节能力')) { throw 'Pi positioning lost its implementation boundary.' }
+    if (-not $section.Contains('格式可读不等于依赖已安装、权限已授予或执行已验证')) { throw 'Skill format and runtime compatibility boundary is missing.' }
+}
+Assert-PiPositioning $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -134,4 +143,7 @@ Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace('以下均为助
 Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| C03 |', '| 未登记 |')) } 'Missing confirmed full-lifecycle record'
 Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('状态：候选产品组织，尚未确认', '状态：已批准产品组织')) } 'lost its unconfirmed status'
 Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| 任务会话 |', '| 未分类 |')) } 'Missing organization boundary'
-Write-Output 'Discovery provenance, links, proposed responsibilities/organization, confirmed reproduction/workbench scope and 24 negative cases passed (documentation only).'
+Assert-Rejected { Assert-PiPositioning ($discovery.Replace('状态：候选定位解释，尚未确认', '状态：已批准定位')) } 'lost its candidate status'
+Assert-Rejected { Assert-PiPositioning ($discovery.Replace('尚未实现本节能力', '本节能力均已实现')) } 'lost its implementation boundary'
+Assert-Rejected { Assert-PiPositioning ($discovery.Replace('格式可读不等于依赖已安装、权限已授予或执行已验证', '所有 Skill 均可直接运行')) } 'runtime compatibility boundary'
+Write-Output 'Discovery provenance, links, proposal/implementation/compatibility boundaries and 27 negative cases passed (documentation only).'
