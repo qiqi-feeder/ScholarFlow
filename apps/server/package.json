@@ -1,0 +1,14 @@
+{
+  "name": "@scholarflow/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.3.0",
+    "@scholarflow/experiment-worker": "0.1.0",
+    "@scholarflow/research": "0.1.0",
+    "archiver": "^7.0.1",
+    "typebox": "1.3.27",
+    "unpdf": "^0.12.1"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "scholarflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-first agentic research workspace built on the Pi SDK",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "tsx apps/server/src/index.ts",
+    "dev:server": "tsx watch apps/server/src/index.ts",
+    "dev:web": "vite --config apps/web/vite.config.ts",
+    "build": "vite build --config apps/web/vite.config.ts",
+    "worker": "tsx packages/experiment-worker/src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test \"packages/research/test/*.test.ts\" \"apps/server/test/*.test.ts\" \"packages/experiment-worker/test/*.test.ts\"",
+    "test:browser": "node --import tsx --test apps/web/test/browser.test.ts",
+    "verify": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright-core": "^1.49.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}
