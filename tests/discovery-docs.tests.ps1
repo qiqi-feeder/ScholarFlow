@@ -97,6 +97,17 @@ function Assert-PiPositioning([string]$text) {
 }
 Assert-PiPositioning $discovery
 
+# A smaller release proposal must preserve its approval and full-lifecycle bounds.
+function Assert-MvpProposal([string]$text) {
+    $section = [regex]::Match($text, '(?s)### 3\.8 第一版 MVP 范围建议与剩余决定\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if ($section -notmatch '(?m)^状态：MVP 建议，尚未整体确认，尚未进入实施规划') { throw 'MVP proposal lost its approval boundary.' }
+    foreach ($stage in @('调研与方案', '实验', '结果与分析', 'LaTeX 稿件', '投稿与修订')) {
+        if ($section -notmatch ('(?m)^\| ' + [regex]::Escape($stage) + ' \|')) { throw "Missing MVP lifecycle stage: $stage" }
+    }
+    if (-not $section.Contains('本地运行不自动等于模型离线')) { throw 'Local runtime and offline model boundary is missing.' }
+}
+Assert-MvpProposal $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -146,4 +157,7 @@ Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| 任务会话
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('状态：候选定位解释，尚未确认', '状态：已批准定位')) } 'lost its candidate status'
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('尚未实现本节能力', '本节能力均已实现')) } 'lost its implementation boundary'
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('格式可读不等于依赖已安装、权限已授予或执行已验证', '所有 Skill 均可直接运行')) } 'runtime compatibility boundary'
-Write-Output 'Discovery provenance, links, proposal/implementation/compatibility boundaries and 27 negative cases passed (documentation only).'
+Assert-Rejected { Assert-MvpProposal ($discovery.Replace('状态：MVP 建议，尚未整体确认，尚未进入实施规划', '状态：已批准 MVP')) } 'lost its approval boundary'
+Assert-Rejected { Assert-MvpProposal ($discovery.Replace('| 投稿与修订 |', '| 未分类 |')) } 'Missing MVP lifecycle stage'
+Assert-Rejected { Assert-MvpProposal ($discovery.Replace('本地运行不自动等于模型离线', '本地运行保证完全离线')) } 'offline model boundary'
+Write-Output 'Discovery provenance, links, proposal/implementation/compatibility/MVP boundaries and 30 negative cases passed (documentation only).'
