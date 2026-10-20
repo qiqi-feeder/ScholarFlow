@@ -12,8 +12,8 @@
 | 浏览器 | Google Chrome（Playwright `playwright-core` 驱动） |
 | TeX | `pdflatex` 可用（MiKTeX）；`latexmk --version` 因缺少 Perl 失败 |
 | 检索 | Crossref REST，无需 Key |
-| DeepSeek API Key | 未配置 |
-| Conda/Python 目标环境 | 未配置 |
+| DeepSeek API Key | 已配置（2026-10-20） |
+| Conda/Python 目标环境 | Miniconda 26.9.3；`scholarflow` 环境 Python 3.12.15 |
 | 目标论文/数据 | 未确认 |
 
 ## 2. 本地检查
@@ -34,7 +34,7 @@ node --import tsx scripts/verify-pi-session.ts
 | `npm test` | 56 个 Node 测试全部通过，0 失败（research、server、worker、agent 工具与 Pi 会话） |
 | `npm run build` | 通过，Vite 生成 `apps/web/dist` |
 | `npm run test:browser` | 1 个 Chrome E2E 通过 |
-| Pi 生命周期脚本 | Session 持久化并可重开；发现 5 个 Skill 与 Pi 内置工具；真实模型调用报告 `blocked: no DeepSeek API key` |
+| Pi 生命周期脚本 | Session 持久化并可重开；发现 5 个 Skill 与 Pi 内置工具；脚本本身不读取宿主配置，因此仍报告 shell 中没有 `DEEPSEEK_API_KEY` |
 
 测试覆盖的关键行为：
 
@@ -58,6 +58,18 @@ node --import tsx scripts/verify-pi-session.ts
 
 该查询证明网络通道、来源字段和响应哈希可用，同时说明标题检索会返回近似/无关记录。系统保留这些结果并提示按 DOI/venue 确认，不自动把第一条当成目标论文。
 
+## 3.1 真实模型工具循环
+
+2026-10-20 在宿主配置 DeepSeek Key 后，通过 app 的 `/messages` 接口发送真实消息，观察到：
+
+- 模型：`deepseek-flash`。
+- `tool_start` 15 次、`tool_end` 15 次，没有 `error` 事件。
+- 实际调用了 `get_research_context`、`list_runs`、Pi 文件工具（`ls`/`read`）以及 `powershell`。
+- 生成 1639 字符的流式汇总回答；usage 为 13,064 total tokens，报告费用约 `$0.001215`。
+- 工具结果之后的后续回答正常；会话事件和 usage 已持久化，可回查。
+
+这次测试使用 PowerShell 直接发 JSON，测试请求里的中文被 PowerShell 5.1 编码成了问号，因此测试任务的标题/目标出现 `?`。助手输出和应用存储的中文本身正常；这是测试客户端编码问题，不是应用回归。真实 Web UI 的中文输入仍需在浏览器中复核。
+
 ## 4. 真实构建证据
 
 server 集成测试在存在 TeX 的机器上执行了真实构建：
@@ -74,27 +86,27 @@ server 集成测试在存在 TeX 的机器上执行了真实构建：
 
 | 编号 | 状态 | 说明 |
 | --- | --- | --- |
-| V01 | 部分 | 包版本/许可证/锁文件/Session 重开/Skill 发现通过；真实模型调用缺 Key |
+| V01 | 部分 | 包版本/许可证/锁文件/Session 重开/Skill 发现通过；真实模型调用见 3.1 |
 | V02 | 通过（自动化＋浏览器） | 隔离、穿越拒绝、重启恢复、刷新保持任务均通过 |
-| V03 | 未执行（真实部分） | 只有缺 Key 的错误可见性与消息去重测试；未发生真实流式工具循环 |
+| V03 | 部分 | 真实 DeepSeek 流式回答和 15 次工具调用通过；无效 Key、限流、断线、停止回答的故障矩阵未逐项演练 |
 | V04 | 部分 | 真实 Crossref 查询完成；Skill 可加载；未执行真实 Agent 调用 Skill 的任务 |
 | V05 | 通过（自动化） | 准入正负样例全部通过 |
 | V06 | 部分 | 上下文装配与来源保留测试通过；真实压缩后 Agent 主动查询未执行 |
 | V07 | 通过（自动化） | 去重、单并发、快照、指纹冲突测试通过 |
 | V08 | 部分 | 取消/超时/进程树/重启 unknown 通过；SSE 断开不终止实验未单独演练 |
-| V09 | 未执行 | 无 Conda/Python 目标环境、无目标数据 |
+| V09 | 未执行 | 已有 Miniconda/Python 3.12 解释器；无目标数据、官方脚本和验收卡目标 |
 | V10 | 通过（自动化） | 真实 smoke 产物指标链路与不可比标识通过 |
 | V11 | 通过（自动化） | 结果版本、替换影响与负结果通过 |
 | V12 | 部分 | 构建/引用失败/陈旧 PDF/导出通过；解包到新目录重编译未演练 |
-| V13 | 未执行 | 缺验收卡目标、数据与真实模型循环 |
+| V13 | 未执行 | 缺验收卡目标和真实目标数据；真实模型循环已在 3.1 验证 |
 | V14 | 部分 | 主流程 E2E 通过；停止回答、取消实验、预算拒绝未逐一走 UI |
 | V15 | 未执行 | 未做 Pi 基线对照与三次配对运行 |
 | V16 | 未执行 | 未从干净检出按指南重跑 |
 
 ## 6. 未执行项与阻塞
 
-- **真实 DeepSeek 工具循环（V03）**：需要用户提供 API Key。当前聊天会明确报告配置错误，不生成假回答。
-- **真实目标实验（V09、V13）**：需要用户确认验收卡中的论文、官方仓库/commit、脚本/参数、两份独立复现依据、数据许可与获取方式、预算和一次拟检验修改；同时需要显式 Conda/Python 路径和必要数据/GPU。
+- **V03 故障矩阵**：真实工具循环已通过；无效 Key、限流、断线重连、重复事件和停止回答仍需逐项演练，并确认密钥不出现在日志/导出/浏览器存储。
+- **真实目标实验（V09、V13）**：需要用户确认验收卡中的论文、官方仓库/commit、脚本/参数、两份独立复现依据、数据许可与获取方式、预算和一次拟检验修改；解释器已配置为 `C:\Users\sagejiang\miniconda3\envs\scholarflow\python.exe`，但目标数据和官方脚本仍未提供。
 - **V15 对照评测**：需要先有真实任务卡，再固定五类场景和评分表。
 - **V16 干净检出回归**：本地 `npm install` 后检查通过，但未在全新目录按指南重跑全部流程。
 - **旧 Demo 既有失败**：`tests/workspace-light.tests.ps1` 仍因缺少 `demo/assets/ide-light/document.svg` 失败；本轮未修改旧 Demo。

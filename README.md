@@ -1,7 +1,7 @@
 # ScholarFlow
 An Agentic Research Workspace powered by Pi
 
-> **MVP 软件切片已实现（2026-10-20）**：首期范围、实施节点和验证要求见 [PLAN](PLAN.md)，当前证据见 [验证记录](docs/VERIFICATION.md)，启动与恢复见 [运行指南](docs/RUN_GUIDE.md)。真实 DeepSeek 调用、Conda 目标实验和 V13/V15/V16 验收尚未执行；缺少凭据/环境时 UI 与验收记录会明确显示为未完成，而不是用 Mock 冒充。
+> **MVP 软件切片已实现（2026-10-20）**：首期范围、实施节点和验证要求见 [PLAN](PLAN.md)，当前证据见 [验证记录](docs/VERIFICATION.md)，启动与恢复见 [运行指南](docs/RUN_GUIDE.md)。真实 DeepSeek 流式回答与工具循环已实测通过；目标实验、V13/V15/V16 验收尚未执行；缺少环境/数据时 UI 与验收记录会明确显示为未完成，而不是用 Mock 冒充。
 
 ## 运行
 
