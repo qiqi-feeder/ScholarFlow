@@ -119,6 +119,15 @@ function Assert-WindowsExecutionDecision([string]$text) {
 }
 Assert-WindowsExecutionDecision $discovery
 
+# Keep the selected API route and explicitly deferred environment setup consistent.
+function Assert-ApiDecision([string]$text) {
+    if ($text -notmatch '(?m)^\| C16 \|[^\r\n]*API[^\r\n]*DeepSeek') { throw 'Missing confirmed API/DeepSeek decision.' }
+    $section = [regex]::Match($text, '(?s)### 3\.8 第一版 MVP 范围建议与剩余决定\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if (-not $section.Contains('用户已确认当前环境没有，要求暂缓处理')) { throw 'Missing explicit environment setup deferral.' }
+    if ($section.Contains('是否接受本地应用/实验＋云端模型 API') -or $section.Contains('已请求安装目录或环境 Python 路径')) { throw 'Resolved API/environment question remains pending.' }
+}
+Assert-ApiDecision $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -173,4 +182,7 @@ Assert-Rejected { Assert-MvpProposal ($discovery.Replace('| 投稿与修订 |', 
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('本地运行不自动等于模型离线', '本地运行保证完全离线')) } 'offline model boundary'
 Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('| C15 |', '| 未登记 |')) } 'Missing confirmed Windows'
 Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('Agent 大语言模型（LLM）', '模型')) } 'Missing model/runtime distinction'
-Write-Output 'Discovery provenance, links, proposal/MVP/Windows execution boundaries and 32 negative cases passed (documentation only).'
+Assert-Rejected { Assert-ApiDecision ($discovery.Replace('| C16 |', '| 未登记 |')) } 'Missing confirmed API'
+Assert-Rejected { Assert-ApiDecision ($discovery.Replace('用户已确认当前环境没有，要求暂缓处理', '继续查找环境')) } 'Missing explicit environment setup deferral'
+Assert-Rejected { Assert-ApiDecision ($discovery.Replace('API 路线已确定，预算待定。', '是否接受本地应用/实验＋云端模型 API')) } 'Resolved API/environment question remains pending'
+Write-Output 'Discovery provenance, links, proposal/MVP/Windows/API boundaries and 35 negative cases passed (documentation only).'
