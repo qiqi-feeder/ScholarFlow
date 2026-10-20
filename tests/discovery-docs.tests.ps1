@@ -64,6 +64,19 @@ function Assert-ReproductionScope([string]$text) {
 }
 Assert-ReproductionScope $discovery
 
+# Product decisions must not silently approve the proposed harness mechanisms.
+function Assert-WorkbenchDecisions([string]$text) {
+    $section = [regex]::Match($text, '(?s)### 3\.5 产品形态与 Harness 贡献边界\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    foreach ($id in @('C11', 'C12', 'C13')) {
+        if ($text -notmatch ('(?m)^\| ' + $id + ' \|')) { throw "Missing workbench decision: $id" }
+    }
+    if ($section -notmatch '(?m)^已确认（C11–C13）') { throw 'Workbench decisions lost their confirmed status.' }
+    if ($section -notmatch '(?m)^以下均为助手提出的候选设计和验证方向，尚未确认，更不是已实现能力或可直接声称的简历业绩：') {
+        throw 'Harness proposals are missing their implementation and approval boundary.'
+    }
+}
+Assert-WorkbenchDecisions $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -102,4 +115,9 @@ foreach ($criterion in @('R01', 'R02', 'R03')) {
     Assert-Rejected { Assert-ReproductionScope ($discovery.Replace("| $criterion |", '| 未分类 |')) } 'Missing or duplicate admission criterion'
 }
 Assert-Rejected { Assert-ReproductionScope ($discovery.Replace('不静默猜参数、拼凑实验流程或转为独立实现', '自动补全实验实现')) } 'implementation deferral is missing'
-Write-Output 'Discovery categories, provenance IDs, links, historical pointers, proposed responsibilities, confirmed reproduction scope and 16 negative cases passed (documentation only).'
+foreach ($id in @('C11', 'C12', 'C13')) {
+    Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace("| $id |", '| 未登记 |')) } 'Missing workbench decision'
+}
+Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace('已确认（C11–C13）', '候选（C11–C13）')) } 'lost their confirmed status'
+Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace('以下均为助手提出的候选设计和验证方向，尚未确认，更不是已实现能力或可直接声称的简历业绩：', '以下功能均已实现：')) } 'implementation and approval boundary'
+Write-Output 'Discovery provenance, links, proposed responsibilities, confirmed reproduction/workbench scope and 21 negative cases passed (documentation only).'
