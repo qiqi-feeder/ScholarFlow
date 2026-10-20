@@ -967,6 +967,18 @@
       "kind": "official_documentation",
       "local_replication": "not_run",
       "limitation": "Documentation-only review of experiment management; no adoption decision or runtime validation."
+    },
+    {
+      "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/docs/sdk.md",
+      "kind": "official_documentation",
+      "local_replication": "not_run",
+      "limitation": "Pinned API reference only; proposed ScholarFlow integration has not been implemented or tested."
+    },
+    {
+      "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/docs/extensions.md",
+      "kind": "official_documentation",
+      "local_replication": "not_run",
+      "limitation": "Pinned API reference only; proposed ScholarFlow integration has not been implemented or tested."
     }
   ],
   "scenario_comparisons": [
@@ -1060,5 +1072,37 @@
       "expected_behavior": "Separate execution validity, condition attribution and support for the scientific conclusion.",
       "counterexample": "Numeric registry membership is treated as proof that the scientific comparison is valid."
     }
-  ]
+  ],
+  "implementation_discussion": {
+    "status": "candidate",
+    "code_implemented": false,
+    "local_validation": "not_run",
+    "component_ids": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06"
+    ],
+    "upstream_refs": [
+      "H01",
+      "H02",
+      "H04",
+      "H05",
+      "H06",
+      "H10",
+      "H12"
+    ],
+    "source_urls": [
+      "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/docs/sdk.md",
+      "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/docs/extensions.md"
+    ],
+    "scope": "mechanism_illustration_not_final_interfaces_or_implementation_plan",
+    "limitations": [
+      "No business-code implementation or Pi integration has been executed.",
+      "Task submission request identity and experiment configuration identity serve different purposes.",
+      "Session idle, external job completion and scientific validity remain distinct."
+    ]
+  }
 }

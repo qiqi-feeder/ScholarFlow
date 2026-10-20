@@ -84,6 +84,26 @@ function validate(data, text) {
   for (const match of text.matchAll(/^### (S\d{2}) \/ /gm)) {
     assert.ok(scenarioIds.has(match[1]), 'scenario missing evidence record');
   }
+  const implementation = data.implementation_discussion;
+  assert.equal(implementation.status, 'candidate', 'implementation approval boundary');
+  assert.equal(implementation.code_implemented, false, 'implementation reality boundary');
+  assert.equal(implementation.local_validation, 'not_run', 'implementation validation boundary');
+  assert.equal(implementation.scope, 'mechanism_illustration_not_final_interfaces_or_implementation_plan', 'implementation scope');
+  assert.ok(implementation.upstream_refs.length > 0, 'implementation upstream references');
+  for (const id of implementation.upstream_refs) assert.ok(ids.has(id), 'unknown implementation upstream');
+  assert.ok(implementation.source_urls.length > 0, 'implementation sources');
+  for (const url of implementation.source_urls) assert.ok(supplements.has(url), 'unregistered implementation source');
+  const componentIds = new Set();
+  for (const id of implementation.component_ids) {
+    assert.match(id, /^A\d{2}$/, 'implementation component id');
+    assert.ok(!componentIds.has(id), 'duplicate implementation component');
+    componentIds.add(id);
+    assert.match(text, new RegExp(`^### ${id} / `, 'm'), 'missing implementation discussion');
+  }
+  assert.ok(componentIds.size > 0, 'implementation discussion components');
+  for (const match of text.matchAll(/^### (A\d{2}) \/ /gm)) {
+    assert.ok(componentIds.has(match[1]), 'implementation discussion missing record');
+  }
   const discovery = readFileSync(resolve(root, 'docs/DISCOVERY.md'), 'utf8');
   assert.match(discovery, /^\| C14 \|/m, 'research-first decision');
   assert.ok(discovery.includes('research/HARNESS_SURVEY_2026-10-20.md'), 'discovery report link');
@@ -112,4 +132,7 @@ rejected(d => { d.scenario_comparisons[0].upstream_refs.push('H99'); }, /unknown
 rejected(d => { d.scenario_comparisons[0].source_urls.push('https://example.invalid/unverified'); }, /unregistered scenario evidence/);
 rejected(d => { d.scenario_comparisons[0].local_validation = 'passed'; }, /scenario validation boundary/);
 rejected(() => {}, /missing scenario discussion/, text => text.replace('### S01 /', '### Missing /'));
+rejected(d => { d.implementation_discussion.status = 'approved'; }, /implementation approval boundary/);
+rejected(d => { d.implementation_discussion.code_implemented = true; }, /implementation reality boundary/);
+rejected(d => { d.implementation_discussion.source_urls.push('https://example.invalid/unverified'); }, /unregistered implementation source/);
 console.log(`Harness survey provenance passed: ${survey.projects.length} projects, ${survey.source_file_count} source records, ${survey.scenario_comparisons.length} candidate scenarios, ${negatives} negative cases. Documentation only; upstream tests and model experiments were not run.`);
