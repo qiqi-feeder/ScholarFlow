@@ -1,7 +1,7 @@
 # ScholarFlow
 An Agentic Research Workspace powered by Pi
 
-> **MVP 实施中（2026-10-20）**：首期范围、实施节点和验证要求见 [PLAN](PLAN.md)，M0 技术锁定见 [M0 验收卡](docs/m0/ACCEPTANCE_CARD.md)。真实 DeepSeek 调用、Conda 目标实验和 V13 科研验收尚未执行；缺少凭据/环境时 UI 与验收记录会明确显示为未完成，而不是用 Mock 冒充。
+> **MVP 软件切片已实现（2026-10-20）**：首期范围、实施节点和验证要求见 [PLAN](PLAN.md)，当前证据见 [验证记录](docs/VERIFICATION.md)，启动与恢复见 [运行指南](docs/RUN_GUIDE.md)。真实 DeepSeek 调用、Conda 目标实验和 V13/V15/V16 验收尚未执行；缺少凭据/环境时 UI 与验收记录会明确显示为未完成，而不是用 Mock 冒充。
 
 ## 运行
 
@@ -30,6 +30,9 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 ## 文档
 
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
+- [运行指南](docs/RUN_GUIDE.md)：安装、配置、工作流、故障恢复与安全边界。
+- [验证记录](docs/VERIFICATION.md)：实际命令、测试结果、真实检索/构建证据与未执行项。
+- [DISCOVERY](docs/DISCOVERY.md)：需求来源、决策记录与当前阶段边界。
 - [M0 验收卡](docs/m0/ACCEPTANCE_CARD.md)：Pi/检索/模板/资源上限锁定与真实任务卡。
 - [产品设计](docs/PRODUCT_DESIGN.md)、[技术方案](docs/TECHNICAL_DESIGN.md)、[实现路线](docs/IMPLEMENTATION_ROADMAP.md)：历史规划参考。
 - [Harness 调研](docs/research/HARNESS_SURVEY_2026-10-20.md)：12 个上游实现的机制与证据。

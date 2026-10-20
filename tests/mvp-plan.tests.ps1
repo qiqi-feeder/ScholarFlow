@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $plan = Get-Content (Join-Path $repositoryRoot 'PLAN.md') -Raw -Encoding UTF8
 
@@ -19,12 +19,12 @@ function Read-PlanRows([string]$text, [string]$prefix, [int]$width) {
 
 function Assert-PlanGraph([string]$text) {
     $milestones = Read-PlanRows $text 'M' 5
-    $checks = Read-PlanRows $text 'V' 5
+    $checks = Read-PlanRows $text 'V' 6
     $dependencies = @{}
     $usedChecks = @{}
     foreach ($id in $milestones.Keys) {
         $row = $milestones[$id]
-        if ($row[4] -notin @('待实施', '进行中', '已完成')) { throw "Unknown milestone status: $id" }
+        if ($row[4] -notmatch '^(待实施|进行中|已完成|部分完成|未执行)(：.*)?$') { throw "Unknown milestone status: $id" }
         $deps = @([regex]::Matches($row[1], 'M\d+') | ForEach-Object { $_.Value })
         if ($row[1] -ne '无' -and $deps.Count -eq 0) { throw "Invalid milestone dependency: $id" }
         foreach ($dep in $deps) {
@@ -76,10 +76,11 @@ Assert-Rejected { Assert-PlanGraph ($plan + "`n| M0 | 无 | duplicate | V01 | �
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 集成 |', '| V02 | 集成 |')) } 'Duplicate V ID'
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| M1 | M0 |', '| M1 | M99 |')) } 'Unknown milestone dependency'
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| M1 | M0 |', '| M1 | M2 |')) } 'Cyclic milestone dependencies'
-Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 待实施 |', '| V99 | 待实施 |')) } 'Unknown acceptance check'
+Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 集成 |', '| V99 | 集成 |')) } 'Unknown acceptance check'
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('V13、V15、V16', 'V13、V15')) } 'Unassigned acceptance check'
-Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 待实施 |', '| 无 | 待实施 |')) } 'Milestone has no acceptance checks'
+Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 部分完成：软件锁定完成；真实任务卡阻塞 |', '| 无 | 部分完成：软件锁定完成；真实任务卡阻塞 |')) } 'Milestone has no acceptance checks'
+Assert-Rejected { Assert-PlanGraph ($plan.Replace('| 部分完成：软件锁定完成；真实任务卡阻塞 |', '| 未知 |')) } 'Unknown milestone status'
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| M0 | 无 |', '| M0 | |')) } 'Incomplete M row'
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 集成 |', '| V01 | |')) } 'Incomplete V row'
 Assert-Rejected { Assert-PlanLinks '[missing](no-such-mvp-plan-file.md)' } 'Broken plan link'
-Write-Output 'MVP plan: milestone dependency graph, acceptance coverage, links and 10 negative cases passed. Documentation only; V01-V16 were not executed.'
+Write-Output 'MVP plan: milestone dependency graph, acceptance coverage, links and 11 negative cases passed. Documentation only; V01-V16 execution status is recorded in docs/VERIFICATION.md.'
