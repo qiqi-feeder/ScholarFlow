@@ -31,7 +31,7 @@ node --import tsx scripts/verify-pi-session.ts
 | 检查 | 结果 |
 | --- | --- |
 | `npm run typecheck` | 通过，无错误 |
-| `npm test` | 56 个 Node 测试全部通过，0 失败（research、server、worker、agent 工具与 Pi 会话） |
+| `npm test` | 57 个 Node 测试全部通过，0 失败（research、server、worker、agent 工具与 Pi 会话） |
 | `npm run build` | 通过，Vite 生成 `apps/web/dist` |
 | `npm run test:browser` | 1 个 Chrome E2E 通过 |
 | Pi 生命周期脚本 | Session 持久化并可重开；发现 5 个 Skill 与 Pi 内置工具；脚本本身不读取宿主配置，因此仍报告 shell 中没有 `DEEPSEEK_API_KEY` |
@@ -40,11 +40,15 @@ node --import tsx scripts/verify-pi-session.ts
 
 - 项目/任务归属隔离、绝对路径与穿越路径拒绝、重启后记录和事件恢复。
 - SSE 持久事件按游标回放；重复客户端消息不二次提交；设置不回显密钥。
-- Pi Session 文件落盘、Skill 目录装配、17 个科研工具注册；模型未配置时产生可见错误。
+- Pi Session 文件落盘、Skill 目录装配、18 个科研工具注册；模型未配置时产生可见错误。
 - 方案确认、准入充分性、精确指纹批准、requestId 去重、单并发队列、日志、超时、取消、PID 身份校验、worker 重启后 `unknown` 不自动重跑。
 - 指标从真实产物按 JSON pointer 导入并保留文件与哈希；缺指标、不可比条件、少种子和 smoke 有明确标识。
 - 结果版本共存、替换时标记受影响稿件文件；失败运行生成负结果报告。
-- 真实 `pdflatex`/`bibtex` 构建 PDF；未定义引用导致 422；源文件变化后旧 PDF 返回 409；导出 zip 可生成。
+- 当前结果可同步为 LaTeX 表格 + PGFPlots 柱状图 PDF，并自动加入 `sections/results.tex`；稿件构建成功。
+- 稿件版本保存源码快照，可选择旧版本恢复并生成新版本。
+- DOI 重复导入复用已有材料；Crossref 来源可导出 BibTeX。
+- Pi Agent 只装配只读文件工具（read/grep/find/ls）和科研工具，不再直接提供 write/edit/powershell/bash。
+- 真实 `pdflatex`/`bibtex` 构建 PDF；未定义引用导致 422；源文件变化后旧 PDF 返回 409；导出 zip 可解包并在新目录重新编译。
 - 浏览器完成项目/任务切换、刷新恢复、错误可见、材料导入、方案确认、批准 smoke、核验、结果分析、稿件面板、设置持久化和双项目隔离。
 
 ## 3. 真实检索证据
@@ -78,7 +82,9 @@ server 集成测试在存在 TeX 的机器上执行了真实构建：
 - 生成的 PDF 以 `%PDF` 开头，通过 API 返回 `application/pdf`。
 - 添加不存在的 `\cite{does-not-exist}` 后构建返回 422，并报告未定义引用。
 - 修改源文件后请求旧 PDF 返回 `409 STALE_BUILD`，不会把旧 PDF 冒充新产物。
-- 投稿包 zip 以 `PK` 开头；包内清单记录构建源哈希、结果版本、runId、快照和限制。
+- 投稿包 zip 以 `PK` 开头；测试将其解压到新目录，确认包含 `main.tex`、`refs.bib`、`main.pdf`、`MANIFEST.json` 和 `README.txt`，随后在新目录重新运行 `pdflatex`/`bibtex` 并得到新的 `%PDF`。
+- 结果同步会生成 `generated/<resultId>.tex`、`generated/<resultId>.pdf` 和 `generated/results.tex`；返回的 PDF 由真实 `pdflatex` 和 PGFPlots 生成。
+- 稿件版本快照可恢复：修改源码后恢复旧版本，文件内容回到快照并创建新版本。
 
 `latexmk` 在本机不可用，因此构建实现直接调用 `pdflatex` 和 `bibtex`，并禁用 shell escape。设置中的 `pdflatexPath` 会在每次构建时读取；配置不存在的可执行文件会得到失败诊断，而不是成功。
 
@@ -97,7 +103,7 @@ server 集成测试在存在 TeX 的机器上执行了真实构建：
 | V09 | 未执行 | 已有 Miniconda/Python 3.12 解释器；无目标数据、官方脚本和验收卡目标 |
 | V10 | 通过（自动化） | 真实 smoke 产物指标链路与不可比标识通过 |
 | V11 | 通过（自动化） | 结果版本、替换影响与负结果通过 |
-| V12 | 部分 | 构建/引用失败/陈旧 PDF/导出通过；解包到新目录重编译未演练 |
+| V12 | 通过（自动化） | 构建/引用失败/陈旧 PDF/结果图表同步/版本恢复/导出解包重编译全部通过 |
 | V13 | 未执行 | 缺验收卡目标和真实目标数据；真实模型循环已在 3.1 验证 |
 | V14 | 部分 | 主流程 E2E 通过；停止回答、取消实验、预算拒绝未逐一走 UI |
 | V15 | 未执行 | 未做 Pi 基线对照与三次配对运行 |
@@ -109,6 +115,8 @@ server 集成测试在存在 TeX 的机器上执行了真实构建：
 - **真实目标实验（V09、V13）**：需要用户确认验收卡中的论文、官方仓库/commit、脚本/参数、两份独立复现依据、数据许可与获取方式、预算和一次拟检验修改；解释器已配置为 `C:\Users\sagejiang\miniconda3\envs\scholarflow\python.exe`，但目标数据和官方脚本仍未提供。
 - **V15 对照评测**：需要先有真实任务卡，再固定五类场景和评分表。
 - **V16 干净检出回归**：本地 `npm install` 后检查通过，但未在全新目录按指南重跑全部流程。
+- **Agent 写稿审批**：稿件现在保留源码快照并可恢复，但 `save_manuscript_file` 仍可直接创建新版本，未要求用户逐次确认“覆盖正式稿”。
+- **文献全文**：Crossref 仍是元数据/摘要通道；没有全文分块、段落级引用定位或 OCR。DOI 去重和 BibTeX 导出已补齐。
 - **旧 Demo 既有失败**：`tests/workspace-light.tests.ps1` 仍因缺少 `demo/assets/ide-light/document.svg` 失败；本轮未修改旧 Demo。
 
 ## 7. 可重复执行
