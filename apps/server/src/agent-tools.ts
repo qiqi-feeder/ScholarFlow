@@ -152,6 +152,20 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       execute: async (_id, params) => {
         const choices = [params.doi, params.url, params.path].filter(Boolean);
         if (choices.length !== 1) throw new Error("provide exactly one of doi, url, or path");
+        if (params.doi) {
+          const existing = ctx.repositories.findMaterialByDoi(ctx.project.id, params.doi);
+          if (existing) {
+            return ok(
+              summarize({
+                material: existing,
+                extractedNote: existing.note ?? "",
+                warnings: ["DOI is already imported in this project; reusing the existing source record."],
+                duplicate: true,
+              }),
+              { materialId: existing.id, duplicate: true },
+            );
+          }
+        }
         const imported = params.doi
           ? await ctx.materials.importDoi(ctx.project.id, ctx.project.dataDir, ctx.task.id, params.doi)
           : params.url
@@ -538,6 +552,29 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
 
   pi.registerTool(
     defineTool({
+      name: "sync_manuscript_results",
+      label: "Sync results to manuscript",
+      description:
+        "Generate source-linked LaTeX tables and bar-chart PDFs from current result versions, insert their includes into sections/results.tex, and create a manuscript version. It refuses nothing; warnings identify charts that could not be compiled.",
+      promptSnippet: "Generate result tables/figures into the manuscript and create a version.",
+      parameters: Type.Object({}),
+      execute: async () => {
+        const synced = ctx.manuscript.syncResults(ctx.project, ctx.task.id);
+        return ok(
+          summarize({
+            version: synced.version.version,
+            resultIds: synced.resultIds,
+            files: synced.files,
+            warnings: synced.warnings,
+          }),
+          { version: synced.version.version, resultIds: synced.resultIds, warnings: synced.warnings },
+        );
+      },
+    }),
+  );
+
+  pi.registerTool(
+    defineTool({
       name: "save_manuscript_file",
       label: "Save manuscript file",
       description:
@@ -613,6 +650,7 @@ export function toolNames(): string[] {
     "cancel_run",
     "record_run_verification",
     "analyze_results",
+    "sync_manuscript_results",
     "save_manuscript_file",
     "compile_manuscript",
     "export_submission",

@@ -419,12 +419,34 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         if (method === "GET" && rest === "materials") {
           return json(res, 200, { materials: repositories.listMaterials(project.id) });
         }
+        if (method === "GET" && rest === "materials/bibtex") {
+          const exported = materials.exportBibtex(project.dataDir, repositories.listMaterials(project.id));
+          res.writeHead(200, {
+            "Content-Type": "application/x-bibtex; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="refs.bib"',
+            "Cache-Control": "no-store",
+            "X-ScholarFlow-Warnings": exported.warnings.join(" | "),
+          });
+          res.end(exported.bibtex);
+          return;
+        }
         if (method === "POST" && rest === "materials") {
           const body = await readJson(req);
           const taskId = optionalString(body.taskId, "taskId");
           if (taskId) taskFor(project, taskId);
           const choices = [body.doi, body.url, body.path].filter(Boolean);
           if (choices.length !== 1) throw new HttpError(400, "provide exactly one of doi, url, or path");
+          if (typeof body.doi === "string") {
+            const existing = repositories.findMaterialByDoi(project.id, body.doi);
+            if (existing) {
+              return json(res, 200, {
+                material: existing,
+                note: existing.note ?? "",
+                warnings: ["DOI is already imported in this project; reusing the existing source record."],
+                duplicate: true,
+              });
+            }
+          }
           const imported = body.doi
             ? await materials.importDoi(project.id, project.dataDir, taskId ?? null, requireString(body.doi, "doi", 300))
             : body.url
@@ -673,6 +695,22 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
           if (!file) throw new HttpError(400, "path is required");
           return json(res, 200, { path: file, content: manuscript.readFile(project, file) });
         }
+        const restoreMatch = rest.match(/^manuscript\/versions\/(\d+)\/restore$/);
+        if (method === "POST" && restoreMatch) {
+          const body = await readJson(req);
+          const taskId = optionalString(body.taskId, "taskId") ?? null;
+          if (taskId) taskFor(project, taskId);
+          const restored = manuscript.restoreVersion(project, taskId, Number(restoreMatch[1]));
+          if (taskId) {
+            const event = repositories.appendEvent(project.id, taskId, "manuscript_restored", {
+              fromVersion: Number(restoreMatch[1]),
+              newVersion: restored.version,
+              files: restored.files.map((file) => file.path),
+            });
+            events.publish(event);
+          }
+          return json(res, 200, { manuscript: restored });
+        }
         if (method === "PUT" && rest === "manuscript/file") {
           const body = await readJson(req);
           const version = manuscript.saveFile(
@@ -682,6 +720,22 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             requireString(body.content, "content", MAX_BODY_BYTES),
           );
           return json(res, 200, { manuscript: version });
+        }
+        if (method === "POST" && rest === "manuscript/results/sync") {
+          const body = await readJson(req);
+          const taskId = optionalString(body.taskId, "taskId") ?? null;
+          if (taskId) taskFor(project, taskId);
+          const synced = manuscript.syncResults(project, taskId);
+          if (taskId) {
+            const event = repositories.appendEvent(project.id, taskId, "manuscript_results_synced", {
+              version: synced.version.version,
+              resultIds: synced.resultIds,
+              files: synced.files,
+              warnings: synced.warnings,
+            });
+            events.publish(event);
+          }
+          return json(res, 200, synced);
         }
         if (method === "POST" && rest === "manuscript/build") {
           const body = await readJson(req);

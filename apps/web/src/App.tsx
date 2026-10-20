@@ -783,8 +783,11 @@ function MaterialsPanel(props: {
         </div>
       </section>
       <section className="card">
-        <h3>项目材料 <span className="count">{props.materials.length}</span></h3>
-        <p className="muted">材料在同项目任务间共享来源，不复制全部聊天历史。扫描 PDF 无可提取文本时会明确提示，而不是猜测内容。</p>
+        <div className="row space-between">
+          <h3>项目材料 <span className="count">{props.materials.length}</span></h3>
+          <a className="button-link" href={`/api/projects/${props.projectId}/materials/bibtex`} target="_blank" rel="noreferrer">导出 BibTeX</a>
+        </div>
+        <p className="muted">材料在同项目任务间共享来源，不复制全部聊天历史。扫描 PDF 无可提取文本时会明确提示，而不是猜测内容。DOI 重复导入会复用已保存的来源。</p>
         <div className="materials">
           {props.materials.length === 0 && <p className="muted">还没有材料。</p>}
           {props.materials.map((material) => (
@@ -1232,8 +1235,10 @@ function ManuscriptPanel(props: {
   const [file, setFile] = useState("main.tex");
   const [content, setContent] = useState("");
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
+  const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
   const [exported, setExported] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [restoreVersion, setRestoreVersion] = useState("");
   const textFiles = (props.data?.files ?? []).filter((entry) => entry.kind === "text");
 
   const loadFile = useCallback(async (target: string) => {
@@ -1250,6 +1255,27 @@ function ManuscriptPanel(props: {
     const initial = textFiles.find((entry) => entry.path === "main.tex") ?? textFiles[0];
     if (initial && !content) void loadFile(initial.path);
   }, [props.data?.sourceHash]);
+
+  useEffect(() => {
+    if (!restoreVersion && (props.data?.versions?.length ?? 0) > 0) {
+      setRestoreVersion(String(props.data!.versions[0]!.version));
+    }
+  }, [props.data?.versions, restoreVersion]);
+
+  const restore = async () => {
+    if (!restoreVersion) return;
+    setBusy(true);
+    try {
+      await post(`/api/projects/${props.projectId}/manuscript/versions/${restoreVersion}/restore`, { taskId: props.taskId });
+      setContent("");
+      await props.onChanged();
+      await loadFile("main.tex");
+    } catch (error) {
+      props.fail(error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const save = async () => {
     setBusy(true);
@@ -1273,6 +1299,19 @@ function ManuscriptPanel(props: {
       if (error instanceof ApiError) {
         setDiagnostics(Array.isArray(error.payload?.diagnostics) ? error.payload.diagnostics : [error.message]);
       } else props.fail(error);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const syncResults = async () => {
+    setBusy(true);
+    setSyncWarnings([]);
+    try {
+      const response = await post<{ warnings?: string[] }>(`/api/projects/${props.projectId}/manuscript/results/sync`, { taskId: props.taskId });
+      setSyncWarnings(response.warnings ?? []);
+      props.onChanged();
+    } catch (error) {
+      props.fail(error);
     } finally {
       setBusy(false);
     }
@@ -1304,10 +1343,22 @@ function ManuscriptPanel(props: {
           ))}
         </div>
         <div className="row">
+          <select aria-label="稿件版本" value={restoreVersion} onChange={(event) => setRestoreVersion(event.target.value)}>
+            {(props.data?.versions ?? []).map((version) => (
+              <option key={version.id} value={String(version.version)}>
+                v{version.version} · {version.build.status} · {version.snapshotPath ? "可恢复" : "无快照"}
+              </option>
+            ))}
+          </select>
+          <button className="secondary" onClick={() => void restore()} disabled={busy || !restoreVersion}>恢复选中版本</button>
+        </div>
+        <div className="row">
+          <button className="secondary" onClick={() => void syncResults()} disabled={busy}>同步结果图表/表格</button>
           <button onClick={() => void build()} disabled={busy}>构建 PDF</button>
           <a className="button-link" href={`/api/projects/${props.projectId}/manuscript/pdf`} target="_blank" rel="noreferrer">打开最新 PDF</a>
           <button className="secondary" onClick={() => void exportPackage()} disabled={busy}>导出投稿包</button>
         </div>
+        {syncWarnings.length > 0 && <div className="notice warn-box"><strong>结果同步警告</strong><ul>{syncWarnings.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
         {stale && <p className="banner warn">源码在构建后已修改，PDF 已过期。重新构建后才能导出。</p>}
         {props.build?.build.builtAt && <p className="muted small">最近构建：{ago(props.build.build.builtAt)} · 版本 v{props.build.version} · sourceHash {props.build.build.sourceHash?.slice(0, 12)}…</p>}
         {diagnostics.length > 0 && <div className="notice warn-box"><strong>构建诊断</strong><ul>{diagnostics.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}

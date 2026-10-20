@@ -299,6 +299,8 @@ export interface ManuscriptVersion {
   taskId: string | null;
   version: number;
   files: Array<{ path: string; sha256: string; bytes: number }>;
+  /** Relative to the project data directory; absent for versions created before snapshots existed. */
+  snapshotPath?: string | null;
   build: {
     status: "not_built" | "succeeded" | "failed";
     pdfPath: string | null;

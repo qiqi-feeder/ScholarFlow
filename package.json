@@ -23,11 +23,13 @@
     "verify": "npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/archiver": "^6.0.3",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "adm-zip": "^0.6.1",
     "playwright-core": "^1.49.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

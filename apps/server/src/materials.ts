@@ -59,6 +59,29 @@ export interface MaterialServiceOptions {
   fetchImpl?: typeof fetch;
 }
 
+function bibtexEscape(value: string): string {
+  return value
+    .replace(/\\/g, "\\textbackslash{}")
+    .replace(/([&%$#_{}])/g, "\\$1")
+    .replace(/~/g, "\\textasciitilde{}")
+    .replace(/\^/g, "\\textasciicircum{}");
+}
+
+function crossrefValue(raw: unknown, key: string): unknown {
+  if (!raw || typeof raw !== "object") return undefined;
+  const record = raw as Record<string, unknown>;
+  if (record.message && typeof record.message === "object") {
+    return (record.message as Record<string, unknown>)[key];
+  }
+  return record[key];
+}
+
+function bibKey(input: { authors: string[]; year?: number; title: string; fallback: string }): string {
+  const family = input.authors[0]?.split(/\s+/).at(-1) ?? "source";
+  const word = input.title.match(/[A-Za-z0-9]+/)?.[0] ?? "work";
+  return `${family}${input.year ?? ""}${word}`.replace(/[^A-Za-z0-9]/g, "").toLowerCase() || input.fallback;
+}
+
 export class MaterialService {
   private readonly fetchImpl: typeof fetch;
   constructor(private readonly options: MaterialServiceOptions) {
@@ -276,5 +299,62 @@ export class MaterialService {
       note: truncateNote(hit.abstract ?? hit.title),
       warnings: hit.license ? [] : ["source license is unknown; verify reuse terms"],
     };
+  }
+
+  exportBibtex(
+    projectRoot: string,
+    materials: Array<MaterialRecord & { note?: string }>,
+  ): { bibtex: string; keys: string[]; warnings: string[] } {
+    const entries: string[] = [];
+    const keys: string[] = [];
+    const used = new Set<string>();
+    const warnings: string[] = [];
+    for (const material of materials) {
+      if (!material.source.doi && material.source.channel !== "crossref") continue;
+      let raw: unknown = undefined;
+      try {
+        const file = path.join(projectRoot, material.path);
+        if (existsSync(file)) raw = JSON.parse(readFileSync(file, "utf8")) as unknown;
+      } catch {
+        warnings.push(`${material.id}: source metadata could not be parsed; using stored fields`);
+      }
+      const titleValue = crossrefValue(raw, "title");
+      const title = Array.isArray(titleValue) ? String(titleValue[0] ?? material.title) : material.title;
+      const authorValue = crossrefValue(raw, "author");
+      const authors = Array.isArray(authorValue)
+        ? authorValue
+            .map((author) => {
+              const entry = author as Record<string, unknown>;
+              return [entry.given, entry.family].filter(Boolean).join(" ");
+            })
+            .filter(Boolean)
+        : [];
+      const issued = crossrefValue(raw, "issued") as { "date-parts"?: number[][] } | undefined;
+      const year = issued?.["date-parts"]?.[0]?.[0]
+        ?? (material.source.version ? Number(material.source.version) : undefined);
+      const containerValue = crossrefValue(raw, "container-title");
+      const container = Array.isArray(containerValue) ? String(containerValue[0] ?? "") : "";
+      const volume = String(crossrefValue(raw, "volume") ?? "");
+      const pages = String(crossrefValue(raw, "page") ?? "");
+      const publisher = String(crossrefValue(raw, "publisher") ?? "");
+      const key = bibKey({ authors, year, title, fallback: material.id.replace(/[^A-Za-z0-9]/g, "") });
+      let unique = key;
+      let suffix = 2;
+      while (used.has(unique)) unique = `${key}${suffix++}`;
+      used.add(unique);
+      keys.push(unique);
+      const fields: Array<[string, string]> = [["title", bibtexEscape(title)]];
+      if (authors.length > 0) fields.push(["author", authors.map(bibtexEscape).join(" and ")]);
+      if (year) fields.push(["year", String(year)]);
+      if (container) fields.push(["journal", bibtexEscape(container)]);
+      if (volume) fields.push(["volume", bibtexEscape(volume)]);
+      if (pages) fields.push(["pages", bibtexEscape(pages)]);
+      if (publisher) fields.push(["publisher", bibtexEscape(publisher)]);
+      if (material.source.doi) fields.push(["doi", bibtexEscape(material.source.doi)]);
+      if (material.source.url) fields.push(["url", bibtexEscape(material.source.url)]);
+      const type = container ? "article" : "misc";
+      entries.push([`@${type}{${unique},`, ...fields.map(([name, value]) => `  ${name} = {${value}},`), "}", ""].join("\n"));
+    }
+    return { bibtex: entries.join("\n"), keys, warnings };
   }
 }

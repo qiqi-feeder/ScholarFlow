@@ -157,6 +157,8 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     const editor = page.getByLabel("编辑 main.tex");
     await editor.waitFor();
     assert.match(await editor.inputValue(), /documentclass/);
+    await page.getByRole("button", { name: "同步结果图表/表格" }).click();
+    await page.getByText("generated/results.tex").first().waitFor({ timeout: 60000 });
     await page.getByRole("button", { name: "构建 PDF" }).click();
     await page.getByText(/最近构建|构建诊断/).first().waitFor({ timeout: 60000 });
 

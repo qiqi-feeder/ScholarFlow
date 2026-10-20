@@ -1,8 +1,10 @@
 ﻿import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import AdmZip from "adm-zip";
 import { ExperimentWorker } from "@scholarflow/experiment-worker";
 import { createApp, type CreatedApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
@@ -164,8 +166,24 @@ test("projects/tasks are isolated and traversal paths are rejected", async () =>
     assert.equal(doiImport.body.material.projectId, projectA);
     assert.ok(doiImport.body.material.sha256.length === 64);
 
+    const duplicate = await api(harness, "POST", `/api/projects/${projectA}/materials`, {
+      doi: "https://doi.org/10.1234/EXAMPLE.2024",
+      taskId: taskA,
+    });
+    assert.equal(duplicate.status, 200);
+    assert.equal(duplicate.body.duplicate, true);
+    assert.equal(duplicate.body.material.id, doiImport.body.material.id);
+
     const materials = await api(harness, "GET", `/api/projects/${projectA}/materials`);
     assert.equal(materials.body.materials.length, 1);
+
+    const bib = await fetch(`${harness.base}/api/projects/${projectA}/materials/bibtex`);
+    assert.equal(bib.status, 200);
+    assert.match(bib.headers.get("content-type") ?? "", /bibtex/);
+    const bibtex = await bib.text();
+    assert.match(bibtex, /@(article|misc)\{/);
+    assert.match(bibtex, /10\.1234\/example\.2024/);
+    assert.match(bibtex, /A Reproducible Baseline/);
 
     const events = await api(harness, "GET", `/api/projects/${projectA}/tasks/${taskA}/events`);
     assert.ok(events.body.events.some((event: any) => event.type === "material_imported"));
@@ -476,6 +494,95 @@ test("manuscript compile, undefined citation failure, and export are real", asyn
     assert.ok(existsSync(exported.body.path));
     const header = readFileSync(exported.body.path).subarray(0, 2).toString();
     assert.equal(header, "PK");
+
+    const zip = new AdmZip(exported.body.path);
+    const entries = zip.getEntries().map((entry) => entry.entryName);
+    for (const required of ["main.tex", "refs.bib", "main.pdf", "MANIFEST.json", "README.txt"]) {
+      assert.ok(entries.includes(required), `export missing ${required}`);
+    }
+    const extractDir = path.join(harness.root, "unzipped");
+    zip.extractAllTo(extractDir, true);
+    const manifest = JSON.parse(readFileSync(path.join(extractDir, "MANIFEST.json"), "utf8"));
+    assert.ok(Array.isArray(manifest.limitations));
+    assert.equal(JSON.stringify(manifest).includes("deepseekApiKey"), false);
+    execFileSync("pdflatex", ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "main.tex"], { cwd: extractDir, stdio: "pipe", windowsHide: true });
+    execFileSync("bibtex", ["main"], { cwd: extractDir, stdio: "pipe", windowsHide: true });
+    execFileSync("pdflatex", ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "main.tex"], { cwd: extractDir, stdio: "pipe", windowsHide: true });
+    execFileSync("pdflatex", ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "main.tex"], { cwd: extractDir, stdio: "pipe", windowsHide: true });
+    assert.equal(readFileSync(path.join(extractDir, "main.pdf")).subarray(0, 4).toString(), "%PDF");
+
+    const beforeRestore = await api(harness, "GET", `/api/projects/${projectId}/manuscript`);
+    const builtVersion = beforeRestore.body.versions.find((version: any) => version.version === 2);
+    assert.ok(builtVersion?.snapshotPath, "built version must have a source snapshot");
+    await api(harness, "PUT", `/api/projects/${projectId}/manuscript/file`, {
+      path: "main.tex",
+      content: `${source.body.content}\n% changed after the build\n`,
+    });
+    const restored = await api(harness, "POST", `/api/projects/${projectId}/manuscript/versions/2/restore`, {});
+    assert.equal(restored.status, 200);
+    assert.equal(restored.body.manuscript.version, 6);
+    const restoredSource = await api(harness, "GET", `/api/projects/${projectId}/manuscript/file?path=main.tex`);
+    assert.equal(restoredSource.body.content, source.body.content);
+  } finally {
+    await harness.close();
+  }
+});
+
+test("current results generate manuscript tables/charts and a real PDF", async () => {
+  const harness = await start({ withAgent: false });
+  try {
+    const project = await api(harness, "POST", "/api/projects", { name: "Result writing" });
+    const projectId = project.body.project.id as string;
+    const task = await api(harness, "POST", `/api/projects/${projectId}/tasks`, { title: "Write results", objective: "Synthesize metrics" });
+    const taskId = task.body.task.id as string;
+    harness.app.services.repositories.createResult({
+      id: "res_testresult0000000001",
+      projectId,
+      taskId,
+      title: "Smoke & baseline",
+      runIds: ["run_test"],
+      table: [{
+        runId: "run_test",
+        runName: "smoke_1",
+        status: "succeeded",
+        values: { score: { value: 1.5, unit: "%", source: "metrics.json#/score" } },
+        conditions: {},
+        comparableGroup: "group-1",
+      }],
+      comparability: { comparable: true, keyDifferences: [], warnings: [], missingConditions: [] },
+      chartPath: null,
+      reportPath: "results/res_test/report.md",
+      supersedes: null,
+      status: "current",
+      affectedArtifacts: [],
+      createdAt: new Date().toISOString(),
+    });
+
+    const synced = await api(harness, "POST", `/api/projects/${projectId}/manuscript/results/sync`, { taskId });
+    assert.equal(synced.status, 200);
+    assert.deepEqual(synced.body.resultIds, ["res_testresult0000000001"]);
+    assert.ok(synced.body.files.includes("generated/results.tex"));
+    assert.ok(synced.body.files.includes("generated/res_testresult0000000001.tex"));
+    assert.ok(synced.body.files.includes("generated/res_testresult0000000001.pdf"), JSON.stringify(synced.body.warnings));
+
+    const manuscript = await api(harness, "GET", `/api/projects/${projectId}/manuscript`);
+    assert.ok(manuscript.body.files.some((entry: any) => entry.path === "generated/results.tex"));
+    const resultsSection = await api(harness, "GET", `/api/projects/${projectId}/manuscript/file?path=sections/results.tex`);
+    assert.match(resultsSection.body.content, /\\input\{generated\/results\}/);
+    const generated = await api(harness, "GET", `/api/projects/${projectId}/manuscript/file?path=generated/res_testresult0000000001.tex`);
+    assert.match(generated.body.content, /\\begin\{table\}/);
+    assert.match(generated.body.content, /smoke\\_1/);
+
+    const built = await api(harness, "POST", `/api/projects/${projectId}/manuscript/build`, {});
+    if (built.status === 200) {
+      assert.equal(built.body.ok, true);
+      const pdf = await fetch(`${harness.base}/api/projects/${projectId}/manuscript/pdf`);
+      assert.equal(pdf.status, 200);
+      assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0, 4).toString(), "%PDF");
+    } else {
+      assert.equal(built.status, 422);
+      assert.ok(Array.isArray(built.body.diagnostics));
+    }
   } finally {
     await harness.close();
   }

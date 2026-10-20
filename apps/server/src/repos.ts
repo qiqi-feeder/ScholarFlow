@@ -283,6 +283,11 @@ export class Repositories {
     return this.listMaterials(projectId).find((material) => material.id === id);
   }
 
+  findMaterialByDoi(projectId: string, doi: string): (MaterialRecord & { note?: string }) | undefined {
+    const needle = doi.replace(/^https?:\/\/doi\.org\//i, "").trim().toLowerCase();
+    return this.listMaterials(projectId).find((material) => material.source.doi?.toLowerCase() === needle);
+  }
+
   // --- plans --------------------------------------------------------------
   createPlan(plan: ExperimentPlan): ExperimentPlan {
     this.db

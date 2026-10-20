@@ -134,6 +134,7 @@ export interface ManuscriptVersion {
   id: string;
   version: number;
   files: Array<{ path: string; sha256: string; bytes: number }>;
+  snapshotPath?: string | null;
   build: {
     status: string;
     pdfPath: string | null;
