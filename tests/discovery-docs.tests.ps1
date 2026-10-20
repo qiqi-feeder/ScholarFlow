@@ -34,6 +34,36 @@ function Assert-LocalLinks([string]$text, [string]$directory) {
 Assert-Discovery $discovery
 Assert-LocalLinks $discovery (Join-Path $root 'docs')
 
+# A proposed workflow must retain its decision status and distinguish provenance.
+function Assert-ReproductionProposal([string]$text) {
+    $section = [regex]::Match($text, '(?s)### 3\.3 论文复现的职责划分\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if (-not $section.Contains('候选方案，尚未确认')) { throw 'Reproduction proposal lost its unconfirmed status.' }
+    foreach ($mode in @('作者代码复现', '独立实现')) {
+        if ($section -notmatch ('(?m)^\| ' + $mode + ' \|')) { throw "Missing reproduction provenance mode: $mode" }
+    }
+}
+Assert-ReproductionProposal $discovery
+
+# Keep confirmed task scope separate from the still-proposed implementation.
+function Assert-ReproductionScope([string]$text) {
+    $section = [regex]::Match($text, '(?s)### 3\.4 初期复现范围与材料准入\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if ($section -notmatch '状态：已确认需求（C08–C10') { throw 'Confirmed reproduction scope lost its decision status.' }
+    foreach ($id in @('C08', 'C09', 'C10')) {
+        if ($text -notmatch ('(?m)^\| ' + $id + ' \|')) { throw "Missing confirmed scope record: $id" }
+    }
+    foreach ($entry in @('论文', '模型名称')) {
+        if ($section -notmatch ('(?m)^\| ' + $entry + ' \|')) { throw "Missing reproduction input: $entry" }
+    }
+    foreach ($criterion in @('R01', 'R02', 'R03')) {
+        $rows = [regex]::Matches($section, ('(?m)^\| ' + $criterion + ' \| [^|\r\n]+ \| [^|\r\n]+ \|\r?$'))
+        if ($rows.Count -ne 1) { throw "Missing or duplicate admission criterion: $criterion" }
+    }
+    if ($section -notmatch '不静默猜参数、拼凑实验流程或转为独立实现') {
+        throw 'Incomplete-material implementation deferral is missing.'
+    }
+}
+Assert-ReproductionScope $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -59,4 +89,17 @@ Assert-Rejected { Assert-Discovery ($discovery.Replace('## 3. 候选方案', '##
 Assert-Rejected { Assert-Discovery ($discovery + "`n| C01 | duplicate | invalid |") } 'Duplicate decision ID'
 Assert-Rejected { Assert-LocalLinks '[missing](no-such-discovery-file.md)' (Join-Path $root 'docs') } 'Broken local link'
 Assert-Rejected { Assert-Discovery ($discovery + [char]0xFFFD) } 'Invalid text encoding'
-Write-Output 'Discovery categories, provenance IDs, links, historical pointers and 4 negative cases passed (documentation only).'
+Assert-Rejected { Assert-ReproductionProposal ($discovery.Replace('候选方案，尚未确认', '已实施')) } 'lost its unconfirmed status'
+Assert-Rejected { Assert-ReproductionProposal ($discovery.Replace('| 独立实现 |', '| 未分类 |')) } 'Missing reproduction provenance mode'
+Assert-Rejected { Assert-ReproductionScope ($discovery.Replace('状态：已确认需求（C08–C10', '状态：候选范围（C08–C10')) } 'lost its decision status'
+foreach ($id in @('C08', 'C09', 'C10')) {
+    Assert-Rejected { Assert-ReproductionScope ($discovery.Replace("| $id |", '| 未登记 |')) } 'Missing confirmed scope record'
+}
+foreach ($entry in @('论文', '模型名称')) {
+    Assert-Rejected { Assert-ReproductionScope ($discovery.Replace("| $entry |", '| 未分类 |')) } 'Missing reproduction input'
+}
+foreach ($criterion in @('R01', 'R02', 'R03')) {
+    Assert-Rejected { Assert-ReproductionScope ($discovery.Replace("| $criterion |", '| 未分类 |')) } 'Missing or duplicate admission criterion'
+}
+Assert-Rejected { Assert-ReproductionScope ($discovery.Replace('不静默猜参数、拼凑实验流程或转为独立实现', '自动补全实验实现')) } 'implementation deferral is missing'
+Write-Output 'Discovery categories, provenance IDs, links, historical pointers, proposed responsibilities, confirmed reproduction scope and 16 negative cases passed (documentation only).'
