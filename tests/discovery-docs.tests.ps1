@@ -128,6 +128,14 @@ function Assert-ApiDecision([string]$text) {
 }
 Assert-ApiDecision $discovery
 
+function Assert-PiProviderReuse([string]$text) {
+    if ($text -notmatch '(?m)^\| C17 \|[^\r\n]*复用 Pi[^\r\n]*Web') { throw 'Missing confirmed Pi provider reuse decision.' }
+    $section = [regex]::Match($text, '(?s)### 3\.8 第一版 MVP 范围建议与剩余决定\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if (-not $section.Contains('API 接入边界已确认（C17）') -or -not $section.Contains('首期不另建厂商适配层')) { throw 'Missing provider integration scope boundary.' }
+    if ($section.Contains('建议首批以 DeepSeek 为必选，另评估通义千问和智谱')) { throw 'Superseded per-provider scope is still active.' }
+}
+Assert-PiProviderReuse $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -185,4 +193,7 @@ Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('Agent 大
 Assert-Rejected { Assert-ApiDecision ($discovery.Replace('| C16 |', '| 未登记 |')) } 'Missing confirmed API'
 Assert-Rejected { Assert-ApiDecision ($discovery.Replace('用户已确认当前环境没有，要求暂缓处理', '继续查找环境')) } 'Missing explicit environment setup deferral'
 Assert-Rejected { Assert-ApiDecision ($discovery.Replace('API 路线已确定，预算待定。', '是否接受本地应用/实验＋云端模型 API')) } 'Resolved API/environment question remains pending'
-Write-Output 'Discovery provenance, links, proposal/MVP/Windows/API boundaries and 35 negative cases passed (documentation only).'
+Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('| C17 |', '| 未登记 |')) } 'Missing confirmed Pi provider reuse'
+Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('首期不另建厂商适配层', '首期自建厂商适配层')) } 'Missing provider integration scope boundary'
+Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('厂商/模型选项随选定 Pi 版本的实际支持展示', '建议首批以 DeepSeek 为必选，另评估通义千问和智谱')) } 'Superseded per-provider scope'
+Write-Output 'Discovery provenance, links, proposal/MVP/Windows/API/Pi reuse boundaries and 38 negative cases passed (documentation only).'
