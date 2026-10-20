@@ -77,6 +77,17 @@ function Assert-WorkbenchDecisions([string]$text) {
 }
 Assert-WorkbenchDecisions $discovery
 
+# Full-lifecycle scope remains confirmed while UI and orchestration stay proposed.
+function Assert-ProjectOrganization([string]$text) {
+    if ($text -notmatch '(?m)^\| C03 \|') { throw 'Missing confirmed full-lifecycle record.' }
+    $section = [regex]::Match($text, '(?s)### 3\.6 全流程工作台、协作与工作区组织\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    if ($section -notmatch '(?m)^状态：候选产品组织，尚未确认') { throw 'Project organization lost its unconfirmed status.' }
+    foreach ($boundary in @('项目工作区', '任务会话', '执行环境')) {
+        if ($section -notmatch ('(?m)^\| ' + $boundary + ' \|')) { throw "Missing organization boundary: $boundary" }
+    }
+}
+Assert-ProjectOrganization $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -120,4 +131,7 @@ foreach ($id in @('C11', 'C12', 'C13')) {
 }
 Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace('已确认（C11–C13）', '候选（C11–C13）')) } 'lost their confirmed status'
 Assert-Rejected { Assert-WorkbenchDecisions ($discovery.Replace('以下均为助手提出的候选设计和验证方向，尚未确认，更不是已实现能力或可直接声称的简历业绩：', '以下功能均已实现：')) } 'implementation and approval boundary'
-Write-Output 'Discovery provenance, links, proposed responsibilities, confirmed reproduction/workbench scope and 21 negative cases passed (documentation only).'
+Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| C03 |', '| 未登记 |')) } 'Missing confirmed full-lifecycle record'
+Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('状态：候选产品组织，尚未确认', '状态：已批准产品组织')) } 'lost its unconfirmed status'
+Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| 任务会话 |', '| 未分类 |')) } 'Missing organization boundary'
+Write-Output 'Discovery provenance, links, proposed responsibilities/organization, confirmed reproduction/workbench scope and 24 negative cases passed (documentation only).'
