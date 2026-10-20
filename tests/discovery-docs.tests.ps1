@@ -97,10 +97,10 @@ function Assert-PiPositioning([string]$text) {
 }
 Assert-PiPositioning $discovery
 
-# A smaller release proposal must preserve its approval and full-lifecycle bounds.
+# Preserve the historical proposal and point to the now-authorized current plan.
 function Assert-MvpProposal([string]$text) {
     $section = [regex]::Match($text, '(?s)### 3\.8 第一版 MVP 范围建议与剩余决定\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
-    if ($section -notmatch '(?m)^状态：MVP 建议，尚未整体确认，尚未进入实施规划') { throw 'MVP proposal lost its approval boundary.' }
+    if ($section -notmatch '(?m)^状态：历史 MVP 建议；现行首期范围与验证要求见 \[PLAN\]\(\.\./PLAN\.md\)（C18）') { throw 'MVP proposal lost its approval boundary.' }
     foreach ($stage in @('调研与方案', '实验', '结果与分析', 'LaTeX 稿件', '投稿与修订')) {
         if ($section -notmatch ('(?m)^\| ' + [regex]::Escape($stage) + ' \|')) { throw "Missing MVP lifecycle stage: $stage" }
     }
@@ -150,6 +150,12 @@ if ($discovery.Contains('阶段：需求探索。')) {
         if (Test-Path (Join-Path $root $name)) { throw "Implementation plan exists during discovery: $name" }
     }
 }
+function Assert-PlanningAuthorization([string]$text) {
+    if ($text -notmatch '(?m)^\| C18 \|[^\r\n]*PLAN[^\r\n]*验证点') { throw 'Missing explicit planning authorization.' }
+    if (-not $text.Contains('阶段：MVP 实施规划。') -or -not $text.Contains('[PLAN](../PLAN.md)')) { throw 'Missing current planning phase and entry point.' }
+}
+Assert-PlanningAuthorization $discovery
+if (-not (Test-Path (Join-Path $root 'PLAN.md')) -or -not $readme.Contains('[PLAN](PLAN.md)')) { throw 'Authorized plan must exist and be linked from README.' }
 
 # Negative cases ensure the checks detect lost categories, duplicate IDs and broken references.
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
@@ -185,7 +191,7 @@ Assert-Rejected { Assert-ProjectOrganization ($discovery.Replace('| 任务会话
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('状态：候选定位解释，尚未确认', '状态：已批准定位')) } 'lost its candidate status'
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('尚未实现本节能力', '本节能力均已实现')) } 'lost its implementation boundary'
 Assert-Rejected { Assert-PiPositioning ($discovery.Replace('格式可读不等于依赖已安装、权限已授予或执行已验证', '所有 Skill 均可直接运行')) } 'runtime compatibility boundary'
-Assert-Rejected { Assert-MvpProposal ($discovery.Replace('状态：MVP 建议，尚未整体确认，尚未进入实施规划', '状态：已批准 MVP')) } 'lost its approval boundary'
+Assert-Rejected { Assert-MvpProposal ($discovery.Replace('状态：历史 MVP 建议；现行首期范围与验证要求见', '状态：已实现 MVP，参见')) } 'lost its approval boundary'
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('| 投稿与修订 |', '| 未分类 |')) } 'Missing MVP lifecycle stage'
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('本地运行不自动等于模型离线', '本地运行保证完全离线')) } 'offline model boundary'
 Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('| C15 |', '| 未登记 |')) } 'Missing confirmed Windows'
@@ -196,4 +202,6 @@ Assert-Rejected { Assert-ApiDecision ($discovery.Replace('API 路线已确定，
 Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('| C17 |', '| 未登记 |')) } 'Missing confirmed Pi provider reuse'
 Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('首期不另建厂商适配层', '首期自建厂商适配层')) } 'Missing provider integration scope boundary'
 Assert-Rejected { Assert-PiProviderReuse ($discovery.Replace('厂商/模型选项随选定 Pi 版本的实际支持展示', '建议首批以 DeepSeek 为必选，另评估通义千问和智谱')) } 'Superseded per-provider scope'
-Write-Output 'Discovery provenance, links, proposal/MVP/Windows/API/Pi reuse boundaries and 38 negative cases passed (documentation only).'
+Assert-Rejected { Assert-PlanningAuthorization ($discovery.Replace('| C18 |', '| 未登记 |')) } 'Missing explicit planning authorization'
+Assert-Rejected { Assert-PlanningAuthorization ($discovery.Replace('阶段：MVP 实施规划。', '阶段：业务已完成。')) } 'Missing current planning phase'
+Write-Output 'Discovery provenance, links, planning authorization and 40 negative cases passed (documentation only).'

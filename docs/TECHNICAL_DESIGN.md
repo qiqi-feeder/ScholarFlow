@@ -1,6 +1,6 @@
 # ScholarFlow 技术方案：可自托管 Server＋Web
 
-> **历史方案，待重新确认**：当前处于需求探索阶段，以 [DISCOVERY](DISCOVERY.md) 中逐项标注的状态为准。本文的架构、接口与工具限制是待评估材料，不构成当前实施授权。
+> **历史方案，待重新确认**：现行首期范围以 [PLAN](../PLAN.md) 为准，需求来源见 [DISCOVERY](DISCOVERY.md)。本文的架构、接口与工具限制保留作参考，不作为并行执行依据。
 
 更新：2026-09-16。状态：推荐设计，尚未实现；版本号和依赖在 M1/M3 开工时审计并锁定。对应[产品文档](PRODUCT_DESIGN.md)、[验收路线](IMPLEMENTATION_ROADMAP.md)。
 

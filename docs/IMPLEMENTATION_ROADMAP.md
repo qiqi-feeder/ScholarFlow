@@ -1,6 +1,6 @@
 # ScholarFlow 推荐实现路线与可验证节点
 
-> **历史方案，待重新确认**：当前处于需求探索阶段，以 [DISCOVERY](DISCOVERY.md) 中逐项标注的状态为准。本文及配套节点清单、架构图保留作历史参考，不构成当前实施授权；不会据此自动开始 M1。
+> **历史方案，待重新确认**：现行首期范围以 [PLAN](../PLAN.md) 为准，需求来源见 [DISCOVERY](DISCOVERY.md)。本文及配套节点清单、架构图保留作历史参考，不作为并行执行依据；不会据此自动开始旧 M1。
 
 更新：2026-09-16。对应[产品](PRODUCT_DESIGN.md)、[技术](TECHNICAL_DESIGN.md)。当前仅文档与 Mock Demo，**M1–M8 尚未实现**；本次交付定义验收，不宣称已运行真实 Pi/Skill/排版。节点结构见 [implementation-milestones.json](implementation-milestones.json)。
 

@@ -1,13 +1,15 @@
 # ScholarFlow
 An Agentic Research Workspace powered by Pi
 
-> **需求探索中（2026-10-20）**：当前共识、候选方案与未决问题以 [DISCOVERY](docs/DISCOVERY.md) 为入口。下列产品、技术和实现路线文档保留为历史方案，尚未重新确认，不构成当前实施授权。仅在明确进入实施阶段后生成 `PLAN.md`。
+> **MVP 计划已编写（2026-10-20）**：首期范围、实施节点和验证要求见 [PLAN](PLAN.md)，需求来源及讨论见 [DISCOVERY](docs/DISCOVERY.md)。本轮只编写计划，业务尚未实施；下列旧方案和静态 Demo 保留作参考，不作为并行执行依据。
 
-探索文档验证：`./tests/discovery-docs.tests.ps1`。当前 Light Workspace 资源缺失及验证限制见 DISCOVERY。
+计划/需求文档验证：`./tests/mvp-plan.tests.ps1`、`./tests/discovery-docs.tests.ps1`。当前 Light Workspace 资源缺失及验证限制见 DISCOVERY；文档检查不代表真实功能验收。
 
 ## 产品与实现方案
 
-当前仓库是产品文档与静态 Mock Demo，尚无可执行的 ScholarFlow Server、真实 Pi/Skill 集成或排版引擎。推荐产品方向为可自托管 Server＋Web，Electron 后续复用。
+当前仓库是产品文档与静态 Mock Demo，尚无可执行的 ScholarFlow Server、真实 Pi/Skill 集成或排版引擎。现行计划为单用户本地 Web＋Pi SDK、Windows 本地实验和 LaTeX 交付；Electron 后置。
+
+- [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
 
 - [产品设计](docs/PRODUCT_DESIGN.md)：部署/数据归属、Skill 选择与执行、写作排版、MVP 范围。
 - [技术方案](docs/TECHNICAL_DESIGN.md)：架构、仓库拆分、存储、Pi/任务/权限与安全。
