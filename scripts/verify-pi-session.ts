@@ -26,6 +26,7 @@ const temp = mkdtempSync(path.join(tmpdir(), "scholarflow-pi-verify-"));
 const skills = [
   path.join(root, "resources", "skills", "literature-review"),
   path.join(root, "resources", "skills", "reproduction-admission"),
+  path.join(root, "resources", "skills", "experiment-design"),
   path.join(root, "resources", "skills", "result-analysis"),
   path.join(root, "resources", "skills", "latex-writing"),
 ];
@@ -41,7 +42,7 @@ try {
   await loader.reload();
   const discovered = loader.getSkills();
   const names = discovered.skills.map((skill) => skill.name).sort();
-  for (const required of ["latex-writing", "literature-review", "result-analysis", "reproduction-admission"]) {
+  for (const required of ["experiment-design", "latex-writing", "literature-review", "result-analysis", "reproduction-admission"]) {
     if (!names.includes(required)) throw new Error(`skill not discovered: ${required}`);
   }
 
