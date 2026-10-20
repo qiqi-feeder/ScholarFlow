@@ -55,7 +55,7 @@ function fakeSearch(): CrossrefSearch {
   } as unknown as CrossrefSearch;
 }
 
-async function start(options: { worker?: boolean; withAgent?: boolean } = {}): Promise<Harness> {
+async function start(options: { worker?: boolean; withAgent?: boolean; pdflatexPath?: string } = {}): Promise<Harness> {
   const root = mkdtempSync(path.join(tmpdir(), "scholarflow-server-"));
   const config = loadConfig({
     configFile: path.join(root, "config", "config.json"),
@@ -65,6 +65,7 @@ async function start(options: { worker?: boolean; withAgent?: boolean } = {}): P
   });
   config.workerEnabled = false;
   config.maxTargetRunsPerTask = 3;
+  if (options.pdflatexPath) config.pdflatexPath = options.pdflatexPath;
   let worker: ExperimentWorker | undefined;
   const app = await createApp({
     config,
@@ -475,6 +476,22 @@ test("manuscript compile, undefined citation failure, and export are real", asyn
     assert.ok(existsSync(exported.body.path));
     const header = readFileSync(exported.body.path).subarray(0, 2).toString();
     assert.equal(header, "PK");
+  } finally {
+    await harness.close();
+  }
+});
+
+test("configured pdflatex path is used and a missing binary is reported", async () => {
+  const missing = "scholarflow-missing-pdflatex";
+  const harness = await start({ withAgent: false, pdflatexPath: missing });
+  try {
+    const project = await api(harness, "POST", "/api/projects", { name: "Configured TeX" });
+    const projectId = project.body.project.id as string;
+    const built = await api(harness, "POST", `/api/projects/${projectId}/manuscript/build`, {});
+    assert.equal(built.status, 422);
+    assert.equal(built.body.ok, false);
+    assert.ok(built.body.diagnostics.some((item: string) => item.includes(missing)));
+    assert.equal(built.body.version.build.status, "failed");
   } finally {
     await harness.close();
   }

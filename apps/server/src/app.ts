@@ -162,7 +162,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
   const materials = new MaterialService({ crossref: search });
   const skills = new SkillService(repositories, resourcesDir);
   const context = new ContextService(repositories, skills);
-  const manuscript = new ManuscriptService(repositories, path.join(resourcesDir, "templates", "paper"));
+  const manuscript = new ManuscriptService(
+    repositories,
+    path.join(resourcesDir, "templates", "paper"),
+    () => config.pdflatexPath,
+  );
   const store = new RunStore(db);
   const worker = options.worker ?? options.workerFactory?.(db) ?? null;
   const experiments = new ExperimentService(repositories, db, store, worker, config, skills, events);

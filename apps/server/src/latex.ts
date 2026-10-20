@@ -57,6 +57,7 @@ export class ManuscriptService {
   constructor(
     private readonly repos: Repositories,
     private readonly templateDir: string,
+    private readonly pdflatexPath: () => string = () => "pdflatex",
   ) {}
 
   manuscriptRoot(project: ProjectRecord): string {
@@ -279,7 +280,7 @@ export class ManuscriptService {
   }
 
   private pdflatex(): string {
-    return process.env.SCHOLARFLOW_PDFLATEX ?? "pdflatex";
+    return this.pdflatexPath() || "pdflatex";
   }
 
   latestBuild(project: ProjectRecord): ManuscriptVersion | undefined {

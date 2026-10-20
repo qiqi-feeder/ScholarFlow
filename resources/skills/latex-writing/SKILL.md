@@ -2,8 +2,8 @@
 name: latex-writing
 description: Write and revise an English article from verified result versions, maintain BibTeX and figure provenance, compile locally, and export a submission package. Use for manuscript drafting, reviewer responses, and camera-ready preparation.
 license: MIT
-compatibility: Requires latexmk and a TeX distribution for PDF builds.
-metadata: {"version":"1.0.0","requires":["latexmk"],"source":"ScholarFlow built-in"}
+compatibility: Requires pdflatex, bibtex, and a TeX distribution for PDF builds.
+metadata: {"version":"1.0.0","requires":["pdflatex","bibtex"],"source":"ScholarFlow built-in"}
 ---
 
 # LaTeX writing
