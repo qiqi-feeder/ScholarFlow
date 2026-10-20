@@ -58,6 +58,32 @@ function validate(data, text) {
   for (const match of text.matchAll(/^### (H\d{2}) \/ /gm)) {
     assert.ok(ids.has(match[1]), 'report project missing evidence record');
   }
+  const supplements = new Set(data.supplementary_sources.map(source => source.url));
+  const scenarioIds = new Set();
+  assert.ok(Array.isArray(data.scenario_comparisons) && data.scenario_comparisons.length > 0, 'scenario comparisons');
+  for (const scenario of data.scenario_comparisons) {
+    assert.match(scenario.id, /^S\d{2}$/, 'scenario id');
+    assert.ok(!scenarioIds.has(scenario.id), 'duplicate scenario id');
+    scenarioIds.add(scenario.id);
+    assert.equal(scenario.status, 'candidate', 'scenario approval boundary');
+    assert.equal(scenario.basis, 'source_informed_inference', 'scenario inference attribution');
+    assert.equal(scenario.local_validation, 'not_run', 'scenario validation boundary');
+    assert.ok(scenario.upstream_refs.length > 0, 'scenario upstream references');
+    for (const id of scenario.upstream_refs) assert.ok(ids.has(id), 'unknown scenario upstream');
+    const allowedSources = new Set([
+      ...supplements,
+      ...data.projects.filter(p => scenario.upstream_refs.includes(p.id)).flatMap(p => p.sources.map(s => s.url)),
+    ]);
+    assert.ok(scenario.source_urls.length > 0, 'scenario source URLs');
+    for (const url of scenario.source_urls) assert.ok(allowedSources.has(url), 'unregistered scenario evidence');
+    for (const field of ['scenario', 'expected_behavior', 'counterexample']) {
+      assert.ok(typeof scenario[field] === 'string' && scenario[field].trim(), `scenario ${field}`);
+    }
+    assert.match(text, new RegExp(`^### ${scenario.id} / `, 'm'), 'missing scenario discussion');
+  }
+  for (const match of text.matchAll(/^### (S\d{2}) \/ /gm)) {
+    assert.ok(scenarioIds.has(match[1]), 'scenario missing evidence record');
+  }
   const discovery = readFileSync(resolve(root, 'docs/DISCOVERY.md'), 'utf8');
   assert.match(discovery, /^\| C14 \|/m, 'research-first decision');
   assert.ok(discovery.includes('research/HARNESS_SURVEY_2026-10-20.md'), 'discovery report link');
@@ -81,4 +107,9 @@ rejected(d => { d.projects.find(p => p.author_evaluations.length).author_evaluat
 rejected(d => { d.projects.find(p => p.author_evaluations.length).author_evaluations[0].applies_to = 'current_snapshot'; }, /evaluation version boundary/);
 rejected(d => { d.source_file_count++; }, /source file count/);
 rejected(() => {}, /missing report project/, text => text.replace('### H01 /', '### Missing /'));
-console.log(`Harness survey provenance passed: ${survey.projects.length} projects, ${survey.source_file_count} source records, ${negatives} negative cases. Documentation only; upstream tests and model experiments were not run.`);
+rejected(d => { d.scenario_comparisons[0].status = 'approved'; }, /scenario approval boundary/);
+rejected(d => { d.scenario_comparisons[0].upstream_refs.push('H99'); }, /unknown scenario upstream/);
+rejected(d => { d.scenario_comparisons[0].source_urls.push('https://example.invalid/unverified'); }, /unregistered scenario evidence/);
+rejected(d => { d.scenario_comparisons[0].local_validation = 'passed'; }, /scenario validation boundary/);
+rejected(() => {}, /missing scenario discussion/, text => text.replace('### S01 /', '### Missing /'));
+console.log(`Harness survey provenance passed: ${survey.projects.length} projects, ${survey.source_file_count} source records, ${survey.scenario_comparisons.length} candidate scenarios, ${negatives} negative cases. Documentation only; upstream tests and model experiments were not run.`);

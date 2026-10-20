@@ -955,6 +955,110 @@
       "kind": "official_documentation",
       "local_replication": "not_run",
       "limitation": "Explains replay and side effects; mutable documentation is not the pinned implementation."
+    },
+    {
+      "url": "https://mlflow.org/docs/latest/ml/tracking/",
+      "kind": "official_documentation",
+      "local_replication": "not_run",
+      "limitation": "Documentation-only review of experiment tracking; no source-code or runtime validation."
+    },
+    {
+      "url": "https://doc.dvc.org/user-guide/experiment-management",
+      "kind": "official_documentation",
+      "local_replication": "not_run",
+      "limitation": "Documentation-only review of experiment management; no adoption decision or runtime validation."
+    }
+  ],
+  "scenario_comparisons": [
+    {
+      "id": "S01",
+      "upstream_refs": [
+        "H01",
+        "H02",
+        "H04"
+      ],
+      "source_urls": [
+        "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_skill_tools.py",
+        "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py"
+      ],
+      "status": "candidate",
+      "basis": "source_informed_inference",
+      "local_validation": "not_run",
+      "scenario": "Chat context compacts while training continues.",
+      "expected_behavior": "Recover the original run and material references; reload method guidance when needed.",
+      "counterexample": "Missing skill context is treated as a missing experiment and the job is resubmitted."
+    },
+    {
+      "id": "S02",
+      "upstream_refs": [
+        "H01",
+        "H04"
+      ],
+      "source_urls": [
+        "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/core/compaction/compaction.ts",
+        "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py"
+      ],
+      "status": "candidate",
+      "basis": "source_informed_inference",
+      "local_validation": "not_run",
+      "scenario": "Two MSE values have different forecast horizons or dataset splits.",
+      "expected_behavior": "Preserve condition and source references and check comparability before ranking.",
+      "counterexample": "A summary preserves only model names and numbers and generates an improvement claim."
+    },
+    {
+      "id": "S03",
+      "upstream_refs": [
+        "H01",
+        "H04",
+        "H10"
+      ],
+      "source_urls": [
+        "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_tool_output_budget_middleware.py",
+        "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/stage_impls/_execution.py",
+        "https://mlflow.org/docs/latest/ml/tracking/",
+        "https://doc.dvc.org/user-guide/experiment-management"
+      ],
+      "status": "candidate",
+      "basis": "source_informed_inference",
+      "local_validation": "not_run",
+      "scenario": "The connection drops after a long-running experiment was submitted.",
+      "expected_behavior": "Query the original run and distinguish running, finished, failed, partial and unknown states.",
+      "counterexample": "A zero exit code or partial debug run is reported as successful paper reproduction."
+    },
+    {
+      "id": "S04",
+      "upstream_refs": [
+        "H01",
+        "H07",
+        "H08"
+      ],
+      "source_urls": [
+        "https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/src/paperqa/agents/tools.py",
+        "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agentic_rag/locate_search.go"
+      ],
+      "status": "candidate",
+      "basis": "source_informed_inference",
+      "local_validation": "not_run",
+      "scenario": "A later paper repeats the original number without evidence of executing the method.",
+      "expected_behavior": "Check source purpose and provenance before accepting it as third-party reproduction evidence.",
+      "counterexample": "Keyword or semantic similarity alone is taken as evidence that the experiment ran."
+    },
+    {
+      "id": "S05",
+      "upstream_refs": [
+        "H10",
+        "H12"
+      ],
+      "source_urls": [
+        "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/verified_registry.py",
+        "https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/src/harbor/verifier/verifier.py"
+      ],
+      "status": "candidate",
+      "basis": "source_informed_inference",
+      "local_validation": "not_run",
+      "scenario": "A measured result is real but belongs to another condition or does not improve the baseline.",
+      "expected_behavior": "Separate execution validity, condition attribution and support for the scientific conclusion.",
+      "counterexample": "Numeric registry membership is treated as proof that the scientific comparison is valid."
     }
   ]
 }

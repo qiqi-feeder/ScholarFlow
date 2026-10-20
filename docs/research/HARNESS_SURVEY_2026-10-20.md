@@ -164,3 +164,56 @@
 - 未统一实测 PDF 解析、混合检索/重排、跨会话材料遗漏、远端 GPU 恢复，不能给它们排序或填写提升比例。
 - 科研近邻仍需下一步检查 AI-Researcher/Agent Laboratory 的具体恢复与产物契约、OpenScholar 的引用评估等；首轮已有介绍，本轮未将它们伪装为源码深审。
 - 独立复现和更广泛项目检索仍可扩展，但先用本轮明确的源码机制与用户讨论；不因此生成 PLAN.md 或修改业务代码。
+
+## 7. Pi / Deep Agents / DeerFlow 对照及科研场景差异
+
+2026-10-20 接续讨论。以下为基于第 3 节实现的场景分析与候选适配，不是已确认架构、已有性能收益或自研创新。适用范围是初期计算型科研任务的分析样例，不扩展成全学科承诺。三个项目的能力有重叠；下表是在已读路径中选择比较点，不是声称某项目缺少其他能力，也不要求把三个运行框架叠加。
+
+| 比较点 | Pi 的已读实现 | Deep Agents 的已读实现 | DeerFlow 的已读实现 | 科研任务中需要继续核对什么 |
+| --- | --- | --- | --- | --- |
+| 方法与工具 | Skill 发现/按需读取，工具可动态选择，MCP 工具发现 | Skill 读取或 pin 后关联工具；读取记录离开上下文后撤回关联工具 | 显式 Skill 激活；持久上下文保留 Skill 引用 | 方法正文、论文特定配置与外部实验状态应如何分别保存 |
+| 上下文 | 通用会话压缩、近期消息、读写文件记录 | 大结果外置、摘要及 Skill/工具联动 | 目标、摘要、委派和产物的独立持久通道 | 压缩后怎样仍能定位正确实验条件、来源与运行版本 |
+| 大输出 | MCP 大文本保留完整文件并截断模型视图 | backend 外置和分页读取，标记预览信息损失 | 类型化摘要与文件引用，保留命令退出语义 | 日志摘要之外，怎样提取原始指标、异常和 partial 状态 |
+| 外部执行 | 会话/工具生命周期可作为接入点 | 文件/执行 backend 可承载工具运行 | sandbox 与执行中间件可承载外部任务 | 会话恢复不等于实验重启；任务查询、取消和科学完成状态仍需验证 |
+
+### S01 / Skill：方法规范、实验条件和运行生命周期分开
+
+已有依据：Deep Agents 的测试明确涵盖压缩移除 Skill 读取后撤回工具；DeerFlow 保留已读 Skill 引用，便于后续回查。它们处理的是当前模型请求的方法与能力上下文，不能据此推断外部训练进程已经停止。[Deep Agents 测试](https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_skill_tools.py)、[DeerFlow 持久上下文](https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py)
+
+科研推导：复现 Skill 保存通用方法，例如准入、先保留基线、检查结果；论文特定的脚本、数据划分、预测长度和参数是本次实验材料，运行标识与实际执行状态则属于外部任务。候选行为是提交时绑定所用材料和条件，恢复后先查询原任务；继续解释或改动方法前，按需重新加载相应 Skill。不能把方法正文是否仍在模型上下文中，直接当作进程是否存在或实验是否有效。
+
+场景：训练还在运行，聊天发生压缩。应能找到原任务并查询，写报告时仍能定位原配置。反例：因为压缩后没看到训练历史就重跑，或因为加载了新 Skill 就悄悄改变已提交实验条件。如何实现方法可用性与执行授权的关系仍待确认；保留引用不等于已重新读取正文。
+
+### S02 / 上下文：研究条件和证据类型比一般进度摘要更重要
+
+已有依据：Pi 有通用压缩与文件记录；DeerFlow 的持久通道把目标、摘要、委派和产物分别组织，并把不可信数据与静态规则分开。这提供上下文组织机制，但没有自动保证论文配置与实测结果一致。[Pi 压缩](https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/core/compaction/compaction.ts)、[DeerFlow 实现](https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py)
+
+科研推导：候选交接至少应能区分用户已确认目标、论文原始陈述、仓库实际配置、实测结果和 Agent 假设。字段保存位置和技术形式尚未确定，不要求全部常驻提示词；必要的是选入上下文的信息能返回原始材料与对应版本。
+
+假设场景：同一模型的两次 MSE 分别来自预测长度 96 和 192，或数据划分不同。用户要求写优劣分析时，系统应先检查比较条件，不能仅按数值排序。反例：摘要只留下模型名和两个数值，之后生成“新方法更好”。这里的差异在于研究语义，不是通用摘要算法自然缺失的某个功能；是否改善遗漏率还需任务对照。
+
+### S03 / 执行与恢复：聊天结束、进程退出和复现达标是不同事件
+
+已有依据：Pi 提供会话和工具生命周期；DeerFlow 测试保持压缩后的退出状态；AutoResearchClaw 执行路径区分 completed/partial/failed。它们是可参考的机制，不共同构成已验证的科研执行服务。[DeerFlow 测试](https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_tool_output_budget_middleware.py)、[科研执行路径](https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/stage_impls/_execution.py)
+
+科研推导：训练可能跨越多轮会话；重试有 GPU、时间和数据处理成本。候选行为是恢复时用已有运行标识核对实际状态，对已完成、运行中、失败和未知分别处理；重试和取消需要执行端确认结果，不能仅凭工具超时断言失败，也不能承诺恰好执行一次。
+
+场景：连接中断但训练仍在执行，应查询而非自动再提交。反例：退出码为零、文件存在，就宣布复现达标；实际上执行了小规模调试配置或只完成部分种子。数据、配置、代码与运行绑定的做法也有成熟实验工具可参考：MLflow 记录参数、代码版本、指标和产物，并支持指标关联模型/数据集；DVC 管理实验与版本。这两项本轮仅查官方文档，没有源码/运行验证，也未决定接入。[MLflow Tracking](https://mlflow.org/docs/latest/ml/tracking/)、[DVC 实验管理](https://doc.dvc.org/user-guide/experiment-management)
+
+### S04 / 知识检索：证据的用途和精确条件决定查找方式
+
+已有依据：PaperQA 将找文献、收集证据和回答分开；RAGFlow 限制查询范围；Pi 已有工具发现与文件能力。这些机制可以支持材料定位，但搜索相关性不证明结果条件匹配。[PaperQA](https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/src/paperqa/agents/tools.py)、[RAGFlow 范围](https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agentic_rag/locate_search.go)
+
+科研推导：找官方仓库地址应核对论文/作者来源；找训练参数应核对目标脚本和配置；找某次指标应查询该运行产物。论文段落可采用检索，模型名称和代码符号可精确查找，实验数值应保留运行与条件约束。具体是否使用 RAG、混合检索或现成实验系统仍待验证，不能把全部材料向量化作为默认决定。
+
+场景：一篇后续论文只引用原文数字，不能满足 C09 所需的他人实际复现依据；找到了数字也不能推定实验曾执行。反例：搜索命中包含模型名和指标的段落，就自动标记复现依据充分。
+
+### S05 / 验证：实测结果、可比结果与结论支持分层检查
+
+已有依据：AutoResearchClaw 记录数值来源，Harbor 区分旧结果、缺失和无效奖励；这些检查有明确价值与边界。数值登记函数按数字匹配，单独使用不能判定其所在句子的实验条件与科学含义。[数值登记](https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/verified_registry.py)、[Harbor 验证](https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/src/harbor/verifier/verifier.py)
+
+科研推导：候选检查分为执行/产物检查、条件及数值归属检查、结论支持检查。前两者中可确定的部分由程序核验，科学解释仍可能需要模型与研究者判断；不宣称自动穷尽所有科学错误。
+
+场景：目标实验按约定完成，但方法没有提升，可以交付忠实报告；原论文指标未达到，则准确报告复现未达标及已查明原因。反例：为了得到正结果换数据、缩短任务后不说明，或一直调参直到测试集数字变好。负结果、失败与材料不足都应保留，不合并成一种“成功”或“错误”。
+
+这些要求在软件工程、数据分析等领域也存在；科研任务的突出差异是研究条件决定可比性、随机性影响评价、证据决定结论边界。以上适配尚未在本地实现或评测，不能写成已经验证的科研优势。
