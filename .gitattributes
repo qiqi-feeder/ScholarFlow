@@ -1,0 +1,5 @@
+# Keep exported design resources byte-for-byte, including on Windows checkouts.
+demo/assets/ide-light/*.svg -text
+demo/assets/ide-light/*.woff2 -text
+# Upstream license includes one intentional trailing space; do not rewrite it.
+demo/assets/ide-light/OFL.txt -text whitespace=-blank-at-eol

@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-09-16T00:00:00+08:00",
+  "skills": [
+    {
+      "name": "frontend-design",
+      "role": "generator",
+      "repository": "anthropics/skills",
+      "sourcePath": "skills/frontend-design",
+      "commit": "34040c9c568585f6929bedeaad110ad08f079624",
+      "license": "Apache-2.0",
+      "skillSha256": "D91970639E9F5C37682AC7AB60094D35F1C7C1F38D731BD56396563AEE10C1D3"
+    },
+    {
+      "name": "ui-ux-pro-max",
+      "role": "generator",
+      "repository": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourcePath": ".claude/skills/ui-ux-pro-max",
+      "commit": "15de38fb70bc80ae9276fa7703b48ae861a672e6",
+      "license": "MIT",
+      "skillSha256": "EA087C341BFB5B23195C7302027268EDE86DA802554C18A5C4896A6017B439F9"
+    },
+    {
+      "name": "impeccable",
+      "role": "generator",
+      "repository": "pbakaus/impeccable",
+      "sourcePath": ".agents/skills/impeccable",
+      "commit": "0a4e72a254f3b175c95b36b82e5f2e60fa63f116",
+      "license": "Apache-2.0",
+      "skillSha256": "FA0CB3EF01A25B9094266109A63C1D01D4B2D4973F75B324F5C4AD7E568D148F"
+    },
+    {
+      "name": "web-design-guidelines",
+      "role": "evaluator",
+      "repository": "vercel-labs/agent-skills",
+      "sourcePath": "skills/web-design-guidelines",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "license": "MIT",
+      "skillSha256": "F4647CA866A3ACCF763777F83E7682954F0187CD6BEA7EEA0399796652414E8F"
+    }
+  ]
+}
+

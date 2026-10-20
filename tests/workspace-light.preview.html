@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ScholarFlow exact viewport preview</title><style>html,body{margin:0;overflow:hidden}iframe{position:absolute;inset:0;border:0;display:block}</style></head>
+<body><iframe id="preview" title="ScholarFlow demo preview"></iframe><script>
+'use strict';
+const params=new URLSearchParams(location.search),frame=document.getElementById('preview');
+const dimension=(name,fallback)=>Math.max(320,Math.min(1920,Number(params.get(name))||fallback));
+frame.width=dimension('width',390);frame.height=dimension('height',844);
+frame.addEventListener('load',()=>{
+  const d=frame.contentDocument,scene=params.get('scene');
+  if(params.get('agent')==='1' && !d.body.classList.contains('agent-open') && frame.width<=1100)d.querySelector('.agent-toggle').click();
+  if(scene==='skills')d.querySelector('#skillPickerTrigger').click();
+  if(scene==='profile')d.querySelector('#profilePickerTrigger').click();
+  if(scene==='approved')d.querySelector('#initialApproval [data-approval-action="approve"]').click();
+});
+frame.src='../demo/workspace-light.html?view='+encodeURIComponent(params.get('view')||'overview')+'&agent='+encodeURIComponent(params.get('agent')||'0');
+</script></body></html>

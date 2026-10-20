@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "implementationStatus": "not_started",
+  "commandStatus": "M1-and-later-commands-are-planned",
+  "milestones": [
+    {
+      "id": "D0", "title": "文档与验收基线", "optional": false, "status": "defined", "dependsOn": [],
+      "deliverables": ["产品、技术与路线文档", "节点清单、架构图、文档测试"],
+      "fixtures": ["当前文档和节点清单的内存变异"],
+      "verification": "./tests/architecture-docs.tests.ps1",
+      "passCriteria": ["本地链接与图结构全部有效", "所有节点含验收契约且依赖无环", "错误清单变异全部被拒"],
+      "negativeCases": ["缺标准、坏命令、缺节点、循环依赖与假完成"],
+      "evidence": "git commit 与文档/累计测试输出"
+    },
+    {
+      "id": "M1", "title": "Server、持久化与鉴权", "optional": false, "status": "defined", "dependsOn": ["D0"],
+      "deliverables": ["API/Worker、DB 迁移、dataRoot、登录", "验收 dispatcher"],
+      "fixtures": ["空 dataRoot、身份、两台机器、坏存储配置"],
+      "verification": "pnpm verify:milestone M1",
+      "passCriteria": ["重启后项目数据/hash 100%一致", "未登录私有 API 均拒绝且跨站请求被拒", "B→A 实际连接，第二 Worker 无执行许可"],
+      "negativeCases": ["坏配置、不可写存储、无鉴权跨机、秘密日志"],
+      "evidence": "artifacts/acceptance/M1/"
+    },
+    {
+      "id": "M2", "title": "真实 Web 与论文资产", "optional": false, "status": "defined", "dependsOn": ["M1"],
+      "deliverables": ["真实 Web/上传/PDF/笔记/证据", "源块与版本"],
+      "fixtures": ["自有 3 页 PDF、换版 PDF、两个项目、恶意输入"],
+      "verification": "pnpm verify:milestone M2",
+      "passCriteria": ["上传与 Server 文件 hash 一致，重启可读", "全部金标准源块正确，10 个来源点选无误", "跨项目材料不混入，键盘操作通过"],
+      "negativeCases": ["路径/symlink 越界、坏/超限 PDF、跨项目 ID、XSS"],
+      "evidence": "artifacts/acceptance/M2/"
+    },
+    {
+      "id": "M3", "title": "持久 Pi 任务", "optional": false, "status": "defined", "dependsOn": ["M2"],
+      "deliverables": ["PiAdapter、Run、Session 快照、SSE", "审批、取消与恢复"],
+      "fixtures": ["确定性延迟/故障模型桩、真实模型只读任务、Worker kill"],
+      "verification": "pnpm verify:milestone M3",
+      "passCriteria": ["10 次幂等提交只有 1 Run", "断网/刷新/关页无重发且事件去重无缺失", "受控取消≤5秒、中断识别≤10秒；真实 SDK/tool smoke 通过"],
+      "negativeCases": ["凭据缺失、工具错误、未知扩展、陈旧审批、撤权 SSE、副作用不明"],
+      "evidence": "artifacts/acceptance/M3/"
+    },
+    {
+      "id": "M4", "title": "Skill 作用域与完整加载", "optional": false, "status": "defined", "dependsOn": ["M3"],
+      "deliverables": ["注册/依赖报告/作用域/选择器", "资源加载与版本快照"],
+      "fixtures": ["两个默认 Skill、同名包、共享引用、正文尾标、缺依赖/越界包、nature 固定 commit"],
+      "verification": "pnpm verify:milestone M4",
+      "passCriteria": ["显式选择覆盖默认，包来源可辨", "完整 SKILL.md 和必要资源 hash/EOF 审计一致", "运行包不漂移，nature shared/pdf/脚本能力有报告"],
+      "negativeCases": ["缺资源/能力、越包根、解压穿越、专有 hooks/MCP/子代理、Skill 提权"],
+      "evidence": "artifacts/acceptance/M4/"
+    },
+    {
+      "id": "M5", "title": "nature-reader 阅读技术 MVP", "optional": false, "status": "defined", "dependsOn": ["M4"],
+      "deliverables": ["真实双语/来源/图表/公式产物", "通用阅读渲染与验证器"],
+      "fixtures": ["两份合法短论文与金标准、扫描/缺页/缺图"],
+      "verification": "pnpm verify:milestone M5",
+      "passCriteria": ["两份各3次真实全文 Run，段落覆盖和双语配对100%，资产/数学/来源检查全部通过", "每 Run 固定抽样≥20段（不足全查），≥90%无实质误译，关键错误/虚构0", "后续问答/选段正确路由，能力不足不发布 complete"],
+      "negativeCases": ["无 OCR、缺全文/资源、验证失败、摘要冒充全文、预算超限"],
+      "evidence": "artifacts/acceptance/M5/"
+    },
+    {
+      "id": "M6", "title": "写作与排版", "optional": false, "status": "defined", "dependsOn": ["M5"],
+      "deliverables": ["写作工作区、提案/审批/引用/版本", "隔离 TeX/PDF 构建与导出"],
+      "fixtures": ["两页稿件、真实写作 Skill、陈旧 patch、无效引用、恶意/错误/超时 TeX"],
+      "verification": "pnpm verify:milestone M6",
+      "passCriteria": ["审批前不改稿、批准恰好新增1版本，无陈旧覆盖", "真实2页 PDF 的文本/图/公式/布局和引用检查通过，源/PDF hash 对账", "攻击无副作用，受控超时≤60秒，失败保留上一成功版本"],
+      "negativeCases": ["无执行器、引用/编译错误、秘密访问、shell/network、审批重放"],
+      "evidence": "artifacts/acceptance/M6/"
+    },
+    {
+      "id": "M7", "title": "实验 Lite", "optional": false, "status": "defined", "dependsOn": ["M6"],
+      "deliverables": ["结果导入与批准 CPU 执行", "Run 元数据、重跑与来源关联"],
+      "fixtures": ["固定 seed CPU 脚本/镜像/输入、坏 schema、越界/网络/耗尽代码"],
+      "verification": "pnpm verify:milestone M7",
+      "passCriteria": ["导入不执行，未批准执行数0", "两次重跑 CSV hash 相同、指标误差≤1e-6，元数据100%齐全", "失败/超时/磁盘满不标成功，结果来源关联可追溯"],
+      "negativeCases": ["坏 schema、越界/网络/耗尽、无执行器、覆盖旧 Run"],
+      "evidence": "artifacts/acceptance/M7/"
+    },
+    {
+      "id": "M8", "title": "自托管交付与恢复", "optional": false, "status": "defined", "dependsOn": ["M7"],
+      "deliverables": ["Linux 完整部署与跨机器指南", "备份/恢复/升级、安全与累计验收"],
+      "fixtures": ["干净 Server A、浏览器 B、全新恢复目录、已有全链路项目、故障"],
+      "verification": "pnpm verify:milestone M8",
+      "passCriteria": ["B→A 上传/真实双语/PDF/实验全链路通过", "备份恢复后 hash/关联100%一致，不自动重发旧任务，备份无密钥", "全部 required gate passed 且人工签核齐全，安全负例全部通过"],
+      "negativeCases": ["鉴权/CSRF/越界/XSS/SSRF/扩展/脚本/TeX/审批重放、异常磁盘与升级失败"],
+      "evidence": "artifacts/acceptance/M8/"
+    },
+    {
+      "id": "E1", "title": "Electron 客户端", "optional": true, "status": "defined", "dependsOn": ["M8"],
+      "deliverables": ["共用 Web 的远程连接桌面壳", "可选本机 Server 生命周期与窄 IPC"],
+      "fixtures": ["目标 OS 包、远程/本机模式、离线/端口占用/恶意网页"],
+      "verification": "pnpm verify:milestone E1",
+      "passCriteria": ["远程不本地执行、本机无孤儿进程，Web/桌面产物hash一致", "渲染器无Node、IPC受限，全部宣称支持OS安装启动退出通过"],
+      "negativeCases": ["恶意IPC、离线假执行、未验收平台假支持"],
+      "evidence": "artifacts/acceptance/E1/"
+    }
+  ]
+}

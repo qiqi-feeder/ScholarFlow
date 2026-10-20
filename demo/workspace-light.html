@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>ScholarFlow · Light Workspace v2</title>
+  <style>
+    @font-face { font-family: Geist; src: url("assets/ide-light/geist-variable.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+    :root {
+      --app: #eef1f6; --chrome: #f4f6fa; --sidebar: #f7f8fc; --surface: #ffffff;
+      --ink: #222936; --muted: #5f6c80; --line: #dde3ec; --line-strong: #c9d2e0;
+      --accent: #315fca; --accent-hover: #254eae; --accent-soft: #e9f0ff; --hover: #edf0f6;
+      --success: #167665; --success-soft: #e6f4ef; --warning: #946313; --danger: #b23e48;
+      --terminal: #f5f7fb; --radius: 4px;
+      font-family: Geist, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink); background: var(--app); font-size: 13px; line-height: 1.55;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    button, a, input, textarea, summary { -webkit-tap-highlight-color: transparent; }
+    button:disabled { cursor: wait; opacity: .65; }
+    button { border: 0; background: transparent; padding: 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .skip-link { position: fixed; left: -9999px; top: 5px; z-index: 100; background: var(--surface); padding: 5px 10px; }
+    .skip-link:focus { left: 12px; }
+    [hidden] { display: none !important; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 26px; line-height: 1.35; letter-spacing: -.5px; font-weight: 650; }
+    h2, h3 { font-size: 16px; line-height: 1.5; font-weight: 600; }
+    .icon { width: 16px; height: 16px; display: inline-block; flex: 0 0 16px; background: currentColor; mask-size: contain; mask-position: center; mask-repeat: no-repeat; }
+    .icon-document { mask-image: url("assets/ide-light/document.svg"); }
+    .icon-folder { mask-image: url("assets/ide-light/folder.svg"); }
+    .icon-reading { mask-image: url("assets/ide-light/reading.svg"); }
+    .icon-matrix { mask-image: url("assets/ide-light/matrix.svg"); }
+    .icon-experiment { mask-image: url("assets/ide-light/experiment.svg"); }
+    .app { height: 100dvh; min-height: 420px; display: grid; grid-template-rows: 40px minmax(0, 1fr) 24px; overflow: hidden; }
+    .titlebar { background: var(--chrome); border-bottom: 1px solid var(--line); padding: 0 16px; display: flex; align-items: center; gap: 16px; }
+    .brand { font-size: 14px; font-weight: 650; letter-spacing: -.2px; flex: none; }
+    .back-forward { color: var(--muted); display: flex; gap: 12px; font-size: 20px; }
+    .global-search { width: min(470px, 40vw); height: 28px; padding: 0 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 auto; }
+    .global-search:hover { border-color: var(--accent); }
+    .search-prompt { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+    kbd { font: 12px Geist, sans-serif; color: var(--muted); border: 1px solid var(--line); background: var(--chrome); padding: 0 4px; border-radius: 3px; white-space: nowrap; }
+    .header-right { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--muted); }
+    .compact-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 4px 7px; border-radius: var(--radius); white-space: nowrap; }
+    .compact-button:hover { background: var(--hover); }
+    .explorer-toggle, .agent-toggle { display: none; }
+    .workbench { min-height: 0; display: grid; grid-template-columns: 48px 228px minmax(420px, 1fr) 384px; }
+    .activity-rail { background: var(--app); border-right: 1px solid var(--line); padding: 8px 6px; display: flex; align-items: center; flex-direction: column; gap: 9px; }
+    .activity-button { width: 35px; height: 36px; color: var(--muted); display: grid; place-items: center; border-radius: var(--radius); position: relative; }
+    .activity-button .icon { width: 18px; height: 18px; }
+    .activity-button:hover { background: var(--hover); color: var(--ink); }
+    .activity-button.active { color: var(--accent); background: var(--accent-soft); }
+    .activity-button.active::before { content: ""; position: absolute; left: -6px; top: 9px; bottom: 9px; width: 2px; background: var(--accent); }
+    .rail-space { flex: 1; }
+    .avatar { width: 28px; height: 28px; background: var(--line); color: var(--muted); border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 550; }
+    .explorer { min-height: 0; background: var(--sidebar); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .pane-heading { height: 38px; flex: none; padding: 0 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .eyebrow, .section-label { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .25px; }
+    .project-area { padding: 18px 14px 15px; position: relative; }
+    .project-switcher { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; font-weight: 550; gap: 6px; }
+    .project-directory { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .project-menu { position: absolute; top: 66px; left: 10px; right: 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 6px; padding: 5px; z-index: 15; box-shadow: 0 8px 24px #22293614; }
+    .project-option { width: 100%; text-align: left; padding: 8px; border-radius: 3px; }
+    .project-option:hover, .project-option.active { background: var(--accent-soft); color: var(--accent); }
+    .resource-tree { padding: 0 10px; overflow-y: auto; flex: 1; min-height: 0; }
+    .tree-row, details > summary { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 29px; padding: 4px 8px; text-align: left; color: var(--muted); border-radius: 3px; }
+    .tree-row { color: var(--ink); }
+    .tree-row span:not(.icon) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-row:hover, summary:hover { background: var(--hover); }
+    .tree-row.selected { background: var(--accent-soft); color: var(--accent); }
+    details > summary { cursor: pointer; list-style: none; color: var(--ink); }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before { content: "›"; color: var(--muted); font-size: 15px; width: 6px; flex: none; }
+    details[open] > summary::before { transform: rotate(90deg); }
+    .tree-count { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .tree-children { padding-left: 16px; }
+    .explorer-footer { flex: none; padding: 14px; border-top: 1px solid var(--line); font-size: 12px; }
+    .index-ready { color: var(--success); margin-top: 4px; }
+    .editor { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--surface); }
+    .editor-tabs { height: 38px; flex: none; background: var(--chrome); border-bottom: 1px solid var(--line); display: flex; overflow-x: auto; scrollbar-width: thin; }
+    .tab-shell { display: flex; align-items: center; min-width: 126px; max-width: 228px; height: 38px; border-right: 1px solid var(--line); flex: none; color: var(--muted); border-top: 2px solid transparent; }
+    .tab-shell.active { background: var(--surface); border-top-color: var(--accent); color: var(--ink); }
+    .editor-tab { text-align: left; flex: 1; min-width: 0; height: 35px; padding: 0 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tab-close { margin-right: 7px; width: 20px; height: 22px; color: var(--muted); border-radius: 3px; font-size: 15px; }
+    .tab-close:hover { background: var(--hover); color: var(--ink); }
+    .breadcrumb { height: 30px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 28px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; }
+    .breadcrumb span:last-child { text-overflow: ellipsis; overflow: hidden; }
+    .view-stage { flex: 1; min-height: 0; overflow: auto; }
+    .workspace-view { display: none; min-height: 100%; }
+    .workspace-view.active { display: block; }
+    .view-container { padding: 28px 34px 36px; max-width: 1120px; margin: 0 auto; }
+    .overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .inline-context { color: var(--muted); font-size: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+    .inline-context .updated { margin-left: 12px; }
+    .research-question { margin: 25px 0; }
+    .research-question h2 { margin: 7px 0; }
+    .research-question > p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .text-button { color: var(--muted); font-size: 12px; }
+    .text-button:hover { color: var(--accent); }
+    .resume-list { border-top: 1px solid var(--line); }
+    .resume-row { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+    .resume-row:hover { background: #fafbfe; }
+    .resource-kind { font-size: 12px; color: var(--muted); width: 28px; flex: none; }
+    .resume-copy { flex: 1; min-width: 0; }
+    .resume-title { display: block; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .resume-meta { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .resume-action { font-size: 12px; color: var(--accent); white-space: nowrap; }
+    .resume-action.done { color: var(--success); }
+    .next-step { padding-top: 24px; }
+    .next-step h2 { margin: 7px 0; }
+    .next-step > p { color: var(--muted); }
+    .next-step-link { margin-top: 10px; display: inline-flex; gap: 6px; align-items: center; color: var(--accent); font-size: 12px; }
+    .button, .quick-prompt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius); padding: 5px 11px; min-height: 30px; white-space: nowrap; }
+    .button:hover, .quick-prompt:hover { background: var(--hover); }
+    .button.primary, .send-button { background: var(--accent); color: white; border-color: var(--accent); }
+    .button.primary:hover, .send-button:hover { background: var(--accent-hover); }
+    .output-panel { height: 132px; flex: none; border-top: 1px solid var(--line); background: var(--terminal); }
+    .output-tabs { height: 32px; display: flex; align-items: center; gap: 22px; padding: 0 24px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .output-tab { height: 32px; border-bottom: 2px solid transparent; }
+    .output-tab.active { border-bottom-color: var(--accent); color: var(--ink); }
+    .output-toggle { margin-left: auto; }
+    .output-content { padding: 11px 24px; color: var(--muted); font-size: 12px; overflow: auto; height: 99px; }
+    .output-event { display: flex; gap: 14px; line-height: 1.9; }
+    .output-event time { color: var(--muted); white-space: nowrap; }
+    body.output-hidden .output-panel { height: 32px; }
+    body.output-hidden .output-content { display: none; }
+    .agent-panel { background: #fbfcfe; border-left: 1px solid var(--line); min-height: 0; display: flex; flex-direction: column; }
+    .agent-name { display: flex; gap: 7px; align-items: center; font-weight: 550; }
+    .agent-mark { color: var(--accent); width: 6px; height: 6px; background: currentColor; border-radius: 50%; }
+    .agent-context { background: #fbfcfe; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); flex: none; }
+    .context-heading { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .context-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .context-chip { display: flex; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--line); padding: 2px 6px; border-radius: 3px; }
+    .remove { color: var(--muted); padding: 0 2px; }
+    .demo-badge { font-size: 10px; font-weight: 500; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; letter-spacing: .4px; }
+    .agent-settings { padding: 11px 16px 10px; background: #fbfcfe; flex: none; }
+    .agent-selectors { display: flex; gap: 8px; }
+    .agent-selector { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 32px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); text-align: left; font-size: 12px; }
+    .agent-selector:hover { border-color: var(--line-strong); background: var(--chrome); }
+    .agent-selector .selector-label { color: var(--muted); font-size: 11px; }
+    .agent-selector .selector-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; }
+    .agent-selector .selector-chevron { color: var(--muted); margin-left: auto; }
+    .agent-selector.skill-selector { flex: 1; color: var(--accent); background: var(--accent-soft); border-color: #cedcf8; }
+    .agent-settings-hint { color: var(--muted); font-size: 11px; margin-top: 7px; }
+    .agent-settings-hint span { color: var(--accent); }
+    .message-config { color: var(--muted); font-size: 11px; margin-top: 6px; }
+    .approval-card { border: 1px solid #e4d6b9; border-radius: 6px; background: var(--surface); margin-top: 13px; overflow: hidden; font-size: 12px; line-height: 1.6; }
+    .approval-body { padding: 12px; }
+    .approval-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .approval-title { font-weight: 600; color: var(--ink); font-size: 13px; }
+    .approval-status { color: var(--warning); background: #fff5e6; padding: 2px 7px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+    .approval-snapshot { color: var(--muted); font-size: 11px; margin: 4px 0 10px; overflow-wrap: anywhere; }
+    .approval-target { display: flex; gap: 8px; align-items: baseline; margin-bottom: 7px; color: var(--muted); }
+    .approval-target code { color: var(--ink); font: 11px/1.6 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+    .approval-files { display: flex; gap: 5px; flex-wrap: wrap; }
+    .approval-file { color: var(--muted); background: var(--chrome); border: 1px solid var(--line); border-radius: 3px; padding: 2px 5px; font: 11px/1.6 ui-monospace, Consolas, monospace; }
+    .approval-scope { color: var(--muted); font-size: 11px; margin-top: 9px; }
+    .approval-diff { margin-top: 9px; }
+    .approval-diff summary { cursor: pointer; color: var(--accent); font-size: 12px; list-style: none; }
+    .approval-diff summary::before { content: '›'; margin-right: 6px; display: inline-block; }
+    .approval-diff[open] summary::before { transform: rotate(90deg); }
+    .approval-diff pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 9px; border: 1px solid var(--line); border-radius: 4px; background: var(--terminal); color: var(--success); font: 11px/1.65 ui-monospace, Consolas, monospace; margin: 8px 0 0; }
+    .approval-actions { display: flex; gap: 7px; align-items: center; border-top: 1px solid var(--line); background: #fafbfe; padding: 9px 12px; }
+    .approval-actions .button { font-size: 12px; min-height: 29px; padding: 4px 10px; }
+    .approval-actions .approval-note { color: var(--muted); font-size: 10px; margin-left: auto; }
+    .approval-actions button:disabled { cursor: default; opacity: .75; }
+    .approval-result { color: var(--muted); font-size: 11px; margin-top: 8px; }
+    .approval-card[data-state="approved"] { border-color: #bfdcd3; }
+    .approval-card[data-state="approved"] .approval-status { color: var(--success); background: var(--success-soft); }
+    .approval-card[data-state="rejected"] { border-color: #e6cdd0; }
+    .approval-card[data-state="rejected"] .approval-status { color: var(--danger); background: #fceff0; }
+    .agent-preflight { padding: 7px 9px; margin: 10px 0; }
+    .agent-preflight summary { color: var(--muted); font-size: 12px; cursor: pointer; }
+    .agent-preflight .tool-step { font-size: 12px; }
+    .agent-thread { padding: 18px 16px; overflow: auto; flex: 1; min-height: 0; }
+    .message + .message { margin-top: 20px; }
+    .message-role { display: flex; gap: 8px; font-weight: 550; margin-bottom: 8px; font-size: 13px; }
+    .message-role small { font-weight: 400; font-size: 12px; color: var(--success); }
+    .message.user { background: var(--hover); border-radius: 6px; padding: 12px; }
+    .message.user .message-role { font-size: 12px; color: var(--muted); font-weight: 400; margin-bottom: 4px; }
+    .message-content { font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+    .message-content > p + p { margin-top: 12px; color: var(--muted); }
+    .tool-trace, .task-card { border: 1px solid var(--line); background: var(--chrome); border-radius: 3px; padding: 8px 10px; margin: 10px 0 14px; }
+    .tool-heading, .task-card-header { color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    .tool-step, .task-step { display: flex; align-items: center; gap: 8px; min-height: 27px; }
+    .tool-step .duration { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .citation-links { display: flex; gap: 14px; margin: 10px 0; font-size: 12px; color: var(--accent); }
+    .citation-links button:hover { text-decoration: underline; }
+    .agent-composer { padding: 12px 16px 10px; border-top: 1px solid var(--line); background: var(--chrome); flex: none; }
+    .composer-context { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+    .composer-box { border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); padding: 10px; }
+    .composer-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .composer-box textarea { width: 100%; min-height: 44px; resize: none; border: 0; outline: 0; background: transparent; display: block; font-size: 13px; }
+    textarea::placeholder, input::placeholder { color: var(--muted); opacity: 1; }
+    .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+    .composer-tool { color: var(--muted); font-size: 12px; }
+    .send-button { border-radius: 3px; padding: 4px 12px; min-height: 28px; font-size: 12px; }
+    .composer-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .statusbar { background: var(--chrome); border-top: 1px solid var(--line); display: flex; align-items: center; gap: 15px; padding: 0 10px; font-size: 12px; color: var(--muted); overflow: hidden; white-space: nowrap; }
+    .status-ready { color: var(--success); }
+    .status-right { margin-left: auto; display: flex; gap: 14px; }
+    dialog { width: min(620px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line-strong); border-radius: 8px; color: var(--ink); box-shadow: 0 16px 60px #22293625; background: var(--surface); margin-top: min(20vh, 130px); }
+    dialog::backdrop { background: #22293635; backdrop-filter: blur(2px); }
+    .agent-picker { width: min(440px, calc(100vw - 32px)); margin-top: min(15vh, 110px); max-height: calc(100dvh - 80px); }
+    .picker-heading { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 12px; }
+    .picker-heading h2 { font-size: 15px; }
+    .picker-close { color: var(--muted); width: 26px; height: 26px; font-size: 20px; border-radius: 4px; }
+    .picker-close:hover { background: var(--hover); }
+    .picker-subtitle { color: var(--muted); font-size: 12px; padding: 0 18px 12px; }
+    .profile-options { padding: 0 6px 6px; }
+    .profile-option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left; border-radius: 5px; }
+    .profile-option:hover, .profile-option[aria-pressed="true"] { background: var(--accent-soft); }
+    .profile-initial { width: 29px; height: 29px; display: grid; place-items: center; background: var(--chrome); border: 1px solid var(--line); border-radius: 5px; color: var(--muted); font-size: 12px; flex: none; }
+    .profile-option[aria-pressed="true"] .profile-initial { color: var(--accent); background: var(--surface); }
+    .picker-copy { flex: 1; min-width: 0; }
+    .picker-copy strong { display: block; font-size: 13px; font-weight: 550; }
+    .picker-copy small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .profile-check { color: var(--accent); width: 16px; text-align: center; }
+    .profile-option:not([aria-pressed="true"]) .profile-check { visibility: hidden; }
+    .picker-footer { padding: 11px 18px; background: var(--chrome); border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .skill-search-wrap { padding: 0 18px 12px; }
+    .skill-search { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; background: var(--chrome); padding: 8px 10px; font-size: 12px; }
+    .skill-library-tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); padding: 0 18px; }
+    .skill-library-tab { color: var(--muted); font-size: 12px; padding: 7px 0; border-bottom: 2px solid transparent; }
+    .skill-library-tab[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+    .skill-options { max-height: min(310px, 40dvh); overflow-y: auto; padding: 6px; }
+    .skill-option { display: flex; gap: 10px; padding: 11px 12px; align-items: start; border-radius: 5px; cursor: pointer; }
+    .skill-option:hover, .skill-option:has(input:checked) { background: var(--accent-soft); }
+    .skill-option input { accent-color: var(--accent); width: 15px; height: 15px; margin: 4px 0 0; flex: none; }
+    .skill-option[data-blocked="true"] { cursor: not-allowed; }
+    .skill-state { color: var(--success); font-size: 10px; white-space: nowrap; padding-top: 3px; }
+    .skill-option[data-blocked="true"] .skill-state { color: var(--warning); }
+    .skill-empty { color: var(--muted); padding: 18px 12px; font-size: 12px; }
+    .skill-picker-actions { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+    .skill-picker-actions .button { margin-left: auto; font-size: 12px; }
+    .command-input-wrap { display: flex; align-items: center; padding: 0 16px; border-bottom: 1px solid var(--line); gap: 12px; }
+    .command-input { height: 48px; width: 100%; border: 0; outline: 0; background: transparent; font-size: 15px; }
+    .command-results { padding: 6px; max-height: 320px; overflow: auto; }
+    .command-result { display: flex; align-items: center; gap: 10px; padding: 11px 10px; width: 100%; text-align: left; border-radius: 4px; }
+    .command-result:hover, .command-result:focus-visible { background: var(--accent-soft); }
+    .command-result small { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .command-footer { border-top: 1px solid var(--line); padding: 8px 16px; color: var(--muted); font-size: 12px; }
+    .command-empty { color: var(--muted); padding: 14px 12px; }
+    .toast { position: fixed; bottom: 38px; left: 50%; transform: translate(-50%, 8px); opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 5px; padding: 9px 15px; box-shadow: 0 4px 18px #22293612; z-index: 60; max-width: calc(100vw - 32px); font-size: 13px; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .drawer-scrim { display: none; }
+    .empty-editor { height: 100%; display: grid; align-content: center; justify-items: center; gap: 14px; color: var(--muted); padding: 24px; text-align: center; }
+    /* Existing source, note, evidence and experiment views share the same light tokens. */
+    .view-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; margin-bottom: 24px; }
+    .view-heading h1 { margin: 5px 0 8px; font-size: 24px; }
+    .view-subtitle { color: var(--muted); }
+    .button-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .filter-input { flex: 1; min-width: 160px; }
+    .filter-input input { width: 100%; min-height: 32px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+    .spacer { flex: 1; }
+    .table-card, .matrix-card { overflow: auto; border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { background: var(--chrome); color: var(--muted); font-size: 12px; font-weight: 500; padding: 10px 14px; white-space: nowrap; }
+    td { padding: 13px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+    .paper-title-cell { min-width: 250px; }
+    .paper-title-cell > span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .paper-link { text-align: left; font-weight: 500; }
+    .paper-link:hover { color: var(--accent); }
+    .status-pill, .small-tag, .evidence-tag { display: inline-block; padding: 2px 6px; border-radius: 3px; background: var(--success-soft); color: var(--success); font-size: 12px; white-space: nowrap; }
+    .status-pill.amber { background: #f9efdc; color: var(--warning); }
+    .reading-toolbar { display: flex; gap: 12px; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--line); }
+    .reading-title { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); }
+    .page-control { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    .ghost-icon { min-width: 25px; padding: 3px; color: var(--muted); }
+    .pdf-stage { background: var(--chrome); padding: 28px; }
+    .pdf-page { background: var(--surface); border: 1px solid var(--line); padding: 38px; max-width: 780px; margin: 0 auto; font-family: Georgia, "Noto Serif SC", serif; }
+    .pdf-page h1 { font-size: 25px; text-align: center; margin: 12px 0; }
+    .paper-kicker, .authors { text-align: center; color: var(--muted); font: 12px Geist, sans-serif; }
+    .paper-columns { column-count: 2; column-gap: 28px; margin-top: 25px; font-size: 14px; line-height: 1.8; }
+    .paper-columns h2 { font-size: 16px; margin: 15px 0 8px; }
+    .paper-columns p { margin-bottom: 12px; }
+    .paper-columns table { font: 12px Geist, sans-serif; }
+    .highlight, .paper-highlight { background: #fff0b2; }
+    .annotation, .paper-note { display: block; color: var(--accent); background: var(--accent-soft); font: 12px/1.8 Geist, sans-serif; padding: 10px; margin: 14px 0; border-left: 2px solid var(--accent); }
+    .page-number { margin-top: 24px; text-align: center; color: var(--muted); font: 12px Geist, sans-serif; }
+    .notes-layout { display: grid; grid-template-columns: 184px minmax(0, 1fr); min-height: 100%; }
+    .note-list { padding: 18px 10px; background: var(--sidebar); border-right: 1px solid var(--line); }
+    .note-list-title { color: var(--muted); font-size: 12px; margin: 0 8px 12px; }
+    .note-card { display: block; width: 100%; text-align: left; padding: 12px 9px; border-radius: 3px; }
+    .note-card:hover { background: var(--hover); }
+    .note-card.active { background: var(--accent-soft); }
+    .note-card strong, .note-card span { display: block; }
+    .note-card strong { font-size: 13px; font-weight: 500; }
+    .note-card span { color: var(--muted); font-size: 12px; margin-top: 5px; }
+    .note-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+    .evidence-callout { margin: 20px 0; padding: 14px 16px; background: var(--accent-soft); border-left: 2px solid var(--accent); }
+    .citation-link { color: var(--accent); }
+    .citation-link:hover { text-decoration: underline; }
+    .confidence { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .confidence-bar { width: 28px; height: 4px; background: linear-gradient(to right, var(--success) var(--confidence), var(--line) var(--confidence)); border-radius: 2px; }
+    .experiment-grid { display: grid; grid-template-columns: minmax(0, 1fr) 228px; gap: 18px; }
+    .run-card { padding: 16px 0; min-width: 0; }
+    .run-header { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .run-header h3 { font-size: 15px; font-weight: 550; }
+    .run-header p { margin-top: 6px; color: var(--muted); font: 12px/1.8 ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+    .metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 18px 0; margin-block: 16px; border-block: 1px solid var(--line); }
+    .chart { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; height: 144px; padding: 10px 12px 0; border-bottom: 1px solid var(--line); background: repeating-linear-gradient(to top, transparent 0, transparent 35px, var(--line) 36px); }
+    .bar-group { display: flex; justify-content: center; align-items: end; gap: 5px; height: 100%; }
+    .bar { display: block; width: 19px; height: var(--bar-height); background: var(--accent); border-radius: 2px 2px 0 0; }
+    .bar.baseline { background: #a5b7db; }
+    .chart-labels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; text-align: center; color: var(--muted); font-size: 12px; }
+    .chart-legend { display: flex; gap: 16px; margin-top: 14px; color: var(--muted); font-size: 12px; }
+    .chart-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; background: var(--accent); border-radius: 2px; }
+    .chart-legend span:first-child::before { background: #a5b7db; }
+    .experiment-grid .console { grid-column: 1 / -1; }
+    .note-layout, .experiment-layout, .evidence-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, .6fr); gap: 20px; align-items: start; }
+    .note-document, .note-editor, .panel-card, .insight-panel { border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+    .note-document { padding: 0; }
+    .note-toolbar { display: flex; gap: 12px; padding: 8px 16px; background: var(--chrome); border-bottom: 1px solid var(--line); }
+    .note-editor { padding: 24px; border: 0; line-height: 1.9; }
+    .note-editor h1 { font-size: 22px; margin-bottom: 15px; }
+    .note-editor h2 { margin: 20px 0 7px; }
+    .note-editor ul { padding-left: 20px; }
+    .note-editor blockquote { margin: 15px 0; padding: 8px 14px; border-left: 2px solid var(--accent); background: var(--accent-soft); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .panel-title { font-size: 14px; font-weight: 550; }
+    .linked-evidence, .insight-list, .run-history { padding: 14px 16px; }
+    .evidence-link { display: block; text-align: left; width: 100%; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .evidence-link strong, .evidence-link span { display: block; }
+    .evidence-link span { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .matrix { min-width: 630px; }
+    .matrix td, .matrix th { font-size: 12px; }
+    .matrix td:first-child { font-weight: 500; }
+    .evidence-footnote { color: var(--muted); font-size: 12px; margin-top: 12px; }
+    .insight { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .insight strong, .insight span { display: block; }
+    .insight span { color: var(--muted); margin-top: 4px; }
+    .run-summary { padding: 16px; }
+    .run-topline { display: flex; gap: 8px; align-items: center; }
+    .run-name { font-size: 16px; font-weight: 600; }
+    .run-meta { color: var(--muted); margin: 8px 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-block: 1px solid var(--line); margin: 12px 0; }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { font-size: 20px; font-weight: 600; }
+    .artifact-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .artifact { color: var(--muted); font-size: 12px; background: var(--chrome); border: 1px solid var(--line); padding: 3px 6px; }
+    .history-row { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .history-copy { flex: 1; }
+    .history-copy strong, .history-copy span { display: block; }
+    .history-copy span, .continue-time { font-size: 12px; color: var(--muted); }
+    .history-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .history-dot.failed { background: var(--danger); }
+    .console { padding: 15px; background: var(--terminal); border: 1px solid var(--line); overflow: auto; font: 12px/1.9 ui-monospace, Consolas, monospace; }
+    .console-line { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); }
+    .console-line.info { color: var(--accent); }
+    .console-line.success { color: var(--success); }
+    .linked-evidence .evidence-link:last-child, .insight:last-child { border-bottom: 0; }
+    @media (max-width: 1250px) {
+      .workbench { grid-template-columns: 48px 200px minmax(400px, 1fr) 310px; }
+      .project-label, .chrome-actions { display: none; }
+      .view-container { padding-inline: 26px; }
+      .inline-context .updated { margin-left: 0; }
+      .note-layout, .experiment-layout, .evidence-layout { grid-template-columns: 1fr; }
+      .experiment-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 1100px) {
+      .workbench { grid-template-columns: 48px 214px minmax(0, 1fr); }
+      .agent-panel { display: none; }
+      .agent-toggle { display: inline-flex; }
+      body.agent-open .agent-panel { display: flex; position: fixed; top: 40px; bottom: 24px; right: 0; width: min(360px, calc(100vw - 48px)); z-index: 30; box-shadow: -8px 0 30px #22293615; }
+      body.agent-open .drawer-scrim { display: block; position: fixed; inset: 40px 0 24px; background: #22293625; z-index: 25; }
+      .header-right { gap: 5px; }
+      .global-search { width: min(470px, 46vw); }
+    }
+    @media (max-width: 760px) {
+      .workbench { grid-template-columns: 48px minmax(0, 1fr); }
+      .explorer { display: none; }
+      .explorer-toggle { display: inline-flex; }
+      body.explorer-open .explorer { display: flex; position: fixed; top: 40px; bottom: 24px; left: 48px; width: min(250px, calc(100vw - 48px)); z-index: 30; box-shadow: 8px 0 30px #22293615; }
+      body.explorer-open .drawer-scrim { display: block; position: fixed; inset: 40px 0 24px; background: #22293625; z-index: 25; }
+      .titlebar { padding: 0 10px; gap: 10px; }
+      .back-forward { display: none; }
+      .global-search { flex: 1; width: auto; min-width: 0; margin: 0; }
+      .brand { font-size: 13px; }
+      .search-prompt { font-size: 12px; }
+      .breadcrumb { padding-inline: 20px; }
+      .view-container { padding: 20px; }
+      .overview-heading, .view-heading { align-items: start; flex-direction: column; gap: 12px; }
+      h1 { font-size: 23px; }
+      .inline-context { gap: 5px; }
+      .resume-row { padding-inline: 0; gap: 8px; }
+      .resume-title { font-size: 13px; white-space: normal; }
+      .resume-meta { line-height: 1.6; }
+      .resume-action { display: none; }
+      .output-tabs { gap: 16px; padding-inline: 18px; }
+      .output-content { padding-inline: 18px; }
+      .output-event { gap: 8px; }
+      .output-event span { overflow-wrap: anywhere; }
+      .statusbar { gap: 10px; }
+      .status-right span, .status-project { display: none; }
+      .pdf-stage { padding: 15px; }
+      .pdf-page { padding: 20px; }
+      .paper-columns { column-count: 1; }
+      .reading-toolbar { flex-wrap: wrap; }
+      .toolbar .button { font-size: 12px; }
+      .composer-hint { font-size: 12px; }
+      .notes-layout { grid-template-columns: minmax(0, 1fr); }
+      .note-list { display: flex; gap: 6px; overflow: auto; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--line); }
+      .note-list-title { display: none; }
+      .note-card { width: 164px; flex: 0 0 164px; padding: 8px; }
+      .note-editor { padding: 22px 20px; }
+      .chart { gap: 8px; padding-inline: 4px; }
+    }
+    @media (max-width: 480px) { .global-search kbd { display: none; } .compact-button { padding-inline: 4px; } .compact-button .icon { display: none; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body class="theme-light" data-version="ide-light-v2" data-agent-layer="skill-profile-approval">
+  <a class="skip-link" href="#mainEditor">跳到编辑区</a>
+  <div class="app">
+    <header class="titlebar">
+      <span class="brand">ScholarFlow</span>
+      <div class="back-forward"><button type="button" data-history="back" aria-label="上一个视图">‹</button><button type="button" data-history="forward" aria-label="下一个视图">›</button></div>
+      <button class="global-search" id="globalSearch" type="button" aria-haspopup="dialog" aria-controls="commandOverlay"><span class="search-prompt">搜索项目、论文或执行命令…</span><kbd>Ctrl K</kbd></button>
+      <div class="header-right"><span class="project-label">医学影像 / main</span><button class="compact-button explorer-toggle" type="button" aria-label="打开项目资源" aria-expanded="false" aria-controls="projectExplorer"><span class="icon icon-folder" aria-hidden="true"></span>资料</button><button class="compact-button agent-toggle" type="button" aria-label="打开 Scholar Agent" aria-expanded="false" aria-controls="agentPanel">Agent</button><span class="chrome-actions" aria-hidden="true">—　□　×</span></div>
+    </header>
+    <div class="workbench">
+      <nav class="activity-rail" aria-label="工作区视图">
+        <button class="activity-button active" type="button" data-open-view="overview" aria-label="项目概览" aria-pressed="true" title="项目概览"><span class="icon icon-folder" aria-hidden="true"></span></button>
+        <button class="activity-button" type="button" data-open-view="sources" aria-label="文献库" aria-pressed="false" title="文献库"><span class="icon icon-document" aria-hidden="true"></span></button>
+        <button class="activity-button" type="button" data-open-view="reading" aria-label="精读论文" aria-pressed="false" title="精读论文"><span class="icon icon-reading" aria-hidden="true"></span></button>
+        <button class="activity-button" type="button" data-open-view="notes" aria-label="研究笔记" aria-pressed="false" title="研究笔记"><span class="icon icon-document" aria-hidden="true"></span></button>
+        <button class="activity-button" type="button" data-open-view="evidence" aria-label="证据矩阵" aria-pressed="false" title="证据矩阵"><span class="icon icon-matrix" aria-hidden="true"></span></button>
+        <button class="activity-button" type="button" data-open-view="experiments" aria-label="实验运行" aria-pressed="false" title="实验运行"><span class="icon icon-experiment" aria-hidden="true"></span></button>
+        <div class="rail-space"></div><button class="avatar" type="button" data-toast="本地演示账户 · Jiang" aria-label="本地演示账户">JL</button>
+      </nav>
+      <aside class="explorer" id="projectExplorer" aria-label="项目资源">
+        <div class="pane-heading"><span class="eyebrow">EXPLORER</span><button class="compact-button" type="button" data-toast="通过下方资源树打开项目材料" aria-label="资源菜单">···</button></div>
+        <div class="project-area">
+          <button class="project-switcher" id="projectSwitcher" type="button" aria-expanded="false" aria-controls="projectMenu"><span id="projectName">医学影像分割</span><span aria-hidden="true">⌄</span></button>
+          <p class="project-directory" id="projectDirectory">medical-segmentation</p>
+          <div class="project-menu" id="projectMenu" hidden><button class="project-option active" type="button" data-project="medical">多模态医学影像分割</button><button class="project-option" type="button" data-project="llm">高效大模型推理</button><button class="project-option" type="button" data-project="urban">城市热岛效应评估</button></div>
+        </div>
+        <nav class="resource-tree" aria-label="项目文件">
+          <button class="tree-row selected" type="button" data-open-view="overview"><span class="icon icon-document" aria-hidden="true"></span><span>research.md</span></button>
+          <details open><summary><span class="icon icon-folder" aria-hidden="true"></span><span>papers</span><span class="tree-count" data-stat="papers">24</span></summary><div class="tree-children"><button class="tree-row" type="button" data-open-view="sources"><span class="icon icon-document" aria-hidden="true"></span><span>全部文献</span></button><button class="tree-row" type="button" data-open-view="reading" data-label="UniSeg.pdf"><span class="icon icon-document" aria-hidden="true"></span><span>UniSeg.pdf</span></button><button class="tree-row" type="button" data-open-view="reading" data-label="Modality-Fusion.pdf"><span class="icon icon-document" aria-hidden="true"></span><span>Modality-Fusion.pdf</span></button></div></details>
+          <details open><summary><span class="icon icon-folder" aria-hidden="true"></span><span>notes</span><span class="tree-count" data-stat="notes">8</span></summary><div class="tree-children"><button class="tree-row" type="button" data-open-view="notes" data-label="hypothesis.md"><span class="icon icon-document" aria-hidden="true"></span><span>hypothesis.md</span></button><button class="tree-row" type="button" data-open-view="notes" data-label="reading-log.md"><span class="icon icon-document" aria-hidden="true"></span><span>reading-log.md</span></button></div></details>
+          <details open><summary><span class="icon icon-folder" aria-hidden="true"></span><span>evidence</span><span class="tree-count" data-stat="evidence">18</span></summary><div class="tree-children"><button class="tree-row" type="button" data-open-view="evidence"><span class="icon icon-matrix" aria-hidden="true"></span><span>method.matrix</span></button></div></details>
+          <details open><summary><span class="icon icon-folder" aria-hidden="true"></span><span>experiments</span><span class="tree-count" data-stat="runs">6</span></summary><div class="tree-children"><button class="tree-row" type="button" data-open-view="experiments"><span class="icon icon-experiment" aria-hidden="true"></span><span>run-006</span></button></div></details>
+        </nav>
+        <div class="explorer-footer"><span class="section-label">PROJECT CONTEXT</span><p class="index-ready">索引已更新 · 本地工作区</p></div>
+      </aside>
+      <main class="editor" id="mainEditor" tabindex="-1">
+        <div class="editor-tabs" id="editorTabs" role="tablist" aria-label="打开的研究资料"></div>
+        <div class="breadcrumb"><span id="breadcrumbProject">医学影像分割</span><span aria-hidden="true">/</span><span id="breadcrumbFile">research.md</span><span aria-hidden="true">/</span><span id="breadcrumbView">研究概览</span></div>
+        <div class="view-stage">
+          <section class="workspace-view active overview" data-view="overview" id="view-overview" aria-label="研究概览">
+            <div class="view-container">
+              <div class="overview-heading"><h1 id="overviewTitle">多模态医学影像分割</h1><button class="button primary" type="button" data-agent-prompt="基于当前证据，下一步应该优先验证什么？请给出依据。">继续研究</button></div>
+              <div class="inline-context"><span><span data-stat="papers">24</span> 篇文献</span><span>·</span><span><span data-stat="evidence">18</span> 条证据</span><span>·</span><span><span data-stat="notes">8</span> 篇笔记</span><span>·</span><span><span data-stat="runs">6</span> 次实验</span><span class="updated">今天 14:32 更新</span></div>
+              <div class="research-question"><span class="section-label">研究问题</span><h2 id="researchQuestion">如何在缺失部分 MRI 模态时保持肿瘤分割性能？</h2><p id="overviewSubtitle">当前方向：结合模态 dropout 与不确定性估计，验证缺失模态条件下的鲁棒性。</p></div>
+              <section aria-label="继续工作"><div class="section-heading"><h2>继续工作</h2><button class="text-button" type="button" data-open-view="sources">查看全部资源 →</button></div><div class="resume-list">
+                <button class="resume-row" type="button" data-open-view="reading" data-label="UniSeg.pdf"><span class="resource-kind">PDF</span><span class="resume-copy"><span class="resume-title">UniSeg: A Unified Multi-modal Framework</span><span class="resume-meta">Wang et al. · 2025 · 第 4 / 12 页 · 3 条批注</span></span><span class="resume-action">继续阅读</span></button>
+                <button class="resume-row" type="button" data-open-view="notes" data-label="hypothesis.md"><span class="resource-kind">MD</span><span class="resume-copy"><span class="resume-title">研究假设与当前结论</span><span class="resume-meta">hypothesis.md · 由你与 Scholar Agent 共同编辑</span></span><span class="resume-action">编辑笔记</span></button>
+                <button class="resume-row" type="button" data-open-view="experiments"><span class="resource-kind">RUN</span><span class="resume-copy"><span class="resume-title">run-006 · modality_dropout=0.3</span><span class="resume-meta">Dice 0.842 · 缺失模态鲁棒性实验 · 2 天前</span></span><span class="resume-action done">已完成</span></button>
+              </div></section>
+              <div class="next-step"><span class="section-label">NEXT UP　/　消融实验 · 2 / 5</span><h2>验证不同缺失比例下的性能边界</h2><p>比较 dropout = 0.1 / 0.3 / 0.5，补齐证据矩阵中的不确定性项。</p><button class="next-step-link" type="button" data-open-view="experiments">打开实验工作区 →</button></div>
+            </div>
+          </section>
+<section class="workspace-view" data-view="sources">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Sources</p><h1>项目文献</h1><p class="view-subtitle">搜索、导入并管理当前 Research Project 的论文与研究材料。</p></div><div class="button-row"><button class="button" type="button" data-toast="PDF 导入为 Demo 占位，未选择或上传文件">导入 PDF</button><button class="button primary" type="button" data-agent-prompt="请围绕缺失模态医学图像分割搜索近三年的高相关论文。">搜索论文</button></div></div>
+            <div class="toolbar"><label class="filter-input"><input id="paperFilter" aria-label="筛选当前项目文献" type="search" placeholder="筛选当前项目文献"></label><button class="button" type="button" data-toast="年份筛选为 Demo 占位">年份：全部</button><button class="button" type="button" data-toast="标签筛选为 Demo 占位">标签</button><span class="spacer"></span><button class="button" type="button" data-toast="BibTeX 导出为 Demo 占位，未生成下载文件">导出 BibTeX</button></div>
+            <div class="table-card">
+              <table aria-label="项目文献列表">
+                <thead><tr><th>论文</th><th>年份</th><th>来源</th><th>状态</th></tr></thead>
+                <tbody id="paperTable">
+                  <tr data-paper-title="UniSeg unified multi-modal medical image segmentation"><td class="paper-title-cell"><button class="paper-link" type="button" data-open-view="reading" data-label="UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation">UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</button><span>L. Wang, J. Li, M. Zhou · 14 条项目引用</span></td><td>2025</td><td>arXiv</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Modality-aware feature fusion MRI segmentation"><td class="paper-title-cell"><button class="paper-link" type="button" data-open-view="reading" data-label="Modality-Aware Feature Fusion for Robust MRI Segmentation">Modality-Aware Feature Fusion for Robust MRI Segmentation</button><span>Y. Chen, R. Gupta · 8 条项目引用</span></td><td>2024</td><td>MICCAI</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Robust learning missing modalities brain tumor"><td class="paper-title-cell"><button class="paper-link" type="button" data-open-view="reading" data-label="Robust Learning with Missing Modalities for Brain Tumor Segmentation">Robust Learning with Missing Modalities for Brain Tumor Segmentation</button><span>A. Patel, S. Kim · 5 条项目引用</span></td><td>2024</td><td>TMI</td><td><span class="status-pill amber">阅读中</span></td></tr>
+                  <tr data-paper-title="HeMIS heterogeneous modality medical image segmentation"><td class="paper-title-cell"><button class="paper-link" type="button" data-open-view="reading" data-label="HeMIS: Hetero-Modal Image Segmentation">HeMIS: Hetero-Modal Image Segmentation</button><span>M. Havaei et al. · 3 条项目引用</span></td><td>2016</td><td>MICCAI</td><td><span class="status-pill">已精读</span></td></tr>
+                  <tr data-paper-title="Latent correlation representation learning missing MRI"><td class="paper-title-cell"><button class="paper-link" type="button" data-open-view="reading" data-label="Latent Correlation Representation Learning for Brain Tumor Segmentation">Latent Correlation Representation Learning for Brain Tumor Segmentation</button><span>Z. Ding et al. · 尚未创建证据</span></td><td>2023</td><td>CVPR</td><td><span class="status-pill amber">待读</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+<section class="workspace-view reading-view" data-view="reading">
+          <div class="reading-toolbar"><span class="reading-title">UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</span><div class="page-control"><button class="ghost-icon" type="button" aria-label="上一页" data-toast="PDF 翻页为 Demo 占位，当前展示第 4 页">‹</button><span>4 / 12</span><button class="ghost-icon" type="button" aria-label="下一页" data-toast="PDF 翻页为 Demo 占位，当前展示第 4 页">›</button></div><button class="ghost-icon" type="button" aria-label="添加批注" data-toast="新增批注为 Demo 占位，当前展示示例批注">＋</button><button class="ghost-icon" type="button" aria-label="更多" data-toast="PDF 更多操作为 Demo 占位">•••</button></div>
+          <div class="pdf-stage">
+            <article class="pdf-page">
+              <div class="paper-kicker">Preprint · Mock document for ScholarFlow demo</div>
+              <h1>UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation</h1>
+              <div class="authors">Lina Wang · Jun Li · Ming Zhou · Institute of Intelligent Medicine</div>
+              <div class="paper-columns">
+                <h2>Abstract</h2>
+                <p>Multi-modal imaging provides complementary information for clinical segmentation. However, real-world datasets frequently contain missing modalities, causing substantial degradation in models trained under complete observations.</p>
+                <p>We introduce UniSeg, a unified framework that combines modality-aware feature fusion with uncertainty-guided regularization. The model is trained with stochastic modality dropout and requires no separate network for each missing pattern.</p>
+                <h2>2. Method</h2>
+                <p>Given a set of available modalities, each modality is first encoded independently. A shared fusion module then aggregates features using learned reliability estimates. During training, subsets of modalities are randomly masked.</p>
+                <span class="paper-note">Scholar Agent 批注：这里的随机模态遮蔽与项目当前的 modality dropout 实验直接相关，可以作为 run-007 的参数依据。</span>
+                <p>The uncertainty branch estimates voxel-level confidence and penalizes inconsistent predictions across modality subsets. This encourages stable representations when input availability changes.</p>
+                <h2>3. Experiments</h2>
+                <p>We evaluate the proposed method on the BraTS benchmark using Dice and Hausdorff Distance. All models are trained for 300 epochs with identical data augmentation and preprocessing.</p>
+                <p><span class="paper-highlight">Under the single-missing-modality setting, UniSeg retains 96.4% of the complete-modality Dice score and outperforms the strongest baseline by 2.1 percentage points.</span></p>
+                <p>The improvement is most pronounced when the T1ce modality is unavailable. Ablation results indicate that modality dropout contributes 1.3 points, while uncertainty regularization contributes an additional 0.8 points.</p>
+                <h2>4. Limitations</h2>
+                <p>The current study is limited to MRI sequences from a single benchmark. Generalization to multi-center clinical data and other imaging modalities remains unexplored.</p>
+              </div>
+              <div class="page-number">4</div>
+            </article>
+          </div>
+        </section>
+<section class="workspace-view" data-view="notes">
+          <div class="notes-layout">
+            <aside class="note-list"><p class="note-list-title">当前项目 · 8 篇</p><button class="note-card active" type="button" aria-current="true" data-toast="当前已打开研究假设笔记"><strong>研究假设与当前结论</strong><span>刚刚更新 · 6 条引用</span></button><button class="note-card" type="button" data-toast="此笔记为 Demo 占位，当前展示研究假设"><strong>文献阅读日志</strong><span>昨天 · 14 条引用</span></button><button class="note-card" type="button" data-toast="此笔记为 Demo 占位，当前展示研究假设"><strong>实验计划</strong><span>9 月 13 日 · 3 项待办</span></button><button class="note-card" type="button" data-toast="此笔记为 Demo 占位，当前展示研究假设"><strong>多模态方法综述</strong><span>Agent 生成 · 待审阅</span></button></aside>
+            <article class="note-editor">
+              <h1>研究假设与当前结论</h1>
+              <div class="note-meta"><span>最后编辑：今天 15:06</span><span>·</span><span>由你和 Scholar Agent 共同编辑</span><span class="status-pill">6 条已验证引用</span></div>
+              <p>当前研究聚焦于医学图像分割中的模态缺失问题。初步文献和实验结果支持以下研究假设：</p>
+              <div class="evidence-callout"><strong>核心假设</strong><br>在训练阶段联合使用随机模态遮蔽与不确定性约束，可以减少模型对单一高信息量模态的依赖，并提高缺失模态下的稳定性。</div>
+              <h2>已有证据</h2>
+              <ul><li>UniSeg 在单模态缺失设置下保留完整模态性能的 96.4%，其中模态 dropout 带来 1.3 Dice 提升。<a class="citation-link" href="#" data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation">[Wang et al., 2025, p.4]</a></li><li>已有方法在 T1ce 缺失时普遍出现更明显的性能下降，说明模型仍高度依赖增强肿瘤区域信息。<a class="citation-link" href="#" data-toast="此来源为示例引用，未连接真实论文">[Chen et al., 2024, p.7]</a></li><li>当前 run-006 的结果与文献趋势一致，但跨随机种子的方差仍需进一步验证。</li></ul>
+              <h2>下一步</h2>
+              <p>运行不同 dropout 比例的消融实验，并加入三个随机种子。随后比较完整模态、单模态缺失和双模态缺失条件下的 Dice 与 HD95。</p>
+            </article>
+          </div>
+        </section>
+<section class="workspace-view" data-view="evidence">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Evidence</p><h1>缺失模态方法对比</h1><p class="view-subtitle">每条结论都保留原文位置，区分来源事实、Agent 综合与尚待验证的推断。</p></div><div class="button-row"><button class="button" type="button" data-toast="CSV 导出为 Demo 占位，未生成下载文件">导出 CSV</button><button class="button primary" type="button" data-agent-prompt="请检查当前证据表中的冲突和证据缺口。">检查证据缺口</button></div></div>
+            <div class="table-card evidence-table"><table><thead><tr><th>方法</th><th>缺失模态策略</th><th>关键结果</th><th>来源</th><th>可信度</th></tr></thead><tbody>
+              <tr data-open-view="reading" data-label="UniSeg: Unified Medical Image Segmentation"><td>UniSeg</td><td>Modality dropout + uncertainty</td><td>保留完整模态性能的 96.4%</td><td><a class="citation-link" href="#" data-open-view="reading">p.4 §3.2</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:94%"></span>高</span></td></tr>
+              <tr><td>HeMIS</td><td>统计矩融合</td><td>对任意模态组合保持兼容</td><td><a class="citation-link" href="#" data-toast="此来源为示例引用，未连接真实论文">p.5 §4.1</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:88%"></span>高</span></td></tr>
+              <tr><td>RFNet</td><td>区域感知融合</td><td>T1ce 缺失时 Dice 下降 4.8</td><td><a class="citation-link" href="#" data-toast="此来源为示例引用，未连接真实论文">p.7 Table 3</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:82%"></span>中高</span></td></tr>
+              <tr><td>当前方法</td><td>Dropout + feature consistency</td><td>run-006 达到 Dice 0.842</td><td><a class="citation-link" href="#" data-open-view="experiments" data-label="Experiment run-006">run-006</a></td><td><span class="confidence"><span class="confidence-bar" style="--confidence:62%"></span>待复验</span></td></tr>
+            </tbody></table></div>
+          </div>
+        </section>
+<section class="workspace-view" data-view="experiments">
+          <div class="view-container">
+            <div class="view-heading"><div><p class="eyebrow">Experiments</p><h1>实验运行</h1><p class="view-subtitle">代码、参数、日志与结果共同构成一次可追溯的 Experiment Run。</p></div><div class="button-row"><button class="button" type="button" data-toast="已打开 configs/ablation.yaml（Mock）">编辑配置</button><button class="button primary" id="runExperiment" type="button">运行实验</button></div></div>
+            <div class="experiment-grid">
+              <div class="run-card"><div class="run-header"><div><h3>run-006 · Modality Dropout Ablation</h3><p>commit a18d2ef · configs/ablation.yaml · 2 天前</p></div><span class="status-pill">已完成</span></div><div class="metric-row"><div class="metric"><span>Dice</span><strong>0.842</strong></div><div class="metric"><span>HD95</span><strong>6.28</strong></div><div class="metric"><span>训练时间</span><strong>3h 42m</strong></div></div><div class="chart" role="img" aria-label="模拟性能对比：蓝色为当前方法，浅蓝色为基线，分别比较完整模态及三种缺失模态"><div class="bar-group"><span class="bar baseline" style="--bar-height:72%"></span><span class="bar" style="--bar-height:78%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:68%"></span><span class="bar" style="--bar-height:84%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:55%"></span><span class="bar" style="--bar-height:72%"></span></div><div class="bar-group"><span class="bar baseline" style="--bar-height:41%"></span><span class="bar" style="--bar-height:61%"></span></div></div><div class="chart-labels"><span>完整模态</span><span>缺 T1</span><span>缺 T1ce</span><span>缺 FLAIR</span></div><div class="chart-legend" aria-hidden="true"><span>基线</span><span>当前方法</span></div></div>
+              <div class="panel-card"><div class="panel-header"><h3 class="panel-title">运行历史</h3><button class="text-button" type="button" data-toast="运行筛选为 Demo 占位">筛选</button></div><div class="run-history"><button class="history-row" type="button" data-toast="运行历史为 Mock 记录，当前展示 run-006"><span class="history-dot"></span><span class="history-copy"><strong>run-006</strong><span>dropout 0.3 · Dice 0.842</span></span><span class="continue-time">2d</span></button><button class="history-row" type="button" data-toast="运行历史为 Mock 记录，当前展示 run-006"><span class="history-dot"></span><span class="history-copy"><strong>run-005</strong><span>dropout 0.2 · Dice 0.837</span></span><span class="continue-time">3d</span></button><button class="history-row" type="button" data-toast="运行历史为 Mock 记录，当前展示 run-006"><span class="history-dot failed"></span><span class="history-copy"><strong>run-004</strong><span>CUDA OOM · 已中断</span></span><span class="continue-time">3d</span></button><button class="history-row" type="button" data-toast="运行历史为 Mock 记录，当前展示 run-006"><span class="history-dot"></span><span class="history-copy"><strong>run-003</strong><span>baseline · Dice 0.831</span></span><span class="continue-time">5d</span></button></div></div>
+              <div class="console" id="experimentConsole"><div class="console-line info">$ scholarflow run configs/ablation.yaml</div><div class="console-line">[14:02:11] Environment: python 3.11 · torch 2.4 · cuda 12.1</div><div class="console-line">[14:02:12] Dataset: BraTS mock split · train=834 · val=208</div><div class="console-line">[17:43:49] epoch 300/300 · val_dice=0.8421 · val_hd95=6.28</div><div class="console-line success">[17:44:03] Run completed. 4 artifacts saved to experiments/run-006/</div></div>
+            </div>
+          </div>
+        </section>
+        </div>
+        <section class="output-panel" aria-label="研究输出">
+          <div class="output-tabs"><button class="output-tab active" type="button" data-output="log" aria-pressed="true">研究日志</button><button class="output-tab" type="button" data-output="runs" aria-pressed="false">实验运行</button><button class="output-tab" type="button" data-output="issues" aria-pressed="false">问题 0</button><button class="compact-button output-toggle" id="outputToggle" type="button" aria-label="折叠研究日志" aria-expanded="true">⌄</button></div>
+          <div class="output-content" id="outputContent"><div class="output-event"><time>14:32:08</time><span>项目索引更新完成 · 24 篇文献 / 18 条证据</span></div><div class="output-event"><time>14:32:10</time><span>已加载 UniSeg.pdf 上下文与 3 条批注</span></div><div class="output-event"><time>14:32:12</time><span>Scholar Agent 已就绪，等待下一项研究任务</span></div></div>
+        </section>
+      </main>
+      <aside class="agent-panel" id="agentPanel" aria-label="Scholar Agent">
+        <div class="pane-heading"><span class="agent-name"><span class="agent-mark" aria-hidden="true"></span>Scholar Agent <span class="demo-badge">DEMO</span></span><button class="text-button" id="newConversation" type="button">新对话</button></div>
+        <div class="agent-context"><div class="context-heading"><span>任务上下文</span><span id="contextCount">3 个来源</span></div><div class="context-chips" id="contextChips"><span class="context-chip"><span id="agentProjectName">整个项目</span><button class="remove" type="button" aria-label="移除整个项目上下文">×</button></span><span class="context-chip">UniSeg.pdf<button class="remove" type="button" aria-label="移除 UniSeg.pdf 上下文">×</button></span><span class="context-chip">run-006<button class="remove" type="button" aria-label="移除 run-006 上下文">×</button></span></div></div>
+        <div class="agent-settings" aria-label="本次对话的角色与 Skill">
+          <div class="agent-selectors"><button class="agent-selector" id="profilePickerTrigger" type="button" aria-haspopup="dialog" aria-controls="profilePicker"><span class="selector-label">Profile</span><span class="selector-value" id="profileName">Reader</span><span class="selector-chevron" aria-hidden="true">⌄</span></button><button class="agent-selector skill-selector" id="skillPickerTrigger" type="button" aria-haspopup="dialog" aria-controls="skillPicker"><span class="selector-label">Skill</span><span class="selector-value" id="skillName">nature-reader</span><span class="selector-chevron" aria-hidden="true">⌄</span></button></div>
+          <p class="agent-settings-hint"><span>对话显式选择</span> · 仅影响下次任务，不授予权限</p>
+        </div>
+        <div class="agent-thread" id="agentThread" role="log" aria-live="polite" aria-relevant="additions text">
+          <div class="message user"><div class="message-role">你</div><div class="message-content">用 nature-reader 生成这篇论文的中英对照阅读版。</div><div class="message-config">Reader · nature-reader</div></div>
+          <div class="message"><div class="message-role">Scholar <small>等待确认 · Mock</small></div><div class="message-content"><p>中英对照任务已准备。请确认项目文件写入范围。</p><details class="tool-trace agent-preflight"><summary>任务预检 · 2 项（Mock）</summary><div class="tool-step"><span class="icon icon-document" aria-hidden="true"></span>SKILL.md 与必要引用资源</div><div class="tool-step"><span class="icon icon-reading" aria-hidden="true"></span>UniSeg.pdf 与来源锚点</div></details><div id="initialApproval"></div></div></div>
+        </div>
+        <form class="agent-composer" id="agentForm"><p class="composer-context">输出目标 <span id="agentOutputTarget">readers/uniseg/</span> · 项目内</p><div class="composer-box"><textarea id="agentInput" rows="2" placeholder="描述任务，或用 @ 添加资料…" aria-label="向 Scholar Agent 提问"></textarea><div class="composer-actions"><button class="composer-tool" id="addContext" type="button">@ 上下文</button><button class="send-button" type="submit" aria-label="发送给 Scholar Agent">发送</button></div></div><p class="composer-hint">Enter 发送 · Shift Enter 换行 · 不调用真实模型</p></form>
+      </aside>
+    </div>
+    <footer class="statusbar"><span>main</span><span class="status-ready">索引已更新</span><span class="status-project" id="statusProject">本地工作区 · Demo</span><div class="status-right"><span id="statusLanguage">Markdown</span><a href="../.experiments/frontend-bakeoff/scholarflow-ide-v1.png" target="_blank" rel="noopener">第一版设计</a><a href="index.html">原始 Demo</a><span>Light v2</span></div></footer>
+  </div>
+  <button class="drawer-scrim" id="drawerScrim" type="button" aria-label="关闭侧边面板"></button>
+  <dialog class="agent-picker" id="profilePicker" aria-labelledby="profilePickerTitle">
+    <div class="picker-heading"><h2 id="profilePickerTitle">选择 Profile</h2><button class="picker-close" type="button" data-close-picker="profilePicker" aria-label="关闭 Profile 选择">×</button></div>
+    <p class="picker-subtitle">角色决定任务视角，Skill 决定专业方法。</p>
+    <div class="profile-options">
+      <button class="profile-option" type="button" data-profile="auto" aria-pressed="false"><span class="profile-initial">A</span><span class="picker-copy"><strong>Auto</strong><small>按任务推荐角色，不自动授予权限</small></span><span class="profile-check" aria-hidden="true">✓</span></button>
+      <button class="profile-option" type="button" data-profile="reader" aria-pressed="true"><span class="profile-initial">R</span><span class="picker-copy"><strong>Reader</strong><small>原文精读、中英对照与来源定位</small></span><span class="profile-check" aria-hidden="true">✓</span></button>
+      <button class="profile-option" type="button" data-profile="writer" aria-pressed="false"><span class="profile-initial">W</span><span class="picker-copy"><strong>Writer</strong><small>论文结构、论证与学术语言</small></span><span class="profile-check" aria-hidden="true">✓</span></button>
+      <button class="profile-option" type="button" data-profile="reviewer" aria-pressed="false"><span class="profile-initial">R</span><span class="picker-copy"><strong>Reviewer</strong><small>独立审查、引用与证据核验</small></span><span class="profile-check" aria-hidden="true">✓</span></button>
+      <button class="profile-option" type="button" data-profile="experimenter" aria-pressed="false"><span class="profile-initial">E</span><span class="picker-copy"><strong>Experimenter</strong><small>代码与实验；执行仍需单独审批</small></span><span class="profile-check" aria-hidden="true">✓</span></button>
+    </div><div class="picker-footer">仅更新下次任务的角色。已有审批保留原配置快照。</div>
+  </dialog>
+  <dialog class="agent-picker" id="skillPicker" aria-labelledby="skillPickerTitle">
+    <div class="picker-heading"><h2 id="skillPickerTitle">选择 Skill <span class="demo-badge">MOCK LIBRARY</span></h2><button class="picker-close" type="button" data-close-picker="skillPicker" aria-label="关闭 Skill 选择">×</button></div>
+    <p class="picker-subtitle">专业流程与资源包，可跨工作区使用。</p>
+    <div class="skill-search-wrap"><input class="skill-search" id="skillSearch" type="search" placeholder="搜索 Skill 或任务…" aria-label="搜索 Skill" autocomplete="off"></div>
+    <div class="skill-library-tabs" aria-label="Skill 库范围"><button class="skill-library-tab" type="button" data-skill-scope="project" aria-pressed="true">项目启用</button><button class="skill-library-tab" type="button" data-skill-scope="user" aria-pressed="false">用户 Skill 库</button></div>
+    <div class="skill-options" id="skillOptions">
+      <label class="skill-option" data-skill-id="nature-reader" data-project-enabled="true"><input type="checkbox" value="nature-reader" checked><span class="picker-copy"><strong>nature-reader</strong><small>论文中英对照 · Markdown、图表与来源锚点</small><small>nature-skills · 示例包，未安装</small></span><span class="skill-state">Mock 可用</span></label>
+      <label class="skill-option" data-skill-id="academic-writing" data-project-enabled="true"><input type="checkbox" value="academic-writing"><span class="picker-copy"><strong>academic-writing</strong><small>章节结构、论证与语言改写</small><small>本地示例 · 写作方法包</small></span><span class="skill-state">Mock 可用</span></label>
+      <label class="skill-option" data-skill-id="citation-audit" data-project-enabled="true"><input type="checkbox" value="citation-audit"><span class="picker-copy"><strong>citation-audit</strong><small>引用一致性与证据来源核验</small><small>本地示例 · 审查方法包</small></span><span class="skill-state">Mock 可用</span></label>
+      <label class="skill-option" data-skill-id="experiment-lite" data-project-enabled="false" data-blocked="true"><input type="checkbox" value="experiment-lite" disabled><span class="picker-copy"><strong>experiment-lite</strong><small>受控 CPU 实验与复现记录</small><small>缺少隔离执行器 · 不能选择</small></span><span class="skill-state">Mock 阻断</span></label>
+      <p class="skill-empty" id="skillEmpty" hidden>没有匹配的 Skill</p>
+    </div>
+    <div class="skill-picker-actions"><button class="text-button" id="clearSkills" type="button">清空选择</button><span class="section-label" id="skillDraftCount">已选 1 项</span><button class="button primary" id="applySkills" type="button">应用选择</button></div>
+    <div class="picker-footer">视觉演示：未读取 SKILL.md、安装依赖或连接执行引擎。</div>
+  </dialog>
+  <dialog id="commandOverlay" aria-label="全局搜索与命令"><label class="command-input-wrap"><span class="section-label">搜索</span><input class="command-input" id="commandInput" type="search" placeholder="搜索资料或执行命令…" autocomplete="off" autofocus></label><div class="command-results" id="commandResults"><button class="command-result" type="button" data-open-view="overview"><span class="icon icon-document" aria-hidden="true"></span><span>research.md · 研究概览</span><small>项目</small></button><button class="command-result" type="button" data-open-view="sources"><span class="icon icon-folder" aria-hidden="true"></span><span>全部文献</span><small>资料</small></button><button class="command-result" type="button" data-open-view="reading"><span class="icon icon-reading" aria-hidden="true"></span><span>UniSeg.pdf · 精读论文</span><small>论文</small></button><button class="command-result" type="button" data-open-view="notes"><span class="icon icon-document" aria-hidden="true"></span><span>hypothesis.md · 研究笔记</span><small>笔记</small></button><button class="command-result" type="button" data-open-view="evidence"><span class="icon icon-matrix" aria-hidden="true"></span><span>evidence.matrix · 方法对比</span><small>证据</small></button><button class="command-result" type="button" data-open-view="experiments"><span class="icon icon-experiment" aria-hidden="true"></span><span>run-006 · 实验运行</span><small>实验</small></button><button class="command-result" type="button" data-agent-prompt="搜索当前项目中与缺失模态相关的证据"><span class="icon icon-reading" aria-hidden="true"></span><span>让 Agent 搜索项目证据</span><small>命令</small></button><p class="command-empty" id="commandEmpty" hidden>没有匹配的资料或命令</p></div><div class="command-footer">Enter 打开 · ↓ 选择 · Esc 关闭</div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script>
+const projectData = {
+      medical: {
+        name: '多模态医学影像分割',
+        color: '#625bd6',
+        subtitle: '探索在模态缺失条件下仍具备稳定泛化能力的医学图像分割方法。',
+        question: '如何在缺失部分 MRI 模态时保持肿瘤分割性能？',
+        stats: { papers: 24, evidence: 18, notes: 8, runs: 6 }
+      },
+      llm: {
+        name: '高效大模型推理',
+        color: '#0f8f83',
+        subtitle: '研究在有限显存环境下兼顾延迟、吞吐量与生成质量的推理优化方法。',
+        question: '量化与推测解码如何组合以降低长文本生成延迟？',
+        stats: { papers: 17, evidence: 12, notes: 6, runs: 3 }
+      },
+      urban: {
+        name: '城市热岛效应评估',
+        color: '#b36a24',
+        subtitle: '结合遥感影像与城市形态数据，评估不同空间尺度上的热岛效应。',
+        question: '城市绿地结构对夏季地表温度的影响具有怎样的尺度差异？',
+        stats: { papers: 9, evidence: 15, notes: 5, runs: 4 }
+      }
+    };
+
+    'use strict';
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const viewFiles = {overview:'research.md', sources:'papers', reading:'UniSeg.pdf', notes:'hypothesis.md', evidence:'evidence.matrix', experiments:'run-006'};
+    const viewLabels = {overview:'研究概览', sources:'文献库', reading:'精读论文', notes:'研究笔记', evidence:'证据矩阵', experiments:'实验运行'};
+    const tabs = [{view:'overview', label:viewFiles.overview}, {view:'reading', label:viewFiles.reading}, {view:'evidence', label:viewFiles.evidence}];
+    let activeView = 'overview', activeLabel = viewFiles.overview, currentProject = 'medical', toastTimer, sessionId = 0;
+    const history = [{view:'overview', label:viewFiles.overview}];
+    let historyIndex = 0;
+    const overlay = $('#commandOverlay'), input = $('#agentInput'), thread = $('#agentThread');
+    const profileNames = {auto:'Auto', reader:'Reader', writer:'Writer', reviewer:'Reviewer', experimenter:'Experimenter'};
+    const selectableSkills = ['nature-reader','academic-writing','citation-audit'];
+    const agentConfig = {profile:'reader', skills:['nature-reader']};
+    const approvalRequests = new Map();
+    let approvalSequence = 0, skillScope = 'project';
+    function taskSnapshot() { return {project:currentProject, conversation:sessionId, profile:agentConfig.profile, skills:[...agentConfig.skills]}; }
+    function outputFor(snapshot) {
+      if(snapshot.skills.includes('nature-reader'))return 'readers/uniseg/';
+      if(snapshot.skills.includes('academic-writing'))return 'manuscripts/draft/';
+      if(snapshot.skills.includes('citation-audit'))return 'notes/citation-audit/';
+      return 'notes/';
+    }
+    function configLabel(snapshot) { return profileNames[snapshot.profile] + ' · ' + (snapshot.skills.join(' + ') || '未选择 Skill'); }
+    function renderAgentConfig() {
+      $('#profileName').textContent = profileNames[agentConfig.profile];
+      $('#skillName').textContent = agentConfig.skills.length ? agentConfig.skills[0] + (agentConfig.skills.length > 1 ? ' +' + (agentConfig.skills.length-1) : '') : '选择 Skill';
+      $('#skillPickerTrigger').title = agentConfig.skills.join(' + ') || '选择专业方法包';
+      $('#agentOutputTarget').textContent = outputFor(agentConfig);
+      $$('.profile-option').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.profile===agentConfig.profile)));
+    }
+    function openAgentPicker(id) {
+      closeProjectMenu();
+      if(overlay.open)overlay.close();
+      if(id==='skillPicker') {
+        skillScope = 'project'; $('#skillSearch').value = '';
+        $$('#skillOptions input').forEach(checkbox=>checkbox.checked=agentConfig.skills.includes(checkbox.value));
+        filterSkills(); updateSkillDraft();
+      }
+      $('#'+id).showModal();
+      $('#'+(id==='profilePicker'?'profilePickerTrigger':'skillPickerTrigger')).setAttribute('aria-expanded','true');
+      if(id==='skillPicker')$('#skillSearch').focus();
+      else $('.profile-option[aria-pressed="true"]').focus();
+    }
+    function closeAgentPicker(id) {
+      $('#'+id).close();
+      const trigger=$('#'+(id==='profilePicker'?'profilePickerTrigger':'skillPickerTrigger'));
+      trigger.setAttribute('aria-expanded','false');trigger.focus();
+    }
+    function updateSkillDraft() { $('#skillDraftCount').textContent = '已选 ' + $$('#skillOptions input:checked:not(:disabled)').length + ' 项'; }
+    function filterSkills() {
+      const query = $('#skillSearch').value.trim().toLowerCase(); let count = 0;
+      $$('.skill-option').forEach(row=>{
+        row.hidden = (skillScope==='project' && row.dataset.projectEnabled!=='true') || !row.textContent.toLowerCase().includes(query);
+        if(!row.hidden)count++;
+      });
+      $$('.skill-library-tab').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.skillScope===skillScope)));
+      $('#skillEmpty').hidden = count!==0;
+    }
+    function proposalFor(prompt,snapshot) {
+      if(/(运行|执行).*(实验|代码|命令)|(实验|代码|命令).*(运行|执行)/.test(prompt)) {
+        return {title:'执行实验代码', target:'experiments/（未配置执行器）', files:['run-config.json'], blocked:true,
+          diff:'! Mock 能力阻断\n! 缺少隔离执行器，不允许回退到宿主命令。'};
+      }
+      if(snapshot.skills.includes('nature-reader'))return {title:'创建中英对照阅读产物', target:outputFor(snapshot),
+        files:['paper.md','source_map.json','translation_notes.md','assets/'],
+        diff:'+ paper.md（拟新增，内容为占位示例）\n+ **Original:** Example source paragraph.\n+ **中文:** 示例译文，非真实论文翻译。\n+ source_map.json / translation_notes.md / assets/'};
+      if(snapshot.skills.includes('academic-writing'))return {title:'保存稿件修改草案', target:outputFor(snapshot), files:['draft.tex','references.bib'],
+        diff:'+ draft.tex（拟新增，非真实稿件）\n+ % 示例章节草案，尚未排版或保存\n+ references.bib（示例引用待核验）'};
+      return {title:'保存项目笔记草案', target:outputFor(snapshot), files:['draft.md'], diff:'+ draft.md（拟新增）\n+ 示例分析与待核验来源，未保存。'};
+    }
+    function createApproval(container,prompt,snapshot) {
+      const proposal = proposalFor(prompt,snapshot), id = 'mock-approval-' + (++approvalSequence);
+      const card = document.createElement('article'); card.className='approval-card'; card.dataset.approvalId=id;
+      card.dataset.state=proposal.blocked?'blocked':'pending'; card.setAttribute('aria-label',proposal.title+'审批（Mock）');
+      card.innerHTML='<div class="approval-body"><div class="approval-heading"><span class="approval-title">'+escapeHtml(proposal.title)+'</span><span class="approval-status">'+(proposal.blocked?'能力阻断':'待审批')+'</span></div><p class="approval-snapshot">'+escapeHtml(configLabel(snapshot))+' · 本次请求快照</p><div class="approval-target"><span>拟新增</span><code>'+escapeHtml(proposal.target)+'</code></div><div class="approval-files">'+proposal.files.map(file=>'<span class="approval-file">'+escapeHtml(file)+'</span>').join('')+'</div><p class="approval-scope">'+(proposal.blocked?'缺少隔离执行器 · 不运行宿主命令':'仅在当前项目新建文件 · 不覆盖已有版本<br>本审批不包含代码执行或额外网络权限')+'</p><details class="approval-diff"><summary>查看拟变更 <span class="demo-badge">MOCK</span></summary><pre>'+escapeHtml(proposal.diff)+'</pre></details><p class="approval-result" role="status" tabindex="-1" hidden></p></div><div class="approval-actions"><button class="button primary" type="button" data-approval-action="approve"'+(proposal.blocked?' disabled':'')+'>'+(proposal.blocked?'缺少执行器':'批准一次')+'</button><button class="button" type="button" data-approval-action="reject"'+(proposal.blocked?' disabled':'')+'>拒绝</button><span class="approval-note">'+(proposal.blocked?'Mock · 无动作执行':'Mock · 一次性审批')+'</span></div>';
+      approvalRequests.set(id,{id,state:card.dataset.state,snapshot:{...snapshot,skills:[...snapshot.skills]},card});
+      container.append(card);
+      return card;
+    }
+    function decideApproval(id,decision) {
+      const request=approvalRequests.get(id);
+      if(!request || request.state!=='pending' || !request.card.isConnected || request.snapshot.project!==currentProject || request.snapshot.conversation!==sessionId)return false;
+      if(!['approve','reject'].includes(decision))return false;
+      request.state=decision==='approve'?'approved':'rejected'; request.card.dataset.state=request.state;
+      $('.approval-status',request.card).textContent=decision==='approve'?'已批准 · Mock':'已拒绝';
+      const result=$('.approval-result',request.card);result.hidden=false;
+      result.textContent=decision==='approve'?'审批演示已完成。未创建文件、执行 Skill 或调用模型。':'请求已拒绝，未创建文件或执行任何操作。';
+      $$('button[data-approval-action]',request.card).forEach(button=>button.disabled=true);
+      $('[data-approval-action="approve"]',request.card).textContent=decision==='approve'?'已批准':'未执行';
+      $('.approval-note',request.card).textContent='审批已结束 · 不可重放';
+      result.focus();
+      return true;
+    }
+    function showToast(message) { $('#toast').textContent = message; $('#toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 2400); }
+    function closeProjectMenu() { $('#projectMenu').hidden = true; $('#projectSwitcher').setAttribute('aria-expanded','false'); }
+    function closeDrawers() {
+      document.body.classList.remove('agent-open','explorer-open');
+      $('.agent-toggle').setAttribute('aria-expanded','false'); $('.explorer-toggle').setAttribute('aria-expanded','false');
+    }
+    function openDrawer(kind) {
+      const className = kind + '-open', opened = document.body.classList.contains(className);
+      closeDrawers();
+      if (!opened) { document.body.classList.add(className); $('.' + kind + '-toggle').setAttribute('aria-expanded','true'); }
+    }
+    function renderTabs() {
+      $('#editorTabs').replaceChildren();
+      for (const tab of tabs) {
+        const shell = document.createElement('div'); shell.className = 'tab-shell' + (tab.view === activeView ? ' active' : ''); shell.setAttribute('role','presentation');
+        const button = document.createElement('button'); button.type = 'button'; button.className = 'editor-tab'; button.dataset.tabView = tab.view;
+        button.id = 'tab-' + tab.view; button.setAttribute('role','tab'); button.setAttribute('aria-selected',String(tab.view === activeView));
+        button.setAttribute('aria-controls','view-' + tab.view); button.tabIndex = tab.view === activeView ? 0 : -1; button.textContent = tab.label; button.title = tab.label;
+        const close = document.createElement('button'); close.type = 'button'; close.className = 'tab-close'; close.dataset.closeTab = tab.view; close.textContent = '×'; close.setAttribute('aria-label','关闭 ' + tab.label);
+        shell.append(button,close); $('#editorTabs').append(shell);
+      }
+    }
+    function openView(view, label, record = true) {
+      if (!Object.hasOwn(viewLabels,view)) return;
+      activeView = view; activeLabel = label || viewFiles[view];
+      const tab = tabs.find(t => t.view === view);
+      if (tab) tab.label = activeLabel; else tabs.push({view,label:activeLabel});
+      $$('.workspace-view').forEach(p => { const selected = p.dataset.view === view; p.classList.toggle('active',selected); p.setAttribute('role','tabpanel'); p.setAttribute('aria-labelledby','tab-' + p.dataset.view); });
+      $$('.activity-button').forEach(b => { const selected = b.dataset.openView === view; b.classList.toggle('active',selected); b.setAttribute('aria-pressed',String(selected)); });
+      $$('.tree-row').forEach(b => { const selected = b.dataset.openView === view && (!b.dataset.label || b.dataset.label === activeLabel); b.classList.toggle('selected',selected); if(selected)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current'); });
+      $('#emptyEditor')?.remove(); $('#breadcrumbFile').textContent = activeLabel; $('#breadcrumbView').textContent = viewLabels[view];
+      $('#statusLanguage').textContent = view === 'reading' ? 'PDF' : view === 'experiments' ? 'Experiment' : 'Markdown';
+      renderTabs(); $('.view-stage').scrollTop = 0; closeProjectMenu(); closeDrawers();
+      if (overlay.open) overlay.close();
+      if (record) { history.splice(historyIndex + 1); history.push({view,label:activeLabel}); historyIndex = history.length - 1; }
+      if (view === 'reading' && activeLabel.includes('Modality')) {
+        $('.reading-title').textContent = 'Modality-Aware Feature Fusion for Robust MRI Segmentation';
+        showToast('示例切换：阅读正文使用 UniSeg mock 文档，未连接真实 PDF');
+      } else if(view === 'reading') $('.reading-title').textContent = 'UniSeg: A Unified Multi-modal Framework for Medical Image Segmentation';
+    }
+    function closeTab(view) {
+      const index = tabs.findIndex(t => t.view === view); if (index < 0) return;
+      tabs.splice(index,1);
+      if (activeView === view && tabs.length) { const next = tabs[Math.min(index,tabs.length-1)]; openView(next.view,next.label); }
+      else if (!tabs.length) {
+        activeView = null; activeLabel = '';
+        $$('.workspace-view').forEach(p => p.classList.remove('active'));
+        $$('.activity-button').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+        $$('.tree-row').forEach(b => { b.classList.remove('selected'); b.removeAttribute('aria-current'); });
+        const empty = document.createElement('div'); empty.id = 'emptyEditor'; empty.className = 'empty-editor';
+        empty.innerHTML = '<p>没有打开的文档</p><button class="button" type="button" data-open-view="overview">打开研究概览</button>';
+        $('.view-stage').append(empty); $('#breadcrumbFile').textContent = '没有打开的文档'; $('#breadcrumbView').textContent = ''; renderTabs();
+      } else renderTabs();
+      const current = $('.editor-tab[aria-selected="true"]'); if(current)current.focus();
+    }
+    function navigateHistory(offset) { const index = historyIndex + offset; if(index < 0 || index >= history.length)return; historyIndex = index; const h = history[index]; openView(h.view,h.label,false); }
+    function filterCommands() {
+      const query = $('#commandInput').value.trim().toLowerCase(); let count = 0;
+      $$('.command-result').forEach(b => { b.hidden = !b.textContent.toLowerCase().includes(query); if(!b.hidden)count++; });
+      $('#commandEmpty').hidden = count !== 0;
+    }
+    function openPalette() { closeDrawers(); closeProjectMenu(); if(overlay.open) { overlay.close(); return; } $('#commandInput').value = ''; filterCommands(); overlay.showModal(); $('#commandInput').focus(); }
+    function escapeHtml(value) { const node = document.createElement('div'); node.textContent = value; return node.innerHTML; }
+    function responseFor(prompt,snapshot=agentConfig) {
+      if(snapshot.skills.includes('nature-reader') && /中英|翻译|阅读版/.test(prompt))return '这里预览双语阅读流程与文件写入审批。正式实现会完整加载 Skill 及必要资源，生成正文、来源映射与图片；本 Demo 未执行 Skill 或翻译论文。';
+      if(snapshot.skills.includes('academic-writing'))return '已准备写作草案的 Mock 提案。正式实现需要核验引用、展示 diff，并在审批后保存新版本；这里不修改真实稿件。';
+      if(prompt.includes('实验') || prompt.includes('验证') || prompt.includes('下一步')) return '建议先完成缺失比例消融。run-006 的 Dice 为 0.842；比较 dropout = 0.1 / 0.3 / 0.5，增加三个随机种子，并将 Dice 与不确定性写回证据矩阵。';
+      if(prompt.includes('证据')) return '将论文原文与方法、数据集、指标和结论逐项对齐，区分来源事实、综合推断和待验证问题。示例引用：UniSeg 第 4 页与 run-006。';
+      if(prompt.includes('总结') || prompt.includes('贡献')) return 'UniSeg 示例将模态感知融合与不确定性约束统一到一个模型中。跨中心泛化与多种缺失模式仍需验证，请核对原文和实验设置。';
+      return '已收到任务。这里演示项目上下文、工具执行与可追溯回答；当前为 Mock，没有调用模型或外部服务。';
+    }
+    function addAgentMessage(prompt) {
+      prompt = prompt.trim(); if(!prompt)return;
+      const snapshot=taskSnapshot();
+      if(matchMedia('(max-width:1100px)').matches) { closeDrawers(); document.body.classList.add('agent-open'); $('.agent-toggle').setAttribute('aria-expanded','true'); }
+      const user = document.createElement('div'); user.className = 'message user'; user.innerHTML = '<div class="message-role">你</div><div class="message-content">' + escapeHtml(prompt) + '</div><div class="message-config">'+escapeHtml(configLabel(snapshot))+'</div>'; thread.append(user);
+      const reply = document.createElement('div'); reply.className = 'message'; reply.innerHTML = '<div class="message-role">Scholar</div><div class="message-content">正在检查项目上下文…</div>'; thread.append(reply); thread.scrollTop = thread.scrollHeight;
+      const session = sessionId;
+      setTimeout(() => {
+        if(session !== sessionId || !reply.isConnected)return;
+        $('.message-role',reply).innerHTML = 'Scholar <small>Mock 分析完成</small>';
+        $('.message-content',reply).innerHTML = '<div class="tool-trace"><div class="tool-heading">Mock 工具流程预览</div><div class="tool-step"><span class="icon icon-folder" aria-hidden="true"></span>项目上下文与角色配置</div><div class="tool-step"><span class="icon icon-document" aria-hidden="true"></span>'+escapeHtml(snapshot.skills.join(' + ') || '通用任务，不加载 Skill')+'</div></div><p>' + escapeHtml(responseFor(prompt,snapshot)) + '</p><div class="citation-links"><button type="button" data-open-view="reading">UniSeg · p.4</button><button type="button" data-open-view="experiments">run-006</button></div>';
+        if(/生成|保存|创建|写入|改写|翻译|中英|运行|执行/.test(prompt))createApproval($('.message-content',reply),prompt,snapshot);
+        thread.scrollTop = thread.scrollHeight;
+      },650);
+    }
+    function switchProject(key) {
+      const project = projectData[key]; if(!project)return; currentProject = key; sessionId++;
+      approvalRequests.clear();
+      agentConfig.profile='auto';agentConfig.skills=[];renderAgentConfig();
+      $('#projectName').textContent = project.name; $('#overviewTitle').textContent = project.name; $('#researchQuestion').textContent = project.question; $('#overviewSubtitle').textContent = project.subtitle;
+      $('#breadcrumbProject').textContent = project.name; $('#projectDirectory').textContent = {medical:'medical-segmentation',llm:'efficient-llm-inference',urban:'urban-heat-islands'}[key];
+      $('.project-label').textContent = project.name + ' / main'; $('#statusProject').textContent = project.name; $('#agentProjectName')?.replaceChildren(document.createTextNode('整个项目'));
+      $$('[data-stat]').forEach(n => n.textContent = project.stats[n.dataset.stat]); $$('.project-option').forEach(b => b.classList.toggle('active',b.dataset.project === key));
+      thread.replaceChildren(); openView('overview'); showToast('已切换示例项目；资源正文沿用医学影像 mock 数据');
+    }
+    function runExperiment() {
+      const button = $('#runExperiment'); if(button.disabled)return;
+      button.disabled = true; button.textContent = '运行中…'; const consoleBox = $('#experimentConsole');
+      consoleBox.replaceChildren(); const lines = ['$ scholarflow run configs/ablation.yaml --seed 42','已创建隔离环境 · BraTS mock split','epoch 1/300 · val_dice=0.418','Demo 加速：已跳过中间轮次','epoch 300/300 · val_dice=0.845','Mock run-007 完成 · 4 个产物'];
+      lines.forEach((line,index) => setTimeout(() => {
+        const n = document.createElement('div'); n.className = 'console-line' + (index === lines.length-1 ? ' success' : ''); n.textContent = line; consoleBox.append(n); consoleBox.scrollTop = consoleBox.scrollHeight;
+        if(index === lines.length-1) { button.disabled = false; button.textContent = '再次运行'; showToast('Mock 实验 run-007 已完成'); }
+      },350*(index+1)));
+    }
+    document.addEventListener('click', event => {
+      const b = event.target.closest('button, a, tr[data-open-view]'); if(!b)return;
+      if(b.dataset.closePicker) {closeAgentPicker(b.dataset.closePicker);return;}
+      if(b.dataset.profile && Object.hasOwn(profileNames,b.dataset.profile)) {agentConfig.profile=b.dataset.profile;renderAgentConfig();closeAgentPicker('profilePicker');return;}
+      if(b.dataset.skillScope) {skillScope=b.dataset.skillScope;filterSkills();return;}
+      if(b.dataset.approvalAction) {decideApproval(b.closest('.approval-card').dataset.approvalId,b.dataset.approvalAction);return;}
+      if(b.dataset.closeTab) { closeTab(b.dataset.closeTab); return; }
+      if(b.dataset.tabView) { const tab = tabs.find(t => t.view === b.dataset.tabView); openView(tab.view,tab.label); return; }
+      if(b.dataset.openView) { event.preventDefault(); openView(b.dataset.openView,b.dataset.label); return; }
+      if(b.dataset.agentPrompt) { if(overlay.open)overlay.close(); input.value = ''; addAgentMessage(b.dataset.agentPrompt); return; }
+      if(b.dataset.project) { switchProject(b.dataset.project); return; }
+      if(b.dataset.history) { navigateHistory(b.dataset.history === 'back' ? -1 : 1); return; }
+      if(b.classList.contains('remove')) { b.closest('.context-chip').remove(); $('#contextCount').textContent = $$('.context-chip').length + ' 个来源'; return; }
+      if(b.dataset.output) {
+        $$('.output-tab').forEach(t => {t.classList.toggle('active',t===b);t.setAttribute('aria-pressed',String(t===b));});
+        $('#outputContent').innerHTML = b.dataset.output === 'runs' ? '<p>run-006 · Dice 0.842 · 已完成</p><p>run-005 · Dice 0.837 · 已完成</p>' : b.dataset.output === 'issues' ? '<p>当前没有问题。这里仅展示 Mock 工作区状态。</p>' : '<div class="output-event"><time>14:32:08</time><span>项目索引已更新</span></div><div class="output-event"><time>14:32:12</time><span>Scholar Agent 已就绪</span></div>';
+        return;
+      }
+      if(b.dataset.toast) {event.preventDefault();showToast(b.dataset.toast);}
+    });
+    document.addEventListener('click', event => { if(!event.target.closest('.project-area'))closeProjectMenu(); });
+    $('#projectSwitcher').addEventListener('click', () => { const opened = $('#projectMenu').hidden; $('#projectMenu').hidden = !opened; $('#projectSwitcher').setAttribute('aria-expanded',String(opened)); });
+    $('#globalSearch').addEventListener('click',openPalette);
+    $('#commandInput').addEventListener('input',filterCommands);
+    $('#commandInput').addEventListener('keydown', e => { if(e.key==='Enter') {e.preventDefault(); $('.command-result:not([hidden])')?.click();} if(e.key==='ArrowDown') {e.preventDefault(); $('.command-result:not([hidden])')?.focus();} });
+    $('#commandResults').addEventListener('keydown', e => {
+      if(!['ArrowDown','ArrowUp'].includes(e.key))return; e.preventDefault();
+      const buttons = $$('.command-result:not([hidden])'), index = buttons.indexOf(document.activeElement); buttons[(index + (e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();
+    });
+    overlay.addEventListener('click', e => { if(e.target===overlay)overlay.close(); });
+    document.addEventListener('keydown', e => {
+      if(e.key==='Escape' && ($('#skillPicker').open || $('#profilePicker').open)) {e.preventDefault();closeAgentPicker($('#skillPicker').open?'skillPicker':'profilePicker');return;}
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k' && ($('#skillPicker').open || $('#profilePicker').open)) {e.preventDefault();return;}
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k') {e.preventDefault();openPalette();}
+      if(e.key==='Escape') { if(overlay.open)overlay.close(); const openAgent = document.body.classList.contains('agent-open'), openExplorer = document.body.classList.contains('explorer-open'); closeDrawers(); closeProjectMenu(); if(openAgent)$('.agent-toggle').focus();else if(openExplorer)$('.explorer-toggle').focus(); }
+      if(e.target instanceof Element && e.target.matches('.editor-tab') && ['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) {
+        e.preventDefault(); const buttons = $$('.editor-tab'), index = buttons.indexOf(e.target), next = e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowRight'?1:buttons.length-1))%buttons.length;
+        buttons[next]?.click(); $$('.editor-tab')[next]?.focus();
+      }
+    });
+    $('#agentForm').addEventListener('submit', e => {e.preventDefault(); const prompt = input.value; input.value=''; addAgentMessage(prompt);});
+    input.addEventListener('keydown', e => {if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing) {e.preventDefault();$('#agentForm').requestSubmit();}});
+    $('#newConversation').addEventListener('click',() => {sessionId++;approvalRequests.clear();thread.replaceChildren();showToast('已开始新对话；保留当前项目和角色/Skill 选择');input.focus();});
+    $('#profilePickerTrigger').addEventListener('click',()=>openAgentPicker('profilePicker'));
+    $('#skillPickerTrigger').addEventListener('click',()=>openAgentPicker('skillPicker'));
+    $('#skillSearch').addEventListener('input',filterSkills);
+    $('#skillOptions').addEventListener('change',updateSkillDraft);
+    $('#clearSkills').addEventListener('click',()=>{$$('#skillOptions input').forEach(checkbox=>checkbox.checked=false);updateSkillDraft();});
+    $('#applySkills').addEventListener('click',()=>{
+      agentConfig.skills=$$('#skillOptions input:checked:not(:disabled)').map(checkbox=>checkbox.value).filter(id=>selectableSkills.includes(id));
+      renderAgentConfig();closeAgentPicker('skillPicker');
+    });
+    ['profilePicker','skillPicker'].forEach(id=>{
+      const picker=$('#'+id), trigger=$('#'+(id==='profilePicker'?'profilePickerTrigger':'skillPickerTrigger'));
+      trigger.setAttribute('aria-expanded','false');
+      picker.addEventListener('click',event=>{if(event.target===picker)closeAgentPicker(id);});
+      picker.addEventListener('close',()=>{if(picker.open)return;trigger.setAttribute('aria-expanded','false');if(!$('#profilePicker').open&&!$('#skillPicker').open)trigger.focus();});
+    });
+    $('#addContext').addEventListener('click',() => {
+      if(!$$('.context-chip').some(n=>n.textContent.includes('evidence.matrix'))) {
+        const chip = document.createElement('span');chip.className='context-chip';chip.innerHTML='evidence.matrix<button class="remove" type="button" aria-label="移除 evidence.matrix 上下文">×</button>';$('#contextChips').append(chip);$('#contextCount').textContent=$$('.context-chip').length+' 个来源';showToast('已添加 evidence.matrix 上下文');
+      } else showToast('evidence.matrix 已在上下文中');
+    });
+    $('#paperFilter').addEventListener('input', e => {
+      const query = e.target.value.trim().toLowerCase();let count=0;$$('#paperTable tr').forEach(r=>{r.hidden=!r.dataset.paperTitle.toLowerCase().includes(query);if(!r.hidden)count++;});
+      let empty=$('#paperFilterEmpty');if(!empty){empty=document.createElement('p');empty.id='paperFilterEmpty';empty.style.cssText='padding:14px;color:var(--muted)';empty.textContent='没有匹配的论文';$('#paperTable').closest('.table-card').after(empty);}empty.hidden=count!==0;
+    });
+    $('#runExperiment').addEventListener('click',runExperiment);
+    $('#outputToggle').addEventListener('click',() => {const hidden=document.body.classList.toggle('output-hidden');$('#outputToggle').setAttribute('aria-expanded',String(!hidden));$('#outputToggle').setAttribute('aria-label',hidden?'展开研究日志':'折叠研究日志');$('#outputToggle').textContent=hidden?'⌃':'⌄';});
+    $('.agent-toggle').addEventListener('click',()=>openDrawer('agent'));$('.explorer-toggle').addEventListener('click',()=>openDrawer('explorer'));$('#drawerScrim').addEventListener('click',closeDrawers);
+    $$('.workspace-view').forEach(p=>{p.id='view-'+p.dataset.view;});
+    window.scholarflowDemo = {openView,closeTab,responseFor,decideApproval,getState:()=>({view:activeView,label:activeLabel,project:currentProject,tabs:tabs.map(t=>({...t})),agent:{profile:agentConfig.profile,skills:[...agentConfig.skills],approvals:[...approvalRequests.values()].map(request=>({id:request.id,state:request.state,snapshot:{...request.snapshot,skills:[...request.snapshot.skills]}}))}})};
+    renderAgentConfig();createApproval($('#initialApproval'),'生成中英对照阅读版',taskSnapshot());
+    const initialView = new URLSearchParams(location.search).get('view');
+    openView(Object.hasOwn(viewLabels,initialView) ? initialView : 'overview',undefined,false);
+    if(new URLSearchParams(location.search).get('agent')==='1' && matchMedia('(max-width:1100px)').matches)openDrawer('agent');
+  </script>
+</body>
+</html>
