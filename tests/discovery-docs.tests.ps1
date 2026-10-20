@@ -108,6 +108,17 @@ function Assert-MvpProposal([string]$text) {
 }
 Assert-MvpProposal $discovery
 
+# The explicitly selected host execution route supersedes earlier container advice.
+function Assert-WindowsExecutionDecision([string]$text) {
+    if ($text -notmatch '(?m)^\| C15 \|[^\r\n]*Windows[^\r\n]*Conda[^\r\n]*Git Bash') { throw 'Missing confirmed Windows/Conda/Git Bash decision.' }
+    $section = [regex]::Match($text, '(?s)### 3\.8 第一版 MVP 范围建议与剩余决定\r?\n(.*?)(?=\r?\n#{2,3} |\z)').Groups[1].Value
+    foreach ($term in @('Agent 大语言模型（LLM）', '科研实验模型', 'Conda 环境')) {
+        if (-not $section.Contains($term)) { throw "Missing model/runtime distinction: $term" }
+    }
+    if ($section.Contains('实验优先评估本地 Linux 容器')) { throw 'Obsolete container-first MVP requirement.' }
+}
+Assert-WindowsExecutionDecision $discovery
+
 foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_ROADMAP.md')) {
     $text = Get-Content (Join-Path $root ('docs/' + $name)) -Raw -Encoding UTF8
     if (-not $text.Contains('历史方案，待重新确认') -or -not $text.Contains('[DISCOVERY](DISCOVERY.md)')) {
@@ -160,4 +171,6 @@ Assert-Rejected { Assert-PiPositioning ($discovery.Replace('格式可读不等�
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('状态：MVP 建议，尚未整体确认，尚未进入实施规划', '状态：已批准 MVP')) } 'lost its approval boundary'
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('| 投稿与修订 |', '| 未分类 |')) } 'Missing MVP lifecycle stage'
 Assert-Rejected { Assert-MvpProposal ($discovery.Replace('本地运行不自动等于模型离线', '本地运行保证完全离线')) } 'offline model boundary'
-Write-Output 'Discovery provenance, links, proposal/implementation/compatibility/MVP boundaries and 30 negative cases passed (documentation only).'
+Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('| C15 |', '| 未登记 |')) } 'Missing confirmed Windows'
+Assert-Rejected { Assert-WindowsExecutionDecision ($discovery.Replace('Agent 大语言模型（LLM）', '模型')) } 'Missing model/runtime distinction'
+Write-Output 'Discovery provenance, links, proposal/MVP/Windows execution boundaries and 32 negative cases passed (documentation only).'
