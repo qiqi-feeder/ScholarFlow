@@ -234,7 +234,9 @@ export class PiAgentService implements AgentServiceLike {
       compaction: { enabled: true },
       retry: { enabled: true, maxRetries: 2 },
     });
-    const builtinTools = process.platform === "win32" ? ["read", "write", "edit", "grep", "find", "ls", "powershell"] : ["read", "write", "edit", "grep", "find", "ls", "bash"];
+    // Read-only built-ins. Writes must go through the versioned research tools
+    // so a model cannot bypass manuscript history or run host shell commands.
+    const builtinTools = ["read", "grep", "find", "ls"];
     const { session } = await createAgentSession({
       cwd: project.dataDir,
       agentDir: path.join(path.dirname(this.deps.config.configFile), "pi-agent"),

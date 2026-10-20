@@ -62,8 +62,11 @@ test("Pi session wires project skills and research tools even when the model cal
     }
     const inspect = (app.agent as PiAgentService).inspectTask(task.id);
     assert.ok(inspect, "Pi session should be created");
-    for (const name of ["read", "write", "edit", "grep", "find", "ls", "get_research_context", "search_literature", "propose_experiment", "analyze_results", "compile_manuscript"]) {
+    for (const name of ["read", "grep", "find", "ls", "get_research_context", "search_literature", "propose_experiment", "analyze_results", "sync_manuscript_results", "compile_manuscript"]) {
       assert.ok(inspect.tools.includes(name), `Pi active tool missing: ${name}`);
+    }
+    for (const name of ["write", "edit", "powershell", "bash"]) {
+      assert.equal(inspect.tools.includes(name), false, `host write/shell tool must not be active: ${name}`);
     }
     assert.ok(inspect.sessionFile, "Pi session file must be persisted");
     assert.ok(app.services.skills.list(project.id).some((skill) => skill.name === "result-analysis"));
