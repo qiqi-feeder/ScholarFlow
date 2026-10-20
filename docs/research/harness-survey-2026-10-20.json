@@ -1,0 +1,960 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-20",
+  "timezone": "Asia/Shanghai",
+  "status": "research_only",
+  "scope": "representative_not_exhaustive",
+  "local_upstream_tests": "not_run",
+  "local_model_or_gpu_experiments": "not_run",
+  "report": "HARNESS_SURVEY_2026-10-20.md",
+  "source_file_count": 70,
+  "projects": [
+    {
+      "id": "H01",
+      "repo": "earendil-works/pi",
+      "category": "harness",
+      "commit": "a731ba8b80ac56662b4ca7f09102f94447862d8c",
+      "branch": "main",
+      "commit_date": "2026-10-20T09:07:59Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "compaction",
+        "skill_loading",
+        "mcp_tool_discovery"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "packages/agent/src/agent-loop.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/agent/src/agent-loop.ts",
+          "sha256": "28a2b03e34a7e32f004aa851e54d3b5be9dad71c392205614cbc9abdf3a9020a",
+          "line_count": 950,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "packages/coding-agent/src/core/compaction/compaction.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/core/compaction/compaction.ts",
+          "sha256": "f5bbc427e337be708bd15297806c0acaf7cb0ee65cc4af77e6e48c3e3937894f",
+          "line_count": 1100,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "packages/coding-agent/src/core/skills.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/core/skills.ts",
+          "sha256": "8dcc644dbabbb34238f609ecf191c0da370d74873ccaccaf3c3cd0e7703d9431",
+          "line_count": 515,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "packages/coding-agent/test/compaction.test.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/test/compaction.test.ts",
+          "sha256": "829f29b4dc268b77baa4904c6283206ff19993f65e4503bcc1ce995be26c4b3b",
+          "line_count": 656,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "packages/coding-agent/docs/mcp.md",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/docs/mcp.md",
+          "sha256": "23b9cca35d1340e8adce6bed8b495da0ebb58931179a937db87d610a1b40b9bf",
+          "line_count": 273,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "packages/coding-agent/src/extensions/tool-search/tool.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/extensions/tool-search/tool.ts",
+          "sha256": "5f844578e69f5d56c2f1d96f5cf1812e8bc11be1da9f40b43a44888c364f684c",
+          "line_count": 245,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "packages/coding-agent/src/extensions/mcp/tools.ts",
+          "url": "https://github.com/earendil-works/pi/blob/a731ba8b80ac56662b4ca7f09102f94447862d8c/packages/coding-agent/src/extensions/mcp/tools.ts",
+          "sha256": "cd3245946deb3cb3df2e7b521a07837525f886d281c5e4600527eb2aed95e2ac",
+          "line_count": 392,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "Already includes BM25 tool search and large-output file references.",
+        "SDK extension setup differs from CLI defaults; no local integration was run."
+      ],
+      "interview_questions": [
+        "Which compaction boundaries preserve tool-call relationships?",
+        "Which features already belong to Pi?"
+      ]
+    },
+    {
+      "id": "H02",
+      "repo": "langchain-ai/deepagents",
+      "category": "harness",
+      "commit": "a2f88434c5a4b5ce5244c468bb9f69b27831842d",
+      "branch": "main",
+      "commit_date": "2026-10-20T03:35:42Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "output_offload",
+        "skill_tool_gating",
+        "summarization"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "libs/deepagents/deepagents/middleware/filesystem.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/deepagents/middleware/filesystem.py",
+          "sha256": "61e46cc7ee8fe7bdc1f71bc2a40c66c8579ae3b53bc9451d093e0f7540e1916e",
+          "line_count": 3881,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/deepagents/deepagents/middleware/skills.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/deepagents/middleware/skills.py",
+          "sha256": "f3cc2139f2b77bd599bf99df032efe27774462b2ecc80f6e58b7ea7edd2d7895",
+          "line_count": 1433,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/deepagents/deepagents/middleware/summarization.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/deepagents/middleware/summarization.py",
+          "sha256": "976c2d1b1e604802a2f05046f188b6b0509be06ba2f14013d9d21b3ad29f7c7f",
+          "line_count": 2358,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "libs/deepagents/tests/unit_tests/middleware/test_skills_middleware.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_skills_middleware.py",
+          "sha256": "2ed2fb4bd9f0a21c78e4688a636415a0b28c97709766fb7848fbdcbc30b80db2",
+          "line_count": 2418,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "libs/deepagents/tests/unit_tests/middleware/test_summarization_middleware.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_summarization_middleware.py",
+          "sha256": "db234a6f92518091b6bc2b09ad8ccaedffc32ff038b51a44ccb6118902dc14bd",
+          "line_count": 3558,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "libs/deepagents/tests/unit_tests/middleware/test_filesystem_middleware_init.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_filesystem_middleware_init.py",
+          "sha256": "07132ba7f0fda58487434abf50c71bfd1a2177add2f5d48b40957510ad7d99e3",
+          "line_count": 150,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/deepagents/deepagents/middleware/_message_eviction.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/deepagents/middleware/_message_eviction.py",
+          "sha256": "a8944dc88b7cf19e800809bf9e0197cd3a86a5addfb163ee9d6796ba6b9e05c5",
+          "line_count": 296,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/deepagents/deepagents/middleware/_skill_tools.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/deepagents/middleware/_skill_tools.py",
+          "sha256": "2d99b6159b5181f59ae6f97e5d65f5d8776851658aad70417334fdc1fcec08b9",
+          "line_count": 415,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "libs/deepagents/tests/unit_tests/middleware/test_skill_tools.py",
+          "url": "https://github.com/langchain-ai/deepagents/blob/a2f88434c5a4b5ce5244c468bb9f69b27831842d/libs/deepagents/tests/unit_tests/middleware/test_skill_tools.py",
+          "sha256": "17bf648211a079f68a99baffc73aec70df1db500c1716dc4ba4e401ff474d552",
+          "line_count": 527,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [
+        {
+          "url": "https://www.langchain.com/blog/improving-deep-agents-with-harness-engineering",
+          "attribution": "author_reported",
+          "local_replication": "not_run",
+          "applies_to": "historical_experiment_not_current_snapshot"
+        }
+      ],
+      "local_execution": "not_run",
+      "limitations": [
+        "Published aggregate harness improvement is not a component ablation.",
+        "Historical benchmark version differs from this source snapshot."
+      ],
+      "interview_questions": [
+        "What happens to skill tools after the skill read is compacted away?",
+        "How does offload failure preserve diagnostic context?"
+      ]
+    },
+    {
+      "id": "H03",
+      "repo": "anomalyco/opencode",
+      "category": "harness",
+      "commit": "d30e990c69efd8a954413a724b35c5a27462f320",
+      "branch": "dev",
+      "commit_date": "2026-10-20T07:17:22Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "structured_compaction",
+        "recent_context",
+        "cache_prefix"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "packages/core/src/session/compaction.ts",
+          "url": "https://github.com/anomalyco/opencode/blob/d30e990c69efd8a954413a724b35c5a27462f320/packages/core/src/session/compaction.ts",
+          "sha256": "f6367aba30c3db4e6084f964645976b1b6105c6e4fe0f6fd11ff481d9dce54c4",
+          "line_count": 931,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "packages/core/src/permission/saved.ts",
+          "url": "https://github.com/anomalyco/opencode/blob/d30e990c69efd8a954413a724b35c5a27462f320/packages/core/src/permission/saved.ts",
+          "sha256": "ef7418f057b62d4e3e0abb365238eea3ca19d7411b2b25d6b47e6a2cbb01594a",
+          "line_count": 144,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "packages/core/test/permission.test.ts",
+          "url": "https://github.com/anomalyco/opencode/blob/d30e990c69efd8a954413a724b35c5a27462f320/packages/core/test/permission.test.ts",
+          "sha256": "c3cd913dbf35d5c3e72e3f48eec00a8df40c22efe9c91b5dfd036d3f874c64a0",
+          "line_count": 777,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "packages/core/test/session-compaction.test.ts",
+          "url": "https://github.com/anomalyco/opencode/blob/d30e990c69efd8a954413a724b35c5a27462f320/packages/core/test/session-compaction.test.ts",
+          "sha256": "d81a719df6b13e269a9728d969d17a4022843abd517087f850078953fa4d95bb",
+          "line_count": 822,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "No isolated quality evaluation was verified for this compaction implementation.",
+        "Older descriptions of pruning do not establish current behavior."
+      ],
+      "interview_questions": [
+        "How is obsolete summary state removed?",
+        "How are prompt-cache reuse and context preservation balanced?"
+      ]
+    },
+    {
+      "id": "H04",
+      "repo": "bytedance/deer-flow",
+      "category": "harness",
+      "commit": "059758f321d83dc7196e35fa99f5829333d97ec1",
+      "branch": "main",
+      "commit_date": "2026-10-20T08:55:13Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "output_budget",
+        "durable_context",
+        "knowledge_scope"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "backend/packages/harness/deerflow/agents/middlewares/tool_output_budget_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/tool_output_budget_middleware.py",
+          "sha256": "70955a455cf04b1535e72ffe797f33528fc38d45dfbce80ec9e37bc7aa30661b",
+          "line_count": 1278,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/durable_context_middleware.py",
+          "sha256": "b0a03d38d45db840dfd3b3275c7093e4e4c6edadcf80ee2d7f3df4cfcf159e67",
+          "line_count": 466,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "backend/packages/harness/deerflow/agents/middlewares/skill_activation_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/skill_activation_middleware.py",
+          "sha256": "cd3bd9302ee18d183ba739aa46630c0990a663d6d335d4d05edeb5577a4c0498",
+          "line_count": 1019,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "backend/packages/harness/deerflow/agents/middlewares/knowledge_scope_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/packages/harness/deerflow/agents/middlewares/knowledge_scope_middleware.py",
+          "sha256": "70ca3085ef2bdb97f689a3086d176871526a12601111b8150849a828a0a337f6",
+          "line_count": 135,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "backend/tests/test_command_tool_result_semantics.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_command_tool_result_semantics.py",
+          "sha256": "d68a39dab94681f7a5b1614cffc65dccca1543cfbd066784e38aab670c04c5d9",
+          "line_count": 381,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "backend/tests/test_tool_output_budget_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_tool_output_budget_middleware.py",
+          "sha256": "1dd947d542f5ff1d322e079ea4bee41ee3847302107040ce8aff25340b0663a3",
+          "line_count": 2939,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "backend/tests/test_durable_context_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_durable_context_middleware.py",
+          "sha256": "3590c244dc2d22f58cb36ef617f12d873fa69008f4ad2c75b38f05e72af362c1",
+          "line_count": 1678,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "backend/tests/test_knowledge_scope_middleware.py",
+          "url": "https://github.com/bytedance/deer-flow/blob/059758f321d83dc7196e35fa99f5829333d97ec1/backend/tests/test_knowledge_scope_middleware.py",
+          "sha256": "2a71a10a2496456bc9dccf409af346a85b54f951349853a0a652c1db0fcde1c9",
+          "line_count": 182,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "Regression tests are not an end-to-end quality ablation.",
+        "Context projection and tool hiding do not alone establish sandbox security."
+      ],
+      "interview_questions": [
+        "Why must truncation preserve a failed exit marker?",
+        "How are untrusted context and current knowledge scope restored?"
+      ]
+    },
+    {
+      "id": "H05",
+      "repo": "OpenHands/software-agent-sdk",
+      "category": "execution",
+      "commit": "0996c33916c2a977ea9fe38deee660ff0e1389f2",
+      "branch": "main",
+      "commit_date": "2026-10-20T08:02:32Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "event_log",
+        "conversation_restore",
+        "configuration_compatibility"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "openhands-sdk/openhands/sdk/conversation/event_store.py",
+          "url": "https://github.com/OpenHands/software-agent-sdk/blob/0996c33916c2a977ea9fe38deee660ff0e1389f2/openhands-sdk/openhands/sdk/conversation/event_store.py",
+          "sha256": "af721391c46a1979c45e0e414c45a82dfc42d8a92d62ac2ccea0242f725450b0",
+          "line_count": 375,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "openhands-sdk/openhands/sdk/conversation/state.py",
+          "url": "https://github.com/OpenHands/software-agent-sdk/blob/0996c33916c2a977ea9fe38deee660ff0e1389f2/openhands-sdk/openhands/sdk/conversation/state.py",
+          "sha256": "7e488ee6cb483f35b852bcb0900f5f49e0490a2b5bf28d6387d869d207727360",
+          "line_count": 777,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "openhands-sdk/openhands/sdk/context/condenser/llm_summarizing_condenser.py",
+          "url": "https://github.com/OpenHands/software-agent-sdk/blob/0996c33916c2a977ea9fe38deee660ff0e1389f2/openhands-sdk/openhands/sdk/context/condenser/llm_summarizing_condenser.py",
+          "sha256": "8e3ddb4a770ba80d7aaa0b96247d95d8985cd860133b0efa6d0315de50727e6e",
+          "line_count": 563,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/sdk/conversation/test_event_store.py",
+          "url": "https://github.com/OpenHands/software-agent-sdk/blob/0996c33916c2a977ea9fe38deee660ff0e1389f2/tests/sdk/conversation/test_event_store.py",
+          "sha256": "ae4bcfb73f7018cd213097671ca22d50f833186ea3e44fd90ac250c8afd8659a",
+          "line_count": 637,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/cross/test_conversation_restore_behavior.py",
+          "url": "https://github.com/OpenHands/software-agent-sdk/blob/0996c33916c2a977ea9fe38deee660ff0e1389f2/tests/cross/test_conversation_restore_behavior.py",
+          "sha256": "b608c4da3d1226af8a69d3901c2ba1b00ca2d7e6d1c6223cf4e0bfc0e0745d9e",
+          "line_count": 995,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "Conversation restore does not establish exactly-once external side effects.",
+        "No local restart or model run was performed."
+      ],
+      "interview_questions": [
+        "What configuration changes are safe during restore?",
+        "How are active and abandoned event branches distinguished?"
+      ]
+    },
+    {
+      "id": "H06",
+      "repo": "langchain-ai/langgraph",
+      "category": "execution",
+      "commit": "1400d25b7b88cfa055c55b8a82bd95b7c25caef1",
+      "branch": "main",
+      "commit_date": "2026-10-19T14:03:29Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "checkpoint",
+        "pending_writes",
+        "interrupt_replay"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "libs/langgraph/langgraph/pregel/_loop.py",
+          "url": "https://github.com/langchain-ai/langgraph/blob/1400d25b7b88cfa055c55b8a82bd95b7c25caef1/libs/langgraph/langgraph/pregel/_loop.py",
+          "sha256": "cc51e52a6624aa064ac1688e4a55326012d11b615d9810d4b5c1f19bf5f579e0",
+          "line_count": 2167,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "libs/langgraph/tests/test_interruption.py",
+          "url": "https://github.com/langchain-ai/langgraph/blob/1400d25b7b88cfa055c55b8a82bd95b7c25caef1/libs/langgraph/tests/test_interruption.py",
+          "sha256": "fbd7a06616c528824df8c14f627eace5482fcbdbb6c4c2f5a17f0b1ae9f3d730",
+          "line_count": 315,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/checkpoint/langgraph/checkpoint/base/__init__.py",
+          "url": "https://github.com/langchain-ai/langgraph/blob/1400d25b7b88cfa055c55b8a82bd95b7c25caef1/libs/checkpoint/langgraph/checkpoint/base/__init__.py",
+          "sha256": "e1b412fb541b47cf9ab0657f5c160c955c71ce929d8ac786f0bcc94d356481e9",
+          "line_count": 890,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "libs/langgraph/langgraph/pregel/_runner.py",
+          "url": "https://github.com/langchain-ai/langgraph/blob/1400d25b7b88cfa055c55b8a82bd95b7c25caef1/libs/langgraph/langgraph/pregel/_runner.py",
+          "sha256": "dc835c835cbd2c783ff1df3ca46343ecab9b4a7f534ed0083be8d0664d21816e",
+          "line_count": 949,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "An incomplete side-effecting task may run again.",
+        "Reference mechanism does not imply adding LangGraph to Pi."
+      ],
+      "interview_questions": [
+        "How do pending writes interact with durable checkpoints?",
+        "What happens when an experiment is submitted before a crash?"
+      ]
+    },
+    {
+      "id": "H07",
+      "repo": "infiniflow/ragflow",
+      "category": "retrieval",
+      "commit": "3d881b91cc58eb415e73a1db32a4e980477aea90",
+      "branch": "main",
+      "commit_date": "2026-10-20T09:33:13Z",
+      "archived": false,
+      "license_metadata": "Apache-2.0",
+      "tree_truncated": false,
+      "mechanisms": [
+        "dataset_scope",
+        "hybrid_retrieval",
+        "retrieval_metrics"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "internal/agent/tool/retrieval_service.go",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agent/tool/retrieval_service.go",
+          "sha256": "c87068b47153367a35240ff0fc397ba25d8b30af962116329fc8272bafe340e1",
+          "line_count": 69,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "internal/agent/tool/retrieval_service_test.go",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agent/tool/retrieval_service_test.go",
+          "sha256": "53391a530e7e60514b213924969355454ca5202d106b5f524315aacfbc61d85b",
+          "line_count": 83,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "test/benchmark/retrieval.py",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/test/benchmark/retrieval.py",
+          "sha256": "119cbe5ae4f4baf8367b798a5a9f1b7c25de8e10e317775be749878bb7ab5664",
+          "line_count": 55,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "test/benchmark/README.md",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/test/benchmark/README.md",
+          "sha256": "6fdced1223f9d9d0f958aae86ef2bc0d80b238e070ff1281e900fff074bdf354",
+          "line_count": 336,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "internal/agentic_rag/tool_search_chunks.go",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agentic_rag/tool_search_chunks.go",
+          "sha256": "5ab8d72253552b0d6d2934155d5a27b5f3a50ee784b485436b62ac53aaeea3ba",
+          "line_count": 176,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "internal/agent/component/retrieval_permission_test.go",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agent/component/retrieval_permission_test.go",
+          "sha256": "f6501f244113ef7153ba1ce686890a7821f37cd69b494b9e4ca4e6d9c2dd54ec",
+          "line_count": 103,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "test/benchmark/metrics.py",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/test/benchmark/metrics.py",
+          "sha256": "8ad7a1f6b02bb23f4bb63cef3e9ee45398ac27972651e65d67fbb0a11c885d6d",
+          "line_count": 79,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "internal/agentic_rag/locate_search.go",
+          "url": "https://github.com/infiniflow/ragflow/blob/3d881b91cc58eb415e73a1db32a4e980477aea90/internal/agentic_rag/locate_search.go",
+          "sha256": "59e918cc8050f69da66b523c351350e659896c508341c28b2ef5d207db228a73",
+          "line_count": 257,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "The inspected HTTP benchmark measures performance, not grounded-answer accuracy.",
+        "Current inspected retrieval code is Go; no parser or reranker evaluation was run."
+      ],
+      "interview_questions": [
+        "Who enforces the allowed dataset scope?",
+        "How do throughput and evidence recall differ?"
+      ]
+    },
+    {
+      "id": "H08",
+      "repo": "Future-House/paper-qa",
+      "category": "retrieval",
+      "commit": "57e89f7223b0960d5ee5ea048c69e3c47e088572",
+      "branch": "main",
+      "commit_date": "2026-08-12T15:31:43Z",
+      "archived": false,
+      "license_metadata": "Apache-2.0",
+      "tree_truncated": false,
+      "mechanisms": [
+        "paper_search",
+        "gather_evidence",
+        "answer_feedback"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "src/paperqa/agents/tools.py",
+          "url": "https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/src/paperqa/agents/tools.py",
+          "sha256": "622c48b4a96efa99267d6e833b0e1d10078ec05da4f4a29fa1a1e9e8fae5fe7d",
+          "line_count": 713,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "src/paperqa/docs.py",
+          "url": "https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/src/paperqa/docs.py",
+          "sha256": "d14055c94afd811e4307a1ef3f7d05ebdeaf57ddf188f8b394f81bfeedce83d5",
+          "line_count": 722,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/test_agents.py",
+          "url": "https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/tests/test_agents.py",
+          "sha256": "357c7c145b7336d267d9d7222d5359a69329a65588367914adead93544029bc0",
+          "line_count": 1175,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "README.md",
+          "url": "https://github.com/Future-House/paper-qa/blob/57e89f7223b0960d5ee5ea048c69e3c47e088572/README.md",
+          "sha256": "1ebe76557cd4d5f9bbe60efa47d8702c5723e3b2a9451ddc7bbae5c086b0bfb7",
+          "line_count": 1252,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [
+        {
+          "url": "https://arxiv.org/html/2409.13740v1",
+          "attribution": "author_reported",
+          "local_replication": "not_run",
+          "applies_to": "historical_experiment_not_current_snapshot"
+        }
+      ],
+      "local_execution": "not_run",
+      "limitations": [
+        "Historical literature-system results are not experiments on the current snapshot.",
+        "Evidence gathering mutates shared question state and cannot run concurrently with itself."
+      ],
+      "interview_questions": [
+        "Why separate paper search and evidence gathering?",
+        "Which tool calls can actually run concurrently?"
+      ]
+    },
+    {
+      "id": "H09",
+      "repo": "SakanaAI/AI-Scientist-v2",
+      "category": "research_execution",
+      "commit": "96bd51617cfdbb494a9fc283af00fe090edfae48",
+      "branch": "main",
+      "commit_date": "2025-12-19T07:46:31Z",
+      "archived": false,
+      "license_metadata": "NOASSERTION",
+      "tree_truncated": false,
+      "mechanisms": [
+        "experiment_nodes",
+        "debug_branches",
+        "replication_aggregation"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "ai_scientist/treesearch/agent_manager.py",
+          "url": "https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/ai_scientist/treesearch/agent_manager.py",
+          "sha256": "3abbc08428be8345baa106045bcbc82fcff115634579b11436a8181707208c89",
+          "line_count": 1222,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "ai_scientist/treesearch/journal.py",
+          "url": "https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/ai_scientist/treesearch/journal.py",
+          "sha256": "5690b2b803300f655788064ec253159f2f41c86802e886e601cf640f798cd5b6",
+          "line_count": 613,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "ai_scientist/treesearch/parallel_agent.py",
+          "url": "https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/ai_scientist/treesearch/parallel_agent.py",
+          "sha256": "57d17fcf00509fef1756ac14b22992f9da66447c4ed97cb7b5a4fec031d6ed4e",
+          "line_count": 2369,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "README.md",
+          "url": "https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/README.md",
+          "sha256": "ed4ae4b9353641dff469679f14cbffd6547f7a6137b9d5b397f3be9a367b4e82",
+          "line_count": 211,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "license",
+          "path": "LICENSE",
+          "url": "https://github.com/SakanaAI/AI-Scientist-v2/blob/96bd51617cfdbb494a9fc283af00fe090edfae48/LICENSE",
+          "sha256": "9c82e554a54dfcf2550b452801475a36f9cb909ede00b03e492089e4836a7462",
+          "line_count": 54,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [
+        {
+          "url": "https://arxiv.org/html/2504.08066v1",
+          "attribution": "author_reported",
+          "local_replication": "not_run",
+          "applies_to": "historical_experiment_not_current_snapshot"
+        }
+      ],
+      "local_execution": "not_run",
+      "limitations": [
+        "No dedicated test directory was found in the inspected tree.",
+        "Workshop acceptance is not a general reproduction success rate.",
+        "Custom source license must not be labeled MIT or Apache."
+      ],
+      "interview_questions": [
+        "What makes an experiment node buggy?",
+        "Why separate debug, replication and method-change nodes?"
+      ]
+    },
+    {
+      "id": "H10",
+      "repo": "aiming-lab/AutoResearchClaw",
+      "category": "research_execution",
+      "commit": "be4ba4755bf1b52220f25e13b2293b5956590070",
+      "branch": "main",
+      "commit_date": "2026-08-19T03:24:41Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "partial_results",
+        "structured_metrics",
+        "verified_numeric_registry"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "researchclaw/pipeline/executor.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/executor.py",
+          "sha256": "29666072244ea3e319a10b5f2287badf19b713bca1bde50e5e8225d0782846ea",
+          "line_count": 822,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "researchclaw/experiment/metrics.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/experiment/metrics.py",
+          "sha256": "ca8fb61c5a0ec46fb6f014cf6855f5e2693e35370c32a85f0559e82af5b8a1d1",
+          "line_count": 265,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/test_rc_executor.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/tests/test_rc_executor.py",
+          "sha256": "593e3451f14b3cb43a2fb91c6c0703fd1d77a5c0a11f8dc0c303c6a941d760c0",
+          "line_count": 4158,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/test_metric_parser.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/tests/test_metric_parser.py",
+          "sha256": "01aaa738ae1d1f22c78da6b2d401f1cb67e631e164475dacddb0f8eccd999db2",
+          "line_count": 277,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "README.md",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/README.md",
+          "sha256": "e83d072a1dc975d01127d07657d97c82b9aaa0ed8260618f0adb1b43a9170db7",
+          "line_count": 863,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "researchclaw/pipeline/stage_impls/_execution.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/stage_impls/_execution.py",
+          "sha256": "c765d6c397a1dcb4b816b83bee72affc0e1021f67e7ea4102c10e3bdb8e9373a",
+          "line_count": 1453,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "researchclaw/pipeline/verified_registry.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/researchclaw/pipeline/verified_registry.py",
+          "sha256": "d05cb1daebcf00b8d59534c6f5f3a9f30145953427804a2071ed3626fca9ca2b",
+          "line_count": 450,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/test_verified_registry.py",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/tests/test_verified_registry.py",
+          "sha256": "7aef618eae64abc07c83f2cdebd45a1fc7d681676c36e17652ced930dadcfdaa",
+          "line_count": 488,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "experiments/arc_bench/README.md",
+          "url": "https://github.com/aiming-lab/AutoResearchClaw/blob/be4ba4755bf1b52220f25e13b2293b5956590070/experiments/arc_bench/README.md",
+          "sha256": "531b66c93e63294d0421e6351a61f5ac987dc43c1056843f1680c2c4528b37e6",
+          "line_count": 299,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [
+        {
+          "url": "https://arxiv.org/html/2605.20025v1",
+          "attribution": "author_reported",
+          "local_replication": "not_run",
+          "applies_to": "historical_experiment_not_current_snapshot"
+        }
+      ],
+      "local_execution": "not_run",
+      "limitations": [
+        "A number-only verification match cannot establish the correct experimental condition.",
+        "Best-of-3 ablations differ from single-run HITL comparisons.",
+        "The 54.7 percent headline compares CoPilot with a baseline, not autonomous success rates.",
+        "Current 55-topic benchmark inputs do not include large run outputs or scoring analyses."
+      ],
+      "interview_questions": [
+        "When can partial measurements be used downstream?",
+        "How are condition-specific claims distinguished from numeric membership?"
+      ]
+    },
+    {
+      "id": "H11",
+      "repo": "SWE-agent/mini-swe-agent",
+      "category": "harness",
+      "commit": "04d809ceab9df28f9adaed044884180159172930",
+      "branch": "main",
+      "commit_date": "2026-09-03T05:05:59Z",
+      "archived": false,
+      "license_metadata": "MIT",
+      "tree_truncated": false,
+      "mechanisms": [
+        "minimal_loop",
+        "limits",
+        "trajectory_save"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "src/minisweagent/agents/default.py",
+          "url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/src/minisweagent/agents/default.py",
+          "sha256": "e8ef8aa365942d739c2ec5cb0879f60f377d2dc2de8ec670aaedf3bafb45a4c2",
+          "line_count": 191,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/agents/test_default.py",
+          "url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/tests/agents/test_default.py",
+          "sha256": "87a97d18cdb931dc5f248d5178e8596021e6b17bbef70af51c40a518ac488eda",
+          "line_count": 545,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "documentation",
+          "path": "README.md",
+          "url": "https://github.com/SWE-agent/mini-swe-agent/blob/04d809ceab9df28f9adaed044884180159172930/README.md",
+          "sha256": "9982d90b7566f2f3fa5e9811b475d5e8e2a84e2df80cf3f1e4be6e820b129835",
+          "line_count": 218,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "Cost checks stop after already incurred cost and are not hard preauthorization.",
+        "Minimality is a comparison baseline, not proof that richer harnesses are worse."
+      ],
+      "interview_questions": [
+        "Why save trajectories on exceptions?",
+        "How do malformed responses count against budget?"
+      ]
+    },
+    {
+      "id": "H12",
+      "repo": "laude-institute/harbor",
+      "category": "evaluation",
+      "commit": "77094ca610014a3c7c2dcac6a29ef01f7ef800c8",
+      "branch": "main",
+      "commit_date": "2026-10-20T06:51:06Z",
+      "archived": false,
+      "license_metadata": "Apache-2.0",
+      "tree_truncated": false,
+      "mechanisms": [
+        "independent_verifier",
+        "stale_reward_cleanup",
+        "reward_validation"
+      ],
+      "sources": [
+        {
+          "kind": "implementation",
+          "path": "src/harbor/trial/trial.py",
+          "url": "https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/src/harbor/trial/trial.py",
+          "sha256": "d618d594a86a7abf362025f0eed8fa6b8a086891a4f997ccc74170ae7f3ff6d8",
+          "line_count": 1976,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "src/harbor/verifier/verifier.py",
+          "url": "https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/src/harbor/verifier/verifier.py",
+          "sha256": "9c142256043891d805050a2b4c2106fa5d2df5a3e61b1763927e0bac4b717531",
+          "line_count": 307,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "test",
+          "path": "tests/unit/test_verifier.py",
+          "url": "https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/tests/unit/test_verifier.py",
+          "sha256": "f25ca5121f5f81b9c6c5d20414e98a6320f9ddb51e3865e8a7282087d813b9c9",
+          "line_count": 637,
+          "inspection": "retrieved_for_targeted_review"
+        },
+        {
+          "kind": "implementation",
+          "path": "src/harbor/models/task/config.py",
+          "url": "https://github.com/laude-institute/harbor/blob/77094ca610014a3c7c2dcac6a29ef01f7ef800c8/src/harbor/models/task/config.py",
+          "sha256": "0957943fa81848e2ece4651f0f7af75a070f0d66531e67dbdbdab08e9e31971e",
+          "line_count": 1061,
+          "inspection": "retrieved_for_targeted_review"
+        }
+      ],
+      "author_evaluations": [],
+      "local_execution": "not_run",
+      "limitations": [
+        "Verifier quality limits scientific validity.",
+        "Separate verification is not automatically tamper-proof or securely isolated."
+      ],
+      "interview_questions": [
+        "Why remove stale reward files?",
+        "How do missing, empty and invalid rewards differ?"
+      ]
+    }
+  ],
+  "supplementary_sources": [
+    {
+      "url": "https://www.anthropic.com/engineering/advanced-tool-use",
+      "kind": "author_report",
+      "local_replication": "not_run",
+      "limitation": "Internal MCP evaluation; not a Pi BM25 benchmark or ScholarFlow result."
+    },
+    {
+      "url": "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents",
+      "kind": "engineering_report",
+      "local_replication": "not_run",
+      "limitation": "Application-development experience; no isolated scientific-task ablation."
+    },
+    {
+      "url": "https://github.com/langchain-ai/docs/blob/main/src/oss/langgraph/functional-api.mdx",
+      "kind": "official_documentation",
+      "local_replication": "not_run",
+      "limitation": "Explains replay and side effects; mutable documentation is not the pinned implementation."
+    }
+  ]
+}
