@@ -1,4 +1,4 @@
-param([int]$Port = 8813, [switch]$CheckCleanup)
+﻿param([int]$Port = 8813, [switch]$CheckCleanup)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $content = Get-Content (Join-Path $root 'demo/workspace-light.html') -Raw -Encoding UTF8

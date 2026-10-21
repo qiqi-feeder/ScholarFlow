@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $documentPath = Join-Path $repositoryRoot 'docs\PRODUCT_DESIGN.md'

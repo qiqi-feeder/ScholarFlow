@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $documentPath = Join-Path $repositoryRoot 'docs/WORKSPACE_PRODUCT_DISCUSSION.md'
 $document = Get-Content -LiteralPath $documentPath -Raw -Encoding UTF8

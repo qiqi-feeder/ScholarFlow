@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $document = Get-Content (Join-Path $repositoryRoot 'docs/FRONTEND_PRODUCT_REQUIREMENTS.md') -Raw -Encoding UTF8
 $plan = Get-Content (Join-Path $repositoryRoot 'PLAN.md') -Raw -Encoding UTF8

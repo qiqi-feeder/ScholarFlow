@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$RepositoryPath = (Split-Path -Parent $PSScriptRoot),
     [string]$RemoteUrl = 'https://github.com/qiqi-feeder/ScholarFlow.git',
     [switch]$UseCachedRemote

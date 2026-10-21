@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $assetRoot = Join-Path $repositoryRoot 'docs/design-references/chat-style-2026-10-22'
 $manifestText = Get-Content (Join-Path $assetRoot 'manifest.json') -Raw -Encoding UTF8
