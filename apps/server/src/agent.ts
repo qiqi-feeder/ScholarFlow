@@ -29,11 +29,31 @@ export class AgentConfigurationError extends Error {
 export class AgentBusyError extends Error {
   readonly code = "AGENT_BUSY";
 }
+export class ModelUnavailableError extends Error {
+  readonly code = "MODEL_UNAVAILABLE";
+}
+
+export interface ModelOption {
+  provider: string;
+  id: string;
+  name: string;
+  available: boolean;
+  reason?: string | null;
+}
+
+export interface TaskModelSelection {
+  provider: string;
+  id: string;
+  name: string;
+  inherited: boolean;
+}
 
 export interface AgentServiceLike {
   sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void>;
   stop(taskId: string): Promise<{ stopped: boolean }>;
   isRunning(taskId: string): boolean;
+  listModels?(): Promise<ModelOption[]>;
+  switchModel?(project: ProjectRecord, taskId: string, provider: string, modelId: string): Promise<TaskRecord>;
   dispose(): Promise<void>;
 }
 
@@ -112,12 +132,68 @@ function resultText(result: unknown): string {
 
 export class PiAgentService implements AgentServiceLike {
   private readonly tasks = new Map<string, LoadedTask>();
+  private readonly busyTasks = new Set<string>();
   private modelRuntimePromise: Promise<ModelRuntime> | null = null;
 
   constructor(private readonly deps: AgentServiceDependencies) {}
 
   isRunning(taskId: string): boolean {
-    return this.tasks.get(taskId)?.running ?? false;
+    return this.busyTasks.has(taskId) || (this.tasks.get(taskId)?.running ?? false);
+  }
+
+  async listModels(): Promise<ModelOption[]> {
+    const runtime = await this.modelRuntime();
+    const available = await runtime.getAvailable();
+    return available.map((model) => ({
+      provider: model.provider,
+      id: model.id,
+      name: model.name,
+      available: true,
+      reason: null,
+    }));
+  }
+
+  defaultModel(): { provider: string; id: string } {
+    return { provider: this.deps.config.modelProvider, id: this.deps.config.modelId };
+  }
+
+  async switchModel(project: ProjectRecord, taskId: string, provider: string, modelId: string): Promise<TaskRecord> {
+    if (this.busyTasks.has(taskId)) {
+      throw new AgentBusyError("the task is answering or switching models; wait for it to become idle");
+    }
+    const task = this.deps.repositories.getTask(taskId);
+    if (!task || task.projectId !== project.id) throw new Error("task not found");
+    this.busyTasks.add(taskId);
+    try {
+      const runtime = await this.modelRuntime();
+      const model = runtime.getModel(provider, modelId);
+      if (!model) throw new ModelUnavailableError(`Pi does not expose ${provider}/${modelId}`);
+      const available = await runtime.getAvailable(provider);
+      if (!available.some((item) => item.id === modelId)) {
+        throw new ModelUnavailableError(
+          `${provider}/${modelId} is not available with the configured credentials; the previous model was kept`,
+        );
+      }
+      const loaded = this.tasks.get(taskId);
+      if (loaded) {
+        if (loaded.running || !loaded.session.isIdle) {
+          throw new AgentBusyError("the task is still answering; stop or wait before switching models");
+        }
+        await loaded.session.setModel(model);
+      }
+      const updated = this.deps.repositories.updateTask(taskId, { modelProvider: provider, modelId });
+      const event = this.deps.repositories.appendEvent(project.id, taskId, "model_changed", {
+        provider,
+        id: modelId,
+        name: model.name,
+        previous: task.modelProvider && task.modelId ? { provider: task.modelProvider, id: task.modelId } : null,
+        note: "Applies from the next message; history and the running experiment are unchanged.",
+      });
+      this.deps.events.publish(event);
+      return updated;
+    } finally {
+      this.busyTasks.delete(taskId);
+    }
   }
 
   private async modelRuntime(): Promise<ModelRuntime> {
@@ -137,21 +213,29 @@ export class PiAgentService implements AgentServiceLike {
     return this.modelRuntimePromise;
   }
 
-  private async ensureConfigured(): Promise<{ runtime: ModelRuntime; model: Model<any> }> {
+  private async ensureConfigured(task?: TaskRecord): Promise<{ runtime: ModelRuntime; model: Model<any> }> {
     const runtime = await this.modelRuntime();
-    const model = runtime.getModel("deepseek", this.deps.config.modelId) ?? runtime.getModels("deepseek")[0];
+    const explicit = Boolean(task?.modelProvider && task?.modelId);
+    const provider = task?.modelProvider || this.deps.config.modelProvider;
+    const id = task?.modelId || this.deps.config.modelId;
+    const model = runtime.getModel(provider, id) ?? (explicit ? undefined : runtime.getModels(provider)[0]);
     if (!model) {
-      throw new AgentConfigurationError(
-        "Pi has no DeepSeek model available. Configure DEEPSEEK_API_KEY or a DeepSeek key in ScholarFlow Settings.",
+      throw new ModelUnavailableError(
+        `Selected model ${provider}/${id} is not available. Choose another model; history was not changed and no fallback was used.`,
       );
     }
-    const available = await runtime.getAvailable("deepseek");
+    const available = await runtime.getAvailable(provider);
     if (available.length === 0) {
       throw new AgentConfigurationError(
-        "DeepSeek is not configured. Add an API key in Settings (stored outside project data) or set DEEPSEEK_API_KEY; no fake answer is produced.",
+        `${provider} is not configured. Add its credentials in Settings or the Pi auth store; no fake answer is produced.`,
       );
     }
-    const chosen = available.find((item) => item.id === model.id) ?? available[0]!;
+    const chosen = available.find((item) => item.id === model.id);
+    if (!chosen) {
+      throw new ModelUnavailableError(
+        `${provider}/${model.id} is not available with the configured credentials. Choose another model; no fallback was used.`,
+      );
+    }
     return { runtime, model: chosen };
   }
 
@@ -215,7 +299,8 @@ export class PiAgentService implements AgentServiceLike {
   private async load(project: ProjectRecord, task: TaskRecord): Promise<LoadedTask> {
     const existing = this.tasks.get(task.id);
     if (existing) return existing;
-    const { runtime, model } = await this.ensureConfigured();
+    const fresh = this.deps.repositories.getTask(task.id) ?? task;
+    const { runtime, model } = await this.ensureConfigured(fresh);
     const loader = new DefaultResourceLoader({
       cwd: project.dataDir,
       agentDir: path.join(path.dirname(this.deps.config.configFile), "pi-agent"),
@@ -223,13 +308,13 @@ export class PiAgentService implements AgentServiceLike {
       noContextFiles: true,
       additionalSkillPaths: [path.join(project.dataDir, ".pi", "skills")],
       appendSystemPrompt: [SYSTEM_RULES],
-      extensionFactories: [this.extensionFactory(this.toolContext(project, task))],
+      extensionFactories: [this.extensionFactory(this.toolContext(project, fresh))],
     });
     await loader.reload();
     const sessionManager =
-      task.sessionFile && existsSync(task.sessionFile)
-        ? SessionManager.open(task.sessionFile)
-        : SessionManager.create(project.dataDir, path.join(project.dataDir, "tasks", task.id, "pi"));
+      fresh.sessionFile && existsSync(fresh.sessionFile)
+        ? SessionManager.open(fresh.sessionFile)
+        : SessionManager.create(project.dataDir, path.join(project.dataDir, "tasks", fresh.id, "pi"));
     const settingsManager = SettingsManager.inMemory({
       compaction: { enabled: true },
       retry: { enabled: true, maxRetries: 2 },
@@ -247,12 +332,22 @@ export class PiAgentService implements AgentServiceLike {
       settingsManager,
       tools: [...builtinTools, ...toolNames()],
     });
-    if (session.sessionFile && session.sessionFile !== task.sessionFile) {
-      this.deps.repositories.updateTask(task.id, { sessionFile: session.sessionFile });
+    if (session.sessionFile && session.sessionFile !== fresh.sessionFile) {
+      this.deps.repositories.updateTask(fresh.id, { sessionFile: session.sessionFile });
     }
-    const unsubscribe = session.subscribe((event) => this.onEvent(project, task, event));
+    // The task row is authoritative. A Pi session may restore an older
+    // model_change; record the task selection once so resume stays consistent.
+    if (!session.model || session.model.provider !== model.provider || session.model.id !== model.id) {
+      await session.setModel(model);
+    }
+    // Legacy tasks inherit the default on first use, then freeze that choice so
+    // later default changes cannot silently alter an existing task.
+    if (!fresh.modelProvider || !fresh.modelId) {
+      this.deps.repositories.updateTask(fresh.id, { modelProvider: model.provider, modelId: model.id });
+    }
+    const unsubscribe = session.subscribe((event) => this.onEvent(project, fresh, event));
     const loaded: LoadedTask = { session, unsubscribe, running: false };
-    this.tasks.set(task.id, loaded);
+    this.tasks.set(fresh.id, loaded);
     return loaded;
   }
 
@@ -282,7 +377,7 @@ export class PiAgentService implements AgentServiceLike {
       return;
     }
     if (value.type === "message_end") {
-      const message = value.message as { role?: string; usage?: unknown; model?: string; stopReason?: string; errorMessage?: string } | undefined;
+      const message = value.message as { role?: string; usage?: unknown; model?: string; provider?: string; stopReason?: string; errorMessage?: string } | undefined;
       if (message?.role !== "assistant") return;
       if (message.stopReason === "error") {
         const record = this.deps.repositories.appendEvent(project.id, task.id, "error", {
@@ -299,6 +394,7 @@ export class PiAgentService implements AgentServiceLike {
         text,
         usage: message.usage ?? null,
         model: message.model ?? null,
+        provider: message.provider ?? null,
         stopReason: message.stopReason ?? null,
       });
       this.deps.events.publish(record);
@@ -341,12 +437,24 @@ export class PiAgentService implements AgentServiceLike {
   }
 
   async sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void> {
+    if (this.busyTasks.has(task.id)) {
+      throw new AgentBusyError("this task is answering or switching models; wait for it to become idle");
+    }
+    this.busyTasks.add(task.id);
+    try {
+      await this.sendMessageInner(project, task, text, clientId);
+    } finally {
+      this.busyTasks.delete(task.id);
+    }
+  }
+
+  private async sendMessageInner(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void> {
     let loaded: LoadedTask;
     try {
       loaded = await this.load(project, task);
     } catch (error) {
       const message =
-        error instanceof AgentConfigurationError
+        error instanceof AgentConfigurationError || error instanceof ModelUnavailableError
           ? error.message
           : `Agent session could not start: ${(error as Error).message}`;
       const event = this.deps.repositories.appendEvent(project.id, task.id, "error", { message: redact(message) });

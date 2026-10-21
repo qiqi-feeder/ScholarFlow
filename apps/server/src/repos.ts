@@ -112,12 +112,14 @@ export class Repositories {
       status: "idle",
       sessionFile: null,
       contextVersion: 1,
+      modelProvider: null,
+      modelId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
     this.db
       .prepare(
-        "INSERT INTO tasks (id, project_id, title, objective, status, session_file, context_version, review_text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO tasks (id, project_id, title, objective, status, session_file, context_version, review_text, model_provider, model_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
       .run(
         task.id,
@@ -128,6 +130,8 @@ export class Repositories {
         null,
         1,
         input.reviewText ?? null,
+        null,
+        null,
         timestamp,
         timestamp,
       );
@@ -146,7 +150,7 @@ export class Repositories {
 
   updateTask(
     id: string,
-    fields: Partial<Pick<TaskRecord, "status" | "sessionFile" | "objective" | "title" | "contextVersion">>,
+    fields: Partial<Pick<TaskRecord, "status" | "sessionFile" | "objective" | "title" | "contextVersion" | "modelProvider" | "modelId">>,
     now = new Date(),
   ): TaskRecord {
     const task = this.getTask(id);
@@ -157,8 +161,8 @@ export class Repositories {
       updatedAt: now.toISOString(),
     };
     this.db
-      .prepare("UPDATE tasks SET status = ?, session_file = ?, objective = ?, title = ?, context_version = ?, updated_at = ? WHERE id = ?")
-      .run(next.status, next.sessionFile, next.objective, next.title, next.contextVersion, next.updatedAt, id);
+      .prepare("UPDATE tasks SET status = ?, session_file = ?, objective = ?, title = ?, context_version = ?, model_provider = ?, model_id = ?, updated_at = ? WHERE id = ?")
+      .run(next.status, next.sessionFile, next.objective, next.title, next.contextVersion, next.modelProvider ?? null, next.modelId ?? null, next.updatedAt, id);
     return next;
   }
 
@@ -176,6 +180,8 @@ export class Repositories {
       status: String(row.status) as TaskStatus,
       sessionFile: row.session_file ? String(row.session_file) : null,
       contextVersion: Number(row.context_version),
+      modelProvider: row.model_provider ? String(row.model_provider) : null,
+      modelId: row.model_id ? String(row.model_id) : null,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
     };
@@ -218,6 +224,10 @@ export class Repositories {
       data: parse(String(row.data_json)),
       createdAt: String(row.created_at),
     };
+  }
+
+  hasClientMessage(taskId: string, clientId: string): boolean {
+    return Boolean(this.db.prepare("SELECT 1 FROM posted_messages WHERE task_id = ? AND client_id = ?").get(taskId, clientId));
   }
 
   claimClientMessage(taskId: string, clientId: string, now = new Date()): boolean {

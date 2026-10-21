@@ -18,6 +18,7 @@ import { ExperimentWorker, openDatabase, RunStore } from "@scholarflow/experimen
 import {
   AgentBusyError,
   AgentConfigurationError,
+  ModelUnavailableError,
   PiAgentService,
   type AgentServiceLike,
 } from "./agent.js";
@@ -240,7 +241,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             node: process.version,
             agent: {
               configured: await isAgentConfigured(agent, config),
-              provider: "deepseek",
+              provider: config.modelProvider,
               model: config.modelId,
             },
             latex: latexProbe(config),
@@ -258,6 +259,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
           if (typeof body.deepseekApiKey === "string") updates.deepseekApiKey = body.deepseekApiKey.trim();
           if (body.clearDeepseekKey === true) updates.deepseekApiKey = "";
           if (typeof body.modelId === "string" && body.modelId.trim()) updates.modelId = body.modelId.trim();
+          if (typeof body.modelProvider === "string" && body.modelProvider.trim()) updates.modelProvider = body.modelProvider.trim();
           if (typeof body.searchEmail === "string") updates.searchEmail = body.searchEmail.trim();
           if (typeof body.pdflatexPath === "string" && body.pdflatexPath.trim()) updates.pdflatexPath = body.pdflatexPath.trim();
           if (typeof body.latexmkPath === "string" && body.latexmkPath.trim()) updates.latexmkPath = body.latexmkPath.trim();
@@ -276,6 +278,22 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
           Object.assign(config, next);
           (agent as unknown as { configChanged?: () => Promise<void> }).configChanged?.();
           return json(res, 200, publicSettings(config));
+        }
+        if (method === "GET" && url.pathname === "/api/models") {
+          const models = agent.listModels
+            ? await agent.listModels()
+            : [
+                {
+                  provider: config.modelProvider,
+                  id: config.modelId,
+                  name: config.modelId,
+                  available: Boolean(config.deepseekApiKey || process.env.DEEPSEEK_API_KEY),
+                },
+              ];
+          return json(res, 200, {
+            models,
+            default: { provider: config.modelProvider, id: config.modelId },
+          });
         }
 
         // Projects
@@ -352,6 +370,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
           if (method === "GET" && action === "") {
             return json(res, 200, {
               task: taskSummary(task),
+              model: modelSelection(task, config),
               sessionFile: task.sessionFile,
               events: repositories.listEvents(task.id, 0, 5000),
               plans: repositories.listPlans(task.id),
@@ -386,10 +405,34 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             });
             return;
           }
+          if (method === "PUT" && action === "model") {
+            if (!agent.switchModel) throw new HttpError(501, "model switching is not available", "NOT_IMPLEMENTED");
+            const body = await readJson(req);
+            const provider = requireString(body.provider, "provider", 80).trim();
+            const modelId = requireString(body.modelId ?? body.id, "modelId", 120).trim();
+            try {
+              const updated = await agent.switchModel(project, task.id, provider, modelId);
+              return json(res, 200, {
+                task: taskSummary(updated),
+                model: modelSelection(updated, config),
+              });
+            } catch (error) {
+              if (error instanceof AgentBusyError) throw new HttpError(409, error.message, error.code);
+              if (error instanceof ModelUnavailableError) throw new HttpError(400, error.message, error.code);
+              if (error instanceof AgentConfigurationError) throw new HttpError(400, error.message, error.code);
+              throw error;
+            }
+          }
           if (method === "POST" && action === "messages") {
             const body = await readJson(req);
             const text = requireString(body.text, "text", 40000);
             const clientId = requireString(body.clientId, "clientId", 120);
+            if (repositories.hasClientMessage(task.id, clientId)) {
+              return json(res, 200, { accepted: false, duplicate: true, latestSeq: repositories.latestEventSeq(task.id) });
+            }
+            if (agent.isRunning(task.id)) {
+              throw new HttpError(409, "this task is answering or switching models; wait for it to become idle", "AGENT_BUSY");
+            }
             if (!repositories.claimClientMessage(task.id, clientId)) {
               return json(res, 200, { accepted: false, duplicate: true, latestSeq: repositories.latestEventSeq(task.id) });
             }
@@ -894,8 +937,20 @@ function taskSummary(task: TaskRecord) {
     objective: task.objective,
     status: task.status,
     contextVersion: task.contextVersion,
+    modelProvider: task.modelProvider ?? null,
+    modelId: task.modelId ?? null,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
+  };
+}
+
+function modelSelection(task: TaskRecord, config: AppConfig) {
+  const inherited = !task.modelProvider || !task.modelId;
+  return {
+    provider: task.modelProvider || config.modelProvider,
+    id: task.modelId || config.modelId,
+    name: task.modelId || config.modelId,
+    inherited,
   };
 }
 

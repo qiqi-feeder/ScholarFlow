@@ -8,6 +8,7 @@ export interface AppConfig {
   host: string;
   port: number;
   deepseekApiKey: string;
+  modelProvider: string;
   modelId: string;
   searchEmail: string;
   latexmkPath: string;
@@ -38,6 +39,7 @@ export interface LoadConfigOptions {
 const DEFAULTS = {
   host: "127.0.0.1",
   port: 8787,
+  modelProvider: "deepseek",
   modelId: "deepseek-flash",
   defaultTimeoutSeconds: 1800,
   maxTargetRunsPerTask: 2,
@@ -80,6 +82,7 @@ export function loadConfig(options: LoadConfigOptions = {}): AppConfig {
     host: env.SCHOLARFLOW_HOST ?? stored.host ?? DEFAULTS.host,
     port: Number(env.SCHOLARFLOW_PORT ?? stored.port ?? DEFAULTS.port),
     deepseekApiKey: env.DEEPSEEK_API_KEY ?? stored.deepseekApiKey ?? "",
+    modelProvider: env.SCHOLARFLOW_MODEL_PROVIDER ?? stored.modelProvider ?? DEFAULTS.modelProvider,
     modelId: env.SCHOLARFLOW_MODEL ?? stored.modelId ?? DEFAULTS.modelId,
     searchEmail: env.SCHOLARFLOW_SEARCH_EMAIL ?? stored.searchEmail ?? "",
     latexmkPath: stored.latexmkPath ?? "latexmk",
@@ -119,7 +122,7 @@ export function publicSettings(config: AppConfig) {
     host: config.host,
     port: config.port,
     model: {
-      provider: "deepseek",
+      provider: config.modelProvider,
       id: config.modelId,
       configured: Boolean(config.deepseekApiKey),
     },

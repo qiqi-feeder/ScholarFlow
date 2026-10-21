@@ -10,6 +10,8 @@ import {
   type Approval,
   type ManuscriptVersion,
   type Material,
+  type ModelCatalog,
+  type ModelOption,
   type Plan,
   type Project,
   type ResultVersion,
@@ -17,11 +19,13 @@ import {
   type Settings,
   type StreamEvent,
   type Task,
+  type TaskModel,
 } from "./api";
 
 type Tab = "work" | "materials" | "plan" | "experiments" | "results" | "manuscript" | "settings";
 type TaskDetail = {
   task: Task;
+  model: TaskModel;
   sessionFile: string | null;
   events: StreamEvent[];
   plans: Plan[];
@@ -38,6 +42,16 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "manuscript", label: "稿件" },
   { id: "settings", label: "设置" },
 ];
+
+const VIEW_ICONS: Record<Tab, string> = {
+  work: "任",
+  materials: "材",
+  plan: "案",
+  experiments: "实",
+  results: "果",
+  manuscript: "稿",
+  settings: "设",
+};
 
 function ago(value: string | null | undefined): string {
   if (!value) return "—";
@@ -139,12 +153,18 @@ export default function App() {
   const [skills, setSkills] = useState<any[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [health, setHealth] = useState<any>(null);
+  const [modelCatalog, setModelCatalog] = useState<ModelCatalog | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [switchingModel, setSwitchingModel] = useState(false);
   const [taskDraft, setTaskDraft] = useState({ title: "", objective: "", reviewText: "" });
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [message, setMessage] = useState("");
   const streamAbort = useRef<AbortController | null>(null);
+  const activeTask = useRef<{ projectId: string; taskId: string } | null>(null);
+  const taskLoadSeq = useRef(0);
+  const projectLoadSeq = useRef(0);
+  const projectIdRef = useRef<string | null>(projectId);
   const selectedProject = projects.find((project) => project.id === projectId) ?? null;
 
   const fail = useCallback((err: unknown) => {
@@ -177,7 +197,16 @@ export default function App() {
     }
   }, [fail]);
 
+  const loadModels = useCallback(async () => {
+    try {
+      setModelCatalog(await api<ModelCatalog>("/api/models"));
+    } catch (err) {
+      fail(err);
+    }
+  }, [fail]);
+
   const loadProject = useCallback(async (id: string) => {
+    const seq = ++projectLoadSeq.current;
     try {
       const [projectOverview, materialsResponse, runsResponse, resultsResponse, manuscriptResponse, skillsResponse] = await Promise.all([
         api<any>(`/api/projects/${id}/overview`),
@@ -187,6 +216,7 @@ export default function App() {
         api<any>(`/api/projects/${id}/manuscript`),
         api<{ skills: any[] }>(`/api/projects/${id}/skills`),
       ]);
+      if (seq !== projectLoadSeq.current || projectIdRef.current !== id) return;
       setOverview(projectOverview);
       setTasks(projectOverview.tasks);
       setMaterials(materialsResponse.materials);
@@ -195,26 +225,32 @@ export default function App() {
       setManuscript(manuscriptResponse);
       setSkills(skillsResponse.skills);
     } catch (err) {
-      fail(err);
+      if (seq === projectLoadSeq.current && projectIdRef.current === id) fail(err);
     }
   }, [fail]);
 
   const loadTask = useCallback(async (project: string, task: string) => {
+    const seq = ++taskLoadSeq.current;
+    activeTask.current = { projectId: project, taskId: task };
+    setTaskId(task);
+    setStreamState("reconnecting");
+    streamAbort.current?.abort();
+    const current = () => activeTask.current?.projectId === project && activeTask.current.taskId === task;
     try {
       const response = await api<TaskDetail>(`/api/projects/${project}/tasks/${task}`);
+      if (seq !== taskLoadSeq.current || !current()) return;
       setDetail(response);
       setEvents(response.events);
       setLiveText("");
       localStorage.setItem(`scholarflow.task.${project}`, task);
       const after = response.events.reduce((max, event) => Math.max(max, event.seq), 0);
-      streamAbort.current?.abort();
       const controller = new AbortController();
       streamAbort.current = controller;
-      setStreamState("reconnecting");
       void streamTask(
         `/api/projects/${project}/tasks/${task}/events/stream`,
         after,
         (event) => {
+          if (!current()) return;
           if (event.type === "assistant_delta") {
             setLiveText((previous) => previous + (event.data.text ?? ""));
             return;
@@ -223,39 +259,71 @@ export default function App() {
           if (event.seq > 0) {
             setEvents((previous) => (previous.some((item) => item.seq === event.seq) ? previous : [...previous, event]));
           }
-          if (["plan_drafted", "run_proposed", "run_queued", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created"].includes(event.type)) {
+          if (event.type === "agent_status" && event.data.status) {
+            setDetail((previous) => previous && previous.task.id === task
+              ? { ...previous, task: { ...previous.task, status: String(event.data.status) } }
+              : previous);
+          }
+          if (event.type === "model_changed") {
+            const provider = String(event.data.provider ?? "");
+            const id = String(event.data.id ?? "");
+            if (provider && id) {
+              setDetail((previous) => previous && previous.task.id === task
+                ? {
+                    ...previous,
+                    task: { ...previous.task, modelProvider: provider, modelId: id },
+                    model: { provider, id, name: String(event.data.name ?? id), inherited: false },
+                  }
+                : previous);
+            }
+          }
+          if (["plan_drafted", "run_proposed", "run_queued", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "model_changed", "assistant_message"].includes(event.type)) {
             void loadProject(project);
             void api<TaskDetail>(`/api/projects/${project}/tasks/${task}`).then((fresh) => {
-              setDetail(fresh);
+              if (current()) setDetail(fresh);
             }).catch(() => undefined);
           }
         },
         controller.signal,
-        (state) => setStreamState(state === "closed" ? "idle" : state),
+        (state) => {
+          if (current()) setStreamState(state === "closed" ? "idle" : state);
+        },
       );
     } catch (err) {
-      fail(err);
+      if (seq === taskLoadSeq.current && current()) fail(err);
     }
   }, [fail, loadProject]);
 
   useEffect(() => {
     void loadProjects();
     void loadSettings();
-  }, [loadProjects, loadSettings]);
+    void loadModels();
+  }, [loadProjects, loadSettings, loadModels]);
 
   useEffect(() => {
-    if (!projectId) return;
+    projectIdRef.current = projectId;
+    if (!projectId) {
+      activeTask.current = null;
+      taskLoadSeq.current += 1;
+      streamAbort.current?.abort();
+      setTaskId(null);
+      setDetail(null);
+      setEvents([]);
+      setLiveText("");
+      setStreamState("idle");
+      return;
+    }
     localStorage.setItem("scholarflow.project", projectId);
+    activeTask.current = null;
+    taskLoadSeq.current += 1;
+    streamAbort.current?.abort();
     setTaskId(null);
     setDetail(null);
     setEvents([]);
     setLiveText("");
     void loadProject(projectId);
     const storedTask = localStorage.getItem(`scholarflow.task.${projectId}`);
-    if (storedTask) {
-      setTaskId(storedTask);
-      void loadTask(projectId, storedTask);
-    }
+    if (storedTask) void loadTask(projectId, storedTask);
   }, [projectId, loadProject, loadTask]);
 
   useEffect(() => () => streamAbort.current?.abort(), []);
@@ -287,7 +355,6 @@ export default function App() {
       setTaskDraft({ title: "", objective: "", reviewText: "" });
       setShowTaskForm(false);
       await loadProject(projectId);
-      setTaskId(response.task.id);
       await loadTask(projectId, response.task.id);
       setTab("work");
     } catch (err) {
@@ -297,8 +364,40 @@ export default function App() {
     }
   };
 
+  const selectTask = (id: string) => {
+    if (!projectId) return;
+    void loadTask(projectId, id);
+  };
+
+  const currentApprovals = detail?.approvals ?? [];
+  const pendingApprovals = currentApprovals.filter((approval) => approval.status === "pending");
+  const confirmedPlan = detail?.plans.find((plan) => plan.status === "confirmed") ?? null;
+  const currentManuscriptBuild = manuscript?.latestBuild ?? null;
+  const effectiveModel = useMemo<TaskModel | null>(() => {
+    if (!detail) return null;
+    if (detail.model) return detail.model;
+    const provider = detail.task.modelProvider ?? modelCatalog?.default.provider ?? settings?.model.provider;
+    const id = detail.task.modelId ?? modelCatalog?.default.id ?? settings?.model.id;
+    if (!provider || !id) return null;
+    return { provider, id, name: id, inherited: !detail.task.modelProvider || !detail.task.modelId };
+  }, [detail, modelCatalog, settings]);
+  const effectiveModelKey = effectiveModel ? `${effectiveModel.provider}:${effectiveModel.id}` : "";
+  const modelAvailable = !effectiveModel
+    ? false
+    : !modelCatalog
+      ? true
+      : modelCatalog.models.length === 0
+        ? effectiveModel.inherited
+        : modelCatalog.models.some((model) => `${model.provider}:${model.id}` === effectiveModelKey);
+  const agentAnswering = detail?.task.status === "running";
+
   const sendMessage = async () => {
-    if (!projectId || !taskId || !message.trim() || busy) return;
+    if (!projectId || !taskId || !message.trim() || busy || switchingModel || agentAnswering) return;
+    if (!modelAvailable) {
+      setError("当前任务模型不可用。请在会话顶部选择宿主实际可用的模型后再发送；不会静默回退。");
+      return;
+    }
+    const target = { projectId, taskId };
     setBusy(true);
     const text = message;
     setMessage("");
@@ -309,9 +408,34 @@ export default function App() {
       });
     } catch (err) {
       fail(err);
-      setMessage(text);
+      if (activeTask.current?.projectId === target.projectId && activeTask.current.taskId === target.taskId) {
+        setMessage(text);
+      }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const switchTaskModel = async (provider: string, id: string) => {
+    if (!projectId || !taskId || switchingModel) return;
+    if (agentAnswering) {
+      setError("回答仍在进行。请先等待完成或停止回答，再切换模型；已生成的历史不会被改写。");
+      return;
+    }
+    const target = { projectId, taskId };
+    setSwitchingModel(true);
+    try {
+      const response = await put<{ task: Task; model: TaskModel }>(
+        `/api/projects/${projectId}/tasks/${taskId}/model`,
+        { provider, modelId: id },
+      );
+      if (activeTask.current?.taskId !== target.taskId) return;
+      setDetail((previous) => previous ? { ...previous, task: response.task, model: response.model } : previous);
+      setTasks((previous) => previous.map((task) => task.id === response.task.id ? response.task : task));
+    } catch (err) {
+      fail(err);
+    } finally {
+      setSwitchingModel(false);
     }
   };
 
@@ -324,22 +448,35 @@ export default function App() {
     }
   };
 
-  const currentApprovals = detail?.approvals ?? [];
-  const pendingApprovals = currentApprovals.filter((approval) => approval.status === "pending");
-  const confirmedPlan = detail?.plans.find((plan) => plan.status === "confirmed") ?? null;
-  const currentManuscriptBuild = manuscript?.latestBuild ?? null;
-
   return (
-    <div className="app">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="logo">SF</div>
-          <div>
-            <h1>ScholarFlow</h1>
-            <p>Agentic research workspace</p>
-          </div>
+    <div className="app-shell">
+      <aside className="rail" aria-label="工作视图">
+        <div className="rail-logo" title="ScholarFlow">SF</div>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`rail-button ${tab === item.id ? "active" : ""}`}
+            aria-label={`工作视图：${item.label}`}
+            title={item.label}
+            aria-pressed={tab === item.id}
+            onClick={() => setTab(item.id)}
+          >
+            <span aria-hidden="true">{VIEW_ICONS[item.id]}</span>
+            {item.id === "experiments" && pendingApprovals.length > 0 && <span className="rail-count">{pendingApprovals.length}</span>}
+          </button>
+        ))}
+        <div className="rail-foot">
+          <span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />
         </div>
-        <div className="project-list">
+      </aside>
+
+      <aside className="nav-panel">
+        <div className="nav-brand">
+          <h1>ScholarFlow</h1>
+          <p>项目与任务</p>
+        </div>
+        <div className="project-list" aria-label="项目列表">
           {projects.map((project) => (
             <button
               key={project.id}
@@ -352,6 +489,56 @@ export default function App() {
           ))}
         </div>
         <NewProject onCreate={createProject} />
+        <div className="nav-section-head">
+          <h2>任务</h2>
+          <button className="secondary small" onClick={() => setShowTaskForm(!showTaskForm)}>
+            {showTaskForm ? "收起" : "＋ 新建任务"}
+          </button>
+        </div>
+        {showTaskForm && (
+          <form
+            className="stack card task-create"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createTask();
+            }}
+          >
+            <input
+              placeholder="任务标题，例如：复现基线并检验学习率修改"
+              value={taskDraft.title}
+              onChange={(event) => setTaskDraft({ ...taskDraft, title: event.target.value })}
+              aria-label="任务标题"
+            />
+            <textarea
+              placeholder="目标：明确的科研问题、约束和交付物"
+              rows={4}
+              value={taskDraft.objective}
+              onChange={(event) => setTaskDraft({ ...taskDraft, objective: event.target.value })}
+              aria-label="任务目标"
+            />
+            <textarea
+              placeholder="可选：导入审稿意见。它作为数据进入本任务，不会自动改变项目规则。"
+              rows={3}
+              value={taskDraft.reviewText}
+              onChange={(event) => setTaskDraft({ ...taskDraft, reviewText: event.target.value })}
+              aria-label="审稿意见"
+            />
+            <button type="submit" disabled={busy}>创建任务</button>
+          </form>
+        )}
+        <div className="task-list" aria-label="任务列表">
+          {tasks.length === 0 && <p className="muted">还没有任务。建立独立目标时才创建新任务；切换面板不会创建会话。</p>}
+          {tasks.map((task) => (
+            <button
+              key={task.id}
+              className={`task-item ${task.id === taskId ? "active" : ""}`}
+              onClick={() => selectTask(task.id)}
+            >
+              <span className="task-title">{task.title}</span>
+              <span className="task-meta"><StatusBadge status={task.status} /> {ago(task.updatedAt)}</span>
+            </button>
+          ))}
+        </div>
         <div className="sidebar-foot">
           <span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />
           {streamState === "connected" ? "事件流已连接" : streamState === "reconnecting" ? "事件流重连中" : "事件流未连接"}
@@ -360,7 +547,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main>
+      <main className="workspace">
         <header className="topbar">
           <div>
             <h2>{selectedProject?.name ?? "选择或创建项目"}</h2>
@@ -379,7 +566,7 @@ export default function App() {
         <ErrorBanner error={error} clear={() => setError(null)} />
         {settings && !settings.model.configured && (
           <div className="banner warn">
-            DeepSeek 未配置：真实 Agent 对话会返回明确的配置错误，不会生成假回答。前往
+            {settings.model.provider} 未配置：真实 Agent 对话会返回明确的配置错误，不会生成假回答。前往
             <button className="link" onClick={() => setTab("settings")}>设置</button>
             配置 Key。
           </div>
@@ -388,7 +575,7 @@ export default function App() {
         {!selectedProject ? (
           <section className="empty">
             <h3>开始一个研究项目</h3>
-            <p>项目拥有独立的材料、任务、实验、结果和稿件。点击左侧“新建项目”。</p>
+            <p>项目拥有独立的材料、任务、实验、结果和稿件。在左侧“新建项目”开始。</p>
           </section>
         ) : (
           <>
@@ -407,260 +594,322 @@ export default function App() {
               ))}
             </nav>
 
-            {tab === "work" && (
-              <WorkPanel
-                tasks={tasks}
-                taskId={taskId}
-                detail={detail}
-                events={events}
-                liveText={liveText}
-                busy={busy}
-                message={message}
-                setMessage={setMessage}
-                sendMessage={sendMessage}
-                stopAnswer={stopAnswer}
-                showTaskForm={showTaskForm}
-                setShowTaskForm={setShowTaskForm}
-                taskDraft={taskDraft}
-                setTaskDraft={setTaskDraft}
-                createTask={createTask}
-                selectTask={(id) => {
-                  setTaskId(id);
-                  if (projectId) void loadTask(projectId, id);
-                }}
-                pendingApprovals={pendingApprovals}
-                openExperiments={() => setTab("experiments")}
-                loadProject={() => projectId && void loadProject(projectId)}
-              />
-            )}
+            <div className="workspace-content">
+              {tab === "work" && (
+                <OverviewPanel
+                  overview={overview}
+                  detail={detail}
+                  pendingApprovals={pendingApprovals}
+                  openExperiments={() => setTab("experiments")}
+                />
+              )}
 
-            {tab === "materials" && projectId && (
-              <MaterialsPanel
-                projectId={projectId}
-                taskId={taskId}
-                materials={materials}
-                onChanged={() => void loadProject(projectId)}
-                fail={fail}
-              />
-            )}
+              {tab === "materials" && projectId && (
+                <MaterialsPanel
+                  projectId={projectId}
+                  taskId={taskId}
+                  materials={materials}
+                  onChanged={() => void loadProject(projectId)}
+                  fail={fail}
+                />
+              )}
 
-            {tab === "plan" && projectId && (
-              <PlanPanel
-                projectId={projectId}
-                taskId={taskId}
-                detail={detail}
-                skills={skills}
-                onChanged={() => {
-                  void loadProject(projectId);
-                  if (taskId) void loadTask(projectId, taskId);
-                }}
-                fail={fail}
-              />
-            )}
+              {tab === "plan" && projectId && (
+                <PlanPanel
+                  projectId={projectId}
+                  taskId={taskId}
+                  detail={detail}
+                  skills={skills}
+                  onChanged={() => {
+                    void loadProject(projectId);
+                    if (taskId) void loadTask(projectId, taskId);
+                  }}
+                  fail={fail}
+                />
+              )}
 
-            {tab === "experiments" && projectId && (
-              <ExperimentsPanel
-                projectId={projectId}
-                taskId={taskId}
-                approvals={currentApprovals}
-                runs={runs}
-                settings={settings}
-                confirmedPlan={confirmedPlan}
-                onChanged={() => {
-                  void loadProject(projectId);
-                  if (taskId) void loadTask(projectId, taskId);
-                }}
-                fail={fail}
-              />
-            )}
+              {tab === "experiments" && projectId && (
+                <ExperimentsPanel
+                  projectId={projectId}
+                  taskId={taskId}
+                  approvals={currentApprovals}
+                  runs={runs}
+                  settings={settings}
+                  confirmedPlan={confirmedPlan}
+                  onChanged={() => {
+                    void loadProject(projectId);
+                    if (taskId) void loadTask(projectId, taskId);
+                  }}
+                  fail={fail}
+                />
+              )}
 
-            {tab === "results" && projectId && (
-              <ResultsPanel
-                projectId={projectId}
-                taskId={taskId}
-                runs={runs}
-                results={results}
-                onChanged={() => projectId && void loadProject(projectId)}
-                fail={fail}
-              />
-            )}
+              {tab === "results" && projectId && (
+                <ResultsPanel
+                  projectId={projectId}
+                  taskId={taskId}
+                  runs={runs}
+                  results={results}
+                  onChanged={() => projectId && void loadProject(projectId)}
+                  fail={fail}
+                />
+              )}
 
-            {tab === "manuscript" && projectId && (
-              <ManuscriptPanel
-                key={projectId}
-                projectId={projectId}
-                taskId={taskId}
-                data={manuscript}
-                build={currentManuscriptBuild}
-                onChanged={() => void loadProject(projectId)}
-                fail={fail}
-              />
-            )}
+              {tab === "manuscript" && projectId && (
+                <ManuscriptPanel
+                  key={projectId}
+                  projectId={projectId}
+                  taskId={taskId}
+                  data={manuscript}
+                  build={currentManuscriptBuild}
+                  onChanged={() => void loadProject(projectId)}
+                  fail={fail}
+                />
+              )}
 
-            {tab === "settings" && (
-              <SettingsPanel
-                settings={settings}
-                health={health}
-                onSaved={async () => {
-                  await loadSettings();
-                  if (projectId) await loadProject(projectId);
-                }}
-                fail={fail}
-              />
-            )}
+              {tab === "settings" && (
+                <SettingsPanel
+                  settings={settings}
+                  health={health}
+                  onSaved={async () => {
+                    await loadSettings();
+                    await loadModels();
+                    if (projectId) await loadProject(projectId);
+                    if (projectId && taskId) await loadTask(projectId, taskId);
+                  }}
+                  fail={fail}
+                />
+              )}
+            </div>
           </>
         )}
       </main>
+
+      <aside className="chat-panel" aria-label="任务会话">
+        <ChatPanel
+          detail={detail}
+          events={events}
+          liveText={liveText}
+          busy={busy}
+          answering={agentAnswering}
+          message={message}
+          setMessage={setMessage}
+          sendMessage={sendMessage}
+          stopAnswer={stopAnswer}
+          pendingApprovals={pendingApprovals}
+          openExperiments={() => setTab("experiments")}
+          models={modelCatalog?.models ?? []}
+          effectiveModel={effectiveModel}
+          modelAvailable={modelAvailable}
+          switchingModel={switchingModel}
+          onSwitchModel={(provider, id) => void switchTaskModel(provider, id)}
+        />
+      </aside>
     </div>
   );
 }
 
-function WorkPanel(props: {
-  tasks: Task[];
-  taskId: string | null;
+function OverviewPanel(props: {
+  overview: any;
+  detail: TaskDetail | null;
+  pendingApprovals: Approval[];
+  openExperiments: () => void;
+}) {
+  if (!props.detail) {
+    return (
+      <section className="empty small">
+        <h3>任务概览</h3>
+        <p>从左侧任务列表选择一个任务。中央视图与右侧会话始终指向同一个当前任务。</p>
+      </section>
+    );
+  }
+  const counts = props.overview?.counts ?? {};
+  const latestRuns: any[] = props.overview?.latestRuns ?? [];
+  const countCards: Array<{ label: string; value: number }> = [
+    { label: "任务", value: Number(counts.tasks ?? 0) },
+    { label: "材料", value: Number(counts.materials ?? 0) },
+    { label: "运行", value: Number(counts.runs ?? 0) },
+    { label: "结果", value: Number(counts.results ?? 0) },
+    { label: "Skills", value: Number(counts.skills ?? 0) },
+  ];
+  return (
+    <section className="overview-panel">
+      <div className="section-head">
+        <div>
+          <h2>任务概览</h2>
+          <p className="muted">{props.detail.task.objective}</p>
+        </div>
+        <StatusBadge status={props.detail.task.status} />
+      </div>
+
+      <div className="stat-grid">
+        {countCards.map((card) => (
+          <div className="stat-card" key={card.label}>
+            <span className="stat-value">{card.value}</span>
+            <span className="stat-label">{card.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {props.pendingApprovals.length > 0 && (
+        <button className="banner warn button-banner" onClick={props.openExperiments}>
+          {props.pendingApprovals.length} 个实验提案等待你批准精确指纹。Agent 不会自行启动。前往实验面板 →
+        </button>
+      )}
+
+      <div className="overview-section">
+        <h3>最近实验</h3>
+        {latestRuns.length === 0 && <p className="muted">还没有运行记录。方案确认并在实验面板批准后，运行会显示在这里。</p>}
+        <div className="run-list">
+          {latestRuns.map((run) => (
+            <div className="run-row" key={String(run.runId ?? run.id ?? JSON.stringify(run))}>
+              <code>{String(run.runId ?? run.id ?? "run")}</code>
+              <StatusBadge status={String(run.status ?? "unknown")} />
+              <span className="muted">{ago(run.createdAt ?? run.updatedAt)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="overview-section">
+        <h3>右侧会话</h3>
+        <p className="muted">
+          会话按任务独立持久化。切换中央的“材料 / 方案 / 实验 / 结果 / 稿件”不会卸载会话，也不会重置当前任务的流式回答。
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function ChatPanel(props: {
   detail: TaskDetail | null;
   events: StreamEvent[];
   liveText: string;
   busy: boolean;
+  answering: boolean;
   message: string;
   setMessage: (value: string) => void;
   sendMessage: () => Promise<void>;
   stopAnswer: () => Promise<void>;
-  showTaskForm: boolean;
-  setShowTaskForm: (value: boolean) => void;
-  taskDraft: { title: string; objective: string; reviewText: string };
-  setTaskDraft: (value: { title: string; objective: string; reviewText: string }) => void;
-  createTask: () => Promise<void>;
-  selectTask: (id: string) => void;
   pendingApprovals: Approval[];
   openExperiments: () => void;
-  loadProject: () => void;
+  models: ModelOption[];
+  effectiveModel: TaskModel | null;
+  modelAvailable: boolean;
+  switchingModel: boolean;
+  onSwitchModel: (provider: string, id: string) => void;
 }) {
   const chatEnd = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: "end" });
   }, [props.events.length, props.liveText]);
   const eventNodes = props.events.filter((event) =>
-    ["user_message", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted"].includes(event.type),
+    ["user_message", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
   );
+  if (!props.detail) {
+    return (
+      <div className="chat-empty">
+        <h3>选择一个任务</h3>
+        <p>任务拥有独立的 Pi 会话。刷新或重启后从持久化事件恢复；不会因切换面板创建新会话。</p>
+      </div>
+    );
+  }
+  const currentKey = props.effectiveModel ? `${props.effectiveModel.provider}:${props.effectiveModel.id}` : "";
+  const hasCurrentOption = props.models.some((model) => `${model.provider}:${model.id}` === currentKey);
+  const canSwitchModel = !props.busy && !props.switchingModel && !props.answering && props.models.length > 0;
+  const sendDisabled = props.busy || props.switchingModel || props.answering || !props.modelAvailable || !props.message.trim();
   return (
-    <div className="work-layout">
-      <section className="task-column">
-        <div className="section-head">
-          <h3>研究任务</h3>
-          <button className="secondary small" onClick={() => props.setShowTaskForm(!props.showTaskForm)}>
-            {props.showTaskForm ? "收起" : "＋ 新任务"}
-          </button>
+    <>
+      <div className="chat-head">
+        <div>
+          <h3>{props.detail.task.title}</h3>
+          <p className="muted">{props.detail.task.objective}</p>
         </div>
-        {props.showTaskForm && (
-          <form
-            className="stack card"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void props.createTask();
-            }}
-          >
-            <input
-              placeholder="任务标题，例如：复现基线并检验学习率修改"
-              value={props.taskDraft.title}
-              onChange={(event) => props.setTaskDraft({ ...props.taskDraft, title: event.target.value })}
-              aria-label="任务标题"
-            />
-            <textarea
-              placeholder="目标：明确的科研问题、约束和交付物"
-              rows={4}
-              value={props.taskDraft.objective}
-              onChange={(event) => props.setTaskDraft({ ...props.taskDraft, objective: event.target.value })}
-              aria-label="任务目标"
-            />
-            <textarea
-              placeholder="可选：导入审稿意见。它作为数据进入本任务，不会自动改变项目规则。"
-              rows={3}
-              value={props.taskDraft.reviewText}
-              onChange={(event) => props.setTaskDraft({ ...props.taskDraft, reviewText: event.target.value })}
-              aria-label="审稿意见"
-            />
-            <button type="submit" disabled={props.busy}>创建任务</button>
-          </form>
-        )}
-        <div className="task-list">
-          {props.tasks.length === 0 && <p className="muted">还没有任务。建立独立目标时才创建新任务；切换面板不会创建会话。</p>}
-          {props.tasks.map((task) => (
-            <button
-              key={task.id}
-              className={`task-item ${task.id === props.taskId ? "active" : ""}`}
-              onClick={() => props.selectTask(task.id)}
-            >
-              <span className="task-title">{task.title}</span>
-              <span className="task-meta"><StatusBadge status={task.status} /> {ago(task.updatedAt)}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+        <StatusBadge status={props.detail.task.status} />
+      </div>
 
-      <section className="chat-column">
-        {!props.detail ? (
-          <div className="empty small">
-            <h3>选择一个任务</h3>
-            <p>任务拥有独立的 Pi 会话。刷新或重启后从持久化事件恢复；不会因切换面板创建新会话。</p>
+      <div className="model-picker">
+        <label htmlFor="task-model-select">当前任务模型</label>
+        <select
+          id="task-model-select"
+          aria-label="当前任务模型"
+          value={currentKey}
+          disabled={!canSwitchModel}
+          onChange={(event) => {
+            const separator = event.target.value.indexOf(":");
+            if (separator < 0) return;
+            props.onSwitchModel(event.target.value.slice(0, separator), event.target.value.slice(separator + 1));
+          }}
+        >
+          {!hasCurrentOption && props.effectiveModel && (
+            <option value={currentKey}>
+              {props.effectiveModel.provider}/{props.effectiveModel.name}{props.modelAvailable ? "" : "（不可用）"}
+            </option>
+          )}
+          {!props.effectiveModel && <option value="">没有可用模型</option>}
+          {props.models.map((model) => (
+            <option key={`${model.provider}:${model.id}`} value={`${model.provider}:${model.id}`}>
+              {model.provider}/{model.name}
+            </option>
+          ))}
+        </select>
+        <span className="model-hint">
+          {props.switchingModel
+            ? "正在保存模型选择…"
+            : props.answering
+              ? "回答中，完成或停止后可切换"
+              : props.effectiveModel?.inherited
+                ? "继承默认模型，发送后固定到本任务"
+                : "仅影响本任务，从下一条消息生效"}
+        </span>
+        {!props.modelAvailable && <span className="model-warning">所选模型当前不可用，发送已阻止</span>}
+      </div>
+
+      {props.pendingApprovals.length > 0 && (
+        <button className="banner warn button-banner" onClick={props.openExperiments}>
+          {props.pendingApprovals.length} 个实验提案等待你批准精确指纹。Agent 不会自行启动。前往实验面板 →
+        </button>
+      )}
+      <div className="chat-log" role="log" aria-live="polite">
+        {eventNodes.length === 0 && <p className="muted">发送第一条消息，或先让 Agent 检索材料、形成方案。论文内容只会作为数据，不会成为宿主规则。</p>}
+        {eventNodes.map((event) => (
+          <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} />
+        ))}
+        {props.liveText && (
+          <div className="message assistant">
+            <Markdown text={props.liveText} />
+            <span className="cursor" aria-label="正在生成" />
           </div>
-        ) : (
-          <>
-            <div className="chat-head">
-              <div>
-                <h3>{props.detail.task.title}</h3>
-                <p className="muted">{props.detail.task.objective}</p>
-              </div>
-              <StatusBadge status={props.detail.task.status} />
-            </div>
-            {props.pendingApprovals.length > 0 && (
-              <button className="banner warn button-banner" onClick={props.openExperiments}>
-                {props.pendingApprovals.length} 个实验提案等待你批准精确指纹。Agent 不会自行启动。前往实验面板 →
-              </button>
-            )}
-            <div className="chat-log" role="log" aria-live="polite">
-              {eventNodes.length === 0 && <p className="muted">发送第一条消息，或先让 Agent 检索材料、形成方案。论文内容只会作为数据，不会成为宿主规则。</p>}
-              {eventNodes.map((event) => (
-                <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} />
-              ))}
-              {props.liveText && (
-                <div className="message assistant">
-                  <Markdown text={props.liveText} />
-                  <span className="cursor" aria-label="正在生成" />
-                </div>
-              )}
-              <div ref={chatEnd} />
-            </div>
-            <form
-              className="composer"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void props.sendMessage();
-              }}
-            >
-              <textarea
-                rows={3}
-                value={props.message}
-                onChange={(event) => props.setMessage(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                    event.preventDefault();
-                    void props.sendMessage();
-                  }
-                }}
-                placeholder="描述目标、上传材料路径，或让 Agent 读取 Skill 并推进当前阶段。Enter 发送，Shift+Enter 换行。"
-                aria-label="消息"
-              />
-              <div className="composer-actions">
-                <span className="muted">停止回答 ≠ 取消实验</span>
-                <button type="button" className="secondary" onClick={() => void props.stopAnswer()}>停止回答</button>
-                <button type="submit" disabled={props.busy || !props.message.trim()}>发送</button>
-              </div>
-            </form>
-          </>
         )}
-      </section>
-    </div>
+        <div ref={chatEnd} />
+      </div>
+      <form
+        className="composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void props.sendMessage();
+        }}
+      >
+        <textarea
+          rows={3}
+          value={props.message}
+          onChange={(event) => props.setMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              if (!sendDisabled) void props.sendMessage();
+            }
+          }}
+          placeholder="描述目标、上传材料路径，或让 Agent 读取 Skill 并推进当前阶段。Enter 发送，Shift+Enter 换行。"
+          aria-label="消息"
+        />
+        <div className="composer-actions">
+          <span className="muted">停止回答 ≠ 取消实验</span>
+          <button type="button" className="secondary" onClick={() => void props.stopAnswer()} disabled={!props.answering && !props.busy}>停止回答</button>
+          <button type="submit" disabled={sendDisabled}>发送</button>
+        </div>
+      </form>
+    </>
   );
 }
 
@@ -669,7 +918,13 @@ function ChatEvent({ event }: { event: StreamEvent }) {
     return <div className="message user"><Markdown text={event.data.text} /></div>;
   }
   if (event.type === "assistant_message") {
-    return <div className="message assistant"><Markdown text={event.data.text} /></div>;
+    const model = [event.data.provider, event.data.model].filter(Boolean).join("/");
+    return (
+      <div className="message assistant">
+        <Markdown text={event.data.text} />
+        {model && <span className="message-meta">回答模型：{model}</span>}
+      </div>
+    );
   }
   if (event.type === "error") {
     return <div className="message error" role="alert"><strong>错误：</strong>{event.data.message}</div>;
@@ -695,6 +950,13 @@ function ChatEvent({ event }: { event: StreamEvent }) {
   }
   if (event.type === "context_compacted") {
     return <div className="system-note">Pi 已压缩会话历史（{event.data.reason}）。已确认方案、runId 和来源仍可通过研究上下文工具找回。</div>;
+  }
+  if (event.type === "model_changed") {
+    return (
+      <div className="system-note">
+        模型已切换为 <code>{String(event.data.provider ?? "")}/{String(event.data.name ?? event.data.id ?? "")}</code>，从下一条消息生效；已有回答保留原模型记录。
+      </div>
+    );
   }
   const labels: Record<string, string> = {
     plan_drafted: "研究方案草稿已保存，等待用户确认",

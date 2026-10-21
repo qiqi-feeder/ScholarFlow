@@ -31,6 +31,8 @@ export function ensureSchema(db: DatabaseSync): void {
       session_file TEXT,
       context_version INTEGER NOT NULL DEFAULT 1,
       review_text TEXT,
+      model_provider TEXT,
+      model_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -184,4 +186,14 @@ export function ensureSchema(db: DatabaseSync): void {
       created_at TEXT NOT NULL
     );
   `);
+  // Additive migration for databases created before task-level model selection.
+  // Old task rows keep NULL and inherit the host default until the user switches.
+  ensureColumn(db, "tasks", "model_provider", "model_provider TEXT");
+  ensureColumn(db, "tasks", "model_id", "model_id TEXT");
+}
+
+function ensureColumn(db: DatabaseSync, table: string, column: string, definition: string): void {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name?: unknown }>;
+  if (columns.some((entry) => entry.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
 }

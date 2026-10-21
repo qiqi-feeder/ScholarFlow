@@ -31,6 +31,7 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
 - [W00 工作台基线](docs/verification/workspace-redesign/W00-baseline.md)：Stitch SB01–SB07 证据、旧库备份、权限/模型基线、WT01 结果与 W01 入口；实施默认值见同目录文档。
+- [W01 外壳与模型](docs/verification/workspace-redesign/W01-shell-models.md)：常驻会话、任务切换隔离、任务级模型迁移/切换与 WT02/WT03/WT16 结果。
 - [前端产品需求](docs/FRONTEND_PRODUCT_REQUIREMENTS.md)：目标用户、使用场景、页面模块、交互/空状态/加载状态与移动端要求；视觉沿用 Stitch 原稿，实施修正与原稿/排除清单见 PLAN 第 8.7 节，不再等待继续改稿。
 - [产品讨论：当前共识](docs/WORKSPACE_PRODUCT_DISCUSSION.md)：精简保留常驻会话、对象工作区、模型切换及文献/Agent 框架，删除过时和重复说明。
 - [Agent 能力与工作区反馈架构](docs/AGENT_CAPABILITY_ARCHITECTURE.md)：每任务一个主 Agent、Pi 动态工具装配、上下文控制、文献获取及真实产物反馈；各工作区工具细节后续讨论，实施批次和测试见 PLAN 第 8 节。

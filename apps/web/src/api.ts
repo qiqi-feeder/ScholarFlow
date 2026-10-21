@@ -14,8 +14,30 @@ export interface Task {
   objective: string;
   status: string;
   contextVersion: number;
+  modelProvider?: string | null;
+  modelId?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ModelOption {
+  provider: string;
+  id: string;
+  name: string;
+  available: boolean;
+  reason?: string | null;
+}
+
+export interface TaskModel {
+  provider: string;
+  id: string;
+  name: string;
+  inherited: boolean;
+}
+
+export interface ModelCatalog {
+  models: ModelOption[];
+  default: { provider: string; id: string };
 }
 
 export interface StreamEvent {

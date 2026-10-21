@@ -5,8 +5,17 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import AdmZip from "adm-zip";
-import { ExperimentWorker } from "@scholarflow/experiment-worker";
+import { DatabaseSync } from "node:sqlite";
+import { ExperimentWorker, openDatabase } from "@scholarflow/experiment-worker";
 import { createApp, type CreatedApp } from "../src/app.js";
+import {
+  AgentBusyError,
+  ModelUnavailableError,
+  PiAgentService,
+  type AgentServiceLike,
+  type ModelOption,
+} from "../src/agent.js";
+import { Repositories } from "../src/repos.js";
 import { loadConfig } from "../src/config.js";
 import { CrossrefSearch } from "../src/search.js";
 
@@ -57,7 +66,7 @@ function fakeSearch(): CrossrefSearch {
   } as unknown as CrossrefSearch;
 }
 
-async function start(options: { worker?: boolean; withAgent?: boolean; pdflatexPath?: string } = {}): Promise<Harness> {
+async function start(options: { worker?: boolean; withAgent?: boolean; pdflatexPath?: string; agent?: AgentServiceLike } = {}): Promise<Harness> {
   const root = mkdtempSync(path.join(tmpdir(), "scholarflow-server-"));
   const config = loadConfig({
     configFile: path.join(root, "config", "config.json"),
@@ -82,6 +91,7 @@ async function start(options: { worker?: boolean; withAgent?: boolean; pdflatexP
           },
         }
       : {}),
+    ...(options.agent ? { agent: options.agent } : {}),
     ...(options.withAgent === false ? { agent: { sendMessage: async () => undefined, stop: async () => ({ stopped: true }), isRunning: () => false, dispose: async () => undefined } } : {}),
   });
   await new Promise<void>((resolve) => app.server.listen(0, "127.0.0.1", () => resolve()));
@@ -681,5 +691,233 @@ test("projects, tasks and events survive a host restart", async () => {
     await second.close();
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("legacy task rows migrate in place and keep their session pointer", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "scholarflow-legacy-model-"));
+  const file = path.join(root, "scholarflow.sqlite");
+  try {
+    const raw = new DatabaseSync(file);
+    raw.exec(`
+      CREATE TABLE projects (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        data_dir TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE tasks (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        objective TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'idle',
+        session_file TEXT,
+        context_version INTEGER NOT NULL DEFAULT 1,
+        review_text TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      INSERT INTO projects VALUES ('prj_legacy', 'Legacy', '', 'C:/data/legacy', '2026-10-20T00:00:00.000Z', '2026-10-20T00:00:00.000Z');
+      INSERT INTO tasks VALUES (
+        'tsk_legacy_fixture', 'prj_legacy', 'Legacy task', 'Keep history',
+        'idle', 'tasks/tsk_legacy_fixture/pi/session.jsonl', 1, 'review stays',
+        '2026-10-20T00:00:00.000Z', '2026-10-20T00:00:00.000Z'
+      );
+    `);
+    raw.close();
+
+    const db = openDatabase(file);
+    try {
+      const columns = (db.prepare("PRAGMA table_info(tasks)").all() as Array<{ name: string }>).map((column) => column.name);
+      assert.ok(columns.includes("model_provider"));
+      assert.ok(columns.includes("model_id"));
+      assert.ok(columns.includes("review_text"));
+      const repositories = new Repositories(db);
+      const task = repositories.getTask("tsk_legacy_fixture");
+      assert.ok(task);
+      assert.equal(task.modelProvider, null);
+      assert.equal(task.modelId, null);
+      assert.equal(task.sessionFile, "tasks/tsk_legacy_fixture/pi/session.jsonl");
+      const review = db.prepare("SELECT review_text FROM tasks WHERE id = ?").get("tsk_legacy_fixture") as { review_text: string };
+      assert.equal(review.review_text, "review stays");
+      repositories.updateTask("tsk_legacy_fixture", { modelProvider: "deepseek", modelId: "deepseek-flash" });
+      const after = repositories.getTask("tsk_legacy_fixture")!;
+      assert.equal(after.modelProvider, "deepseek");
+      assert.equal(after.modelId, "deepseek-flash");
+      assert.equal(after.sessionFile, "tasks/tsk_legacy_fixture/pi/session.jsonl");
+    } finally {
+      db.close();
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("task model switching is persisted, audited and rejected while busy", async () => {
+  const harness = await start({ withAgent: false });
+  try {
+    const projectResponse = await api(harness, "POST", "/api/projects", { name: "Model project" });
+    const projectId = projectResponse.body.project.id as string;
+    const taskResponse = await api(harness, "POST", `/api/projects/${projectId}/tasks`, {
+      title: "Model task",
+      objective: "Select a model explicitly",
+    });
+    const taskId = taskResponse.body.task.id as string;
+    const project = harness.app.services.repositories.getProject(projectId)!;
+    const models = [
+      { provider: "deepseek", id: "deepseek-flash", name: "DeepSeek Flash" },
+      { provider: "deepseek", id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
+    ];
+    const runtime = {
+      getModel: (provider: string, id: string) => models.find((model) => model.provider === provider && model.id === id),
+      getModels: (provider: string) => models.filter((model) => model.provider === provider),
+      getAvailable: async (provider?: string) => models.filter((model) => !provider || model.provider === provider),
+    };
+    const service = new PiAgentService({
+      repositories: harness.app.services.repositories,
+      context: harness.app.services.context,
+      events: harness.app.services.events,
+      config: harness.app.config,
+      search: fakeSearch(),
+      materials: harness.app.services.materials,
+      skills: harness.app.services.skills,
+      experiments: harness.app.services.experiments,
+      manuscript: harness.app.services.manuscript,
+    });
+    (service as unknown as { modelRuntime: () => Promise<typeof runtime> }).modelRuntime = async () => runtime;
+
+    const available = await service.listModels();
+    assert.deepEqual(available.map((model: ModelOption) => model.id), ["deepseek-flash", "deepseek-v4-pro"]);
+    const updated = await service.switchModel(project, taskId, "deepseek", "deepseek-v4-pro");
+    assert.equal(updated.modelProvider, "deepseek");
+    assert.equal(updated.modelId, "deepseek-v4-pro");
+    const persisted = harness.app.services.repositories.getTask(taskId)!;
+    assert.equal(persisted.modelId, "deepseek-v4-pro");
+    const audit = harness.app.services.repositories.listEvents(taskId, 0, 100).find((event) => event.type === "model_changed");
+    assert.ok(audit);
+    const auditData = audit.data as { id: string; previous: unknown };
+    assert.equal(auditData.id, "deepseek-v4-pro");
+    assert.equal(auditData.previous, null);
+
+    (service as unknown as { busyTasks: Set<string> }).busyTasks.add(taskId);
+    await assert.rejects(
+      () => service.switchModel(project, taskId, "deepseek", "deepseek-flash"),
+      (error: unknown) => error instanceof AgentBusyError,
+    );
+    (service as unknown as { busyTasks: Set<string> }).busyTasks.delete(taskId);
+
+    await assert.rejects(
+      () => service.switchModel(project, taskId, "deepseek", "retired"),
+      (error: unknown) => error instanceof ModelUnavailableError,
+    );
+    assert.equal(harness.app.services.repositories.getTask(taskId)!.modelId, "deepseek-v4-pro");
+    await service.dispose();
+  } finally {
+    await harness.close();
+  }
+});
+
+test("model routes expose host capabilities, persist selection and reject sends during a switch", async () => {
+  let harness!: Harness;
+  let running = false;
+  const sent: string[] = [];
+  const stopped: string[] = [];
+  const agent: AgentServiceLike = {
+    listModels: async () => [
+      { provider: "deepseek", id: "deepseek-flash", name: "DeepSeek Flash", available: true, reason: null },
+      { provider: "deepseek", id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", available: true, reason: null },
+    ],
+    switchModel: async (_project, taskId, provider, modelId) => {
+      if (modelId === "retired") throw new ModelUnavailableError("retired is not offered");
+      return harness.app.services.repositories.updateTask(taskId, { modelProvider: provider, modelId });
+    },
+    sendMessage: async (_project, _task, text) => {
+      sent.push(text);
+    },
+    stop: async (taskId) => {
+      stopped.push(taskId);
+      running = false;
+      return { stopped: true };
+    },
+    isRunning: () => running,
+    dispose: async () => undefined,
+  };
+  harness = await start({ agent });
+  try {
+    const project = await api(harness, "POST", "/api/projects", { name: "Route model project" });
+    const projectId = project.body.project.id as string;
+    const task = await api(harness, "POST", `/api/projects/${projectId}/tasks`, {
+      title: "Route model task",
+      objective: "Exercise HTTP model selection",
+    });
+    const taskId = task.body.task.id as string;
+
+    const catalog = await api(harness, "GET", "/api/models");
+    assert.equal(catalog.status, 200);
+    assert.equal(catalog.body.models.length, 2);
+    assert.deepEqual(catalog.body.default, { provider: "deepseek", id: "deepseek-flash" });
+    assert.equal(JSON.stringify(catalog.body).includes("apiKey"), false);
+
+    const initial = await api(harness, "GET", `/api/projects/${projectId}/tasks/${taskId}`);
+    assert.equal(initial.body.model.inherited, true);
+    assert.equal(initial.body.model.id, harness.app.config.modelId);
+
+    const switched = await api(harness, "PUT", `/api/projects/${projectId}/tasks/${taskId}/model`, {
+      provider: "deepseek",
+      modelId: "deepseek-v4-pro",
+    });
+    assert.equal(switched.status, 200);
+    assert.equal(switched.body.task.modelId, "deepseek-v4-pro");
+    assert.equal(switched.body.model.inherited, false);
+    const detail = await api(harness, "GET", `/api/projects/${projectId}/tasks/${taskId}`);
+    assert.equal(detail.body.task.modelId, "deepseek-v4-pro");
+
+    const failed = await api(harness, "PUT", `/api/projects/${projectId}/tasks/${taskId}/model`, {
+      provider: "deepseek",
+      modelId: "retired",
+    });
+    assert.equal(failed.status, 400);
+    assert.equal(failed.body.code, "MODEL_UNAVAILABLE");
+    const unchanged = await api(harness, "GET", `/api/projects/${projectId}/tasks/${taskId}`);
+    assert.equal(unchanged.body.task.modelId, "deepseek-v4-pro");
+
+    running = true;
+    const rejected = await api(harness, "POST", `/api/projects/${projectId}/tasks/${taskId}/messages`, {
+      text: "must not be accepted",
+      clientId: "client-model-0001",
+    });
+    assert.equal(rejected.status, 409);
+    assert.equal(rejected.body.code, "AGENT_BUSY");
+    assert.equal(sent.length, 0);
+
+    running = false;
+    const accepted = await api(harness, "POST", `/api/projects/${projectId}/tasks/${taskId}/messages`, {
+      text: "accepted after idle",
+      clientId: "client-model-0001",
+    });
+    assert.equal(accepted.status, 202);
+    assert.equal(sent.length, 1);
+
+    running = true;
+    const duplicate = await api(harness, "POST", `/api/projects/${projectId}/tasks/${taskId}/messages`, {
+      text: "accepted after idle",
+      clientId: "client-model-0001",
+    });
+    assert.equal(duplicate.status, 200);
+    assert.equal(duplicate.body.duplicate, true);
+    assert.equal(sent.length, 1);
+
+    running = true;
+    const stoppedResponse = await api(harness, "POST", `/api/projects/${projectId}/tasks/${taskId}/stop`);
+    assert.equal(stoppedResponse.status, 200);
+    assert.equal(stoppedResponse.body.stopped, true);
+    assert.deepEqual(stopped, [taskId]);
+    const idle = await api(harness, "GET", `/api/projects/${projectId}/tasks/${taskId}`);
+    assert.equal(idle.body.task.status, "idle");
+  } finally {
+    await harness.close();
   }
 });

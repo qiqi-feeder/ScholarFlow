@@ -71,6 +71,21 @@ function Assert-Defaults([string]$text) {
     }
 }
 
+function Assert-W01([string]$text) {
+    foreach ($required in @(
+        'W01 完成，WT02、WT03、WT16 通过',
+        'GET /api/models',
+        'model_changed',
+        'deepseek-flash',
+        'deepseek-v4-pro',
+        '旧任务',
+        'sessionFile',
+        'npm run test:browser'
+    )) {
+        if (-not $text.Contains($required)) { throw "W01 evidence missing: $required" }
+    }
+}
+
 function Assert-Manifest($manifest, [string]$root) {
     if ($manifest.schema -ne 1) { throw 'Manifest schema mismatch' }
     if ($manifest.project -ne 'projects/251310333590789772') { throw 'Wrong Stitch project' }
@@ -113,27 +128,34 @@ function Assert-Manifest($manifest, [string]$root) {
 }
 
 function Assert-EvidenceIndex([string]$index, [string]$plan) {
-    foreach ($required in @('W00-baseline.md', 'W00-implementation-defaults.md', 'design-baseline/README.md')) {
+    foreach ($required in @('W00-baseline.md', 'W00-implementation-defaults.md', 'W01-shell-models.md', 'design-baseline/README.md')) {
         if (-not $index.Contains($required)) { throw "Evidence index missing: $required" }
     }
     if (-not $index.Contains('WT01 通过')) { throw 'Evidence index lost WT01 result' }
+    if (-not $index.Contains('WT02、WT03、WT16 通过')) { throw 'Evidence index lost W01 result' }
     if (-not $plan.Contains('(docs/verification/workspace-redesign/W00-baseline.md)')) {
         throw 'Plan does not link W00 baseline'
+    }
+    if (-not $plan.Contains('(docs/verification/workspace-redesign/W01-shell-models.md)')) {
+        throw 'Plan does not link W01 evidence'
     }
 }
 
 $baseline = Read-Text $baselinePath
 $defaults = Read-Text $defaultsPath
+$w01 = Read-Text (Join-Path $evidenceRoot 'W01-shell-models.md')
 $index = Read-Text (Join-Path $evidenceRoot 'README.md')
 $plan = Read-Text (Join-Path $repositoryRoot 'PLAN.md')
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
 Assert-Baseline $baseline
 Assert-Defaults $defaults
+Assert-W01 $w01
 Assert-Manifest $manifest $repositoryRoot
 Assert-EvidenceIndex $index $plan
 Assert-NoSensitive $baseline 'W00 baseline'
 Assert-NoSensitive $defaults 'W00 defaults'
+Assert-NoSensitive $w01 'W01 evidence'
 Assert-NoSensitive $index 'evidence index'
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
@@ -174,5 +196,9 @@ Assert-Rejected { Assert-NoSensitive ($baseline + ' C:\Users\example\secret') } 
 Assert-Rejected { Assert-NoSensitive ($baseline + ' sk-abcdefghijklmnop') } 'API-key-like'
 Assert-Rejected { Assert-NoSensitive ($defaults + ' api_key = abcdefghijklmnop') } 'Credential assignment'
 Assert-Rejected { Assert-EvidenceIndex $index ($plan.Replace('(docs/verification/workspace-redesign/W00-baseline.md)', '(missing.md)')) } 'does not link W00 baseline'
+Assert-Rejected { Assert-W01 ($w01.Replace('GET /api/models', 'missing route')) } 'W01 evidence missing'
+Assert-Rejected { Assert-EvidenceIndex ($index.Replace('W01-shell-models.md', 'missing.md')) $plan } 'Evidence index missing'
+Assert-Rejected { Assert-EvidenceIndex $index ($plan.Replace('W01-shell-models.md', 'missing.md')) } 'does not link W01 evidence'
+Assert-Rejected { Assert-NoSensitive ($w01 + ' sk-abcdefghijklmnop') } 'API-key-like'
 
-Write-Output "Workspace W00 baseline: Stitch SB01-SB07, exclusions, hashes, evidence index, implementation defaults, credential/path guards and $negativeCaseCount negative cases passed. WT01 only; W01-W05 remain unexecuted."
+Write-Output "Workspace W00/W01 evidence: Stitch SB01-SB07, exclusions, hashes, baseline/shell model evidence, credential/path guards and $negativeCaseCount negative cases passed. WT01-WT03/WT16 only; W02-W05 remain unexecuted."

@@ -23,6 +23,9 @@ export interface TaskRecord {
   status: TaskStatus;
   sessionFile: string | null;
   contextVersion: number;
+  /** Explicit task-level model selection. Null on legacy tasks; they inherit the configured default. */
+  modelProvider?: string | null;
+  modelId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

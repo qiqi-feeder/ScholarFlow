@@ -6,6 +6,7 @@ import test from "node:test";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { ExperimentWorker } from "@scholarflow/experiment-worker";
 import { createApp, type CreatedApp } from "../../server/src/app.js";
+import type { AgentServiceLike } from "../../server/src/agent.js";
 import { loadConfig } from "../../server/src/config.js";
 import { CrossrefSearch } from "../../server/src/search.js";
 
@@ -105,6 +106,17 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     await page.locator(".message.error").waitFor({ timeout: 20000 });
     assert.match(await page.locator(".message.error").innerText(), /DeepSeek|API key/i);
 
+    // W01 shell: the right-hand session survives central view changes.
+    const modelSelect = page.getByLabel("当前任务模型");
+    await modelSelect.waitFor();
+    assert.equal(await modelSelect.isDisabled(), true);
+    assert.match(await page.locator(".model-hint").innerText(), /继承默认/);
+    await page.getByRole("tab", { name: "材料" }).click();
+    await page.getByLabel("消息").waitFor();
+    assert.equal(await page.locator(".message.error").isVisible(), true);
+    await page.getByRole("tab", { name: "任务" }).click();
+    await page.getByRole("heading", { name: "Chart baseline" }).waitFor();
+
     // Import a readable local material with source provenance.
     await page.getByRole("tab", { name: "材料" }).click();
     await page.getByLabel("材料路径").fill("workspace/notes.txt");
@@ -114,7 +126,7 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     // Create and confirm a plan in the UI.
     await page.getByRole("tab", { name: "方案与准入" }).click();
     await page.getByText("手动创建方案").click();
-    await page.getByPlaceholder("目标").fill("Smoke-test the local experiment lifecycle");
+    await page.getByPlaceholder("目标", { exact: true }).fill("Smoke-test the local experiment lifecycle");
     await page.getByPlaceholder("设计").fill("One smoke run with a recorded metric");
     await page.getByPlaceholder("dataset").fill("demo-data");
     await page.getByPlaceholder("preprocessing").fill("none");
@@ -166,6 +178,11 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     await page.getByRole("tab", { name: "设置" }).click();
     await page.getByPlaceholder("you@example.org").fill("browser@example.org");
     await page.getByRole("button", { name: "保存设置" }).click();
+    await page.waitForFunction(async () => {
+      const response = await fetch("/api/settings");
+      const settings = await response.json() as any;
+      return settings.search?.contactEmail === "browser@example.org";
+    });
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByRole("tab", { name: "设置" }).click();
     assert.equal(await page.getByPlaceholder("you@example.org").inputValue(), "browser@example.org");
@@ -184,6 +201,165 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
   } finally {
     await browser.close();
     await worker?.stop();
+    await app.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("workspace shell: persistent session, task isolation, stale-stream guard and task-level model", { timeout: 120000 }, async () => {
+  assert.ok(existsSync(path.join(webDist, "index.html")), "run `npm run build` before the browser test");
+  const chrome = chromeCandidates.find((candidate) => existsSync(candidate));
+  if (!chrome) throw new Error("Chrome or Edge is required for the browser verification");
+  const root = mkdtempSync(path.join(tmpdir(), "scholarflow-shell-browser-"));
+  const config = loadConfig({
+    configFile: path.join(root, "config", "config.json"),
+    dataDir: path.join(root, "data"),
+    home: root,
+    env: { PATH: process.env.PATH ?? "" },
+  });
+  config.workerEnabled = false;
+  let app!: CreatedApp;
+  const running = new Set<string>();
+  const seen: Array<{ taskId: string; modelId: string | null }> = [];
+  const models = [
+    { provider: "deepseek", id: "deepseek-flash", name: "DeepSeek Flash", available: true, reason: null },
+    { provider: "deepseek", id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", available: true, reason: null },
+  ];
+  const publish = (projectId: string, taskId: string, type: string, data: Record<string, unknown>) => {
+    const event = app.services.repositories.appendEvent(projectId, taskId, type, data);
+    app.services.events.publish(event);
+    return event;
+  };
+  const agent: AgentServiceLike = {
+    listModels: async () => models,
+    switchModel: async (project, taskId, provider, modelId) => {
+      if (!models.some((model) => model.provider === provider && model.id === modelId)) {
+        throw new Error("model unavailable");
+      }
+      const updated = app.services.repositories.updateTask(taskId, { modelProvider: provider, modelId });
+      publish(project.id, taskId, "model_changed", { provider, id: modelId, name: modelId, previous: null });
+      return updated;
+    },
+    sendMessage: async (project, task, text, clientId) => {
+      const repositories = app.services.repositories;
+      const selectedModel = repositories.getTask(task.id)?.modelId ?? app.config.modelId;
+      seen.push({ taskId: task.id, modelId: selectedModel });
+      running.add(task.id);
+      repositories.updateTask(task.id, { status: "running" });
+      publish(project.id, task.id, "user_message", { text, clientId });
+      publish(project.id, task.id, "agent_status", { status: "running" });
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      publish(project.id, task.id, "assistant_message", { text: `echo: ${text}`, model: selectedModel, provider: "deepseek" });
+      running.delete(task.id);
+      repositories.updateTask(task.id, { status: "idle" });
+      publish(project.id, task.id, "agent_status", { status: "idle" });
+    },
+    stop: async (taskId) => {
+      running.delete(taskId);
+      return { stopped: true };
+    },
+    isRunning: (taskId) => running.has(taskId),
+    dispose: async () => undefined,
+  };
+  const base = await startServer(await (async () => {
+    app = await createApp({
+      config,
+      agent,
+      resourcesDir: path.join(repoRoot, "resources"),
+      webDist,
+      search: { search: async () => ({ hits: [] }), fetchDoi: async () => { throw new Error("not used"); } } as unknown as CrossrefSearch,
+    });
+    return app;
+  })());
+  const project = await fetch(`${base}/api/projects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Shell Lab", description: "W01 shell verification" }),
+  }).then((response) => response.json()) as any;
+  const projectId = project.project.id as string;
+  const createTask = async (title: string) => {
+    const response = await fetch(`${base}/api/projects/${projectId}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, objective: `${title} objective` }),
+    }).then((result) => result.json()) as any;
+    return response.task.id as string;
+  };
+  const taskA = await createTask("Task A");
+  const taskB = await createTask("Task B");
+  app.services.repositories.updateTask(taskA, { sessionFile: "tasks/task-a/session.jsonl" });
+  const browser: Browser = await chromium.launch({
+    executablePath: chrome,
+    headless: true,
+    args: ["--no-first-run", "--no-default-browser-check"],
+  });
+  const page: Page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const waitForIdle = async () => {
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const detail = await fetch(`${base}/api/projects/${projectId}/tasks/${taskA}`).then((response) => response.json()) as any;
+      if (detail.task.status === "idle") return;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    throw new Error("task did not return to idle");
+  };
+  try {
+    await page.goto(base, { waitUntil: "domcontentloaded" });
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+
+    const modelSelect = page.getByLabel("当前任务模型");
+    await modelSelect.selectOption("deepseek:deepseek-v4-pro");
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const detail = await fetch(`${base}/api/projects/${projectId}/tasks/${taskA}`).then((response) => response.json()) as any;
+      if (detail.task.modelId === "deepseek-v4-pro") break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.equal(await modelSelect.inputValue(), "deepseek:deepseek-v4-pro");
+
+    // Switching central content while an answer streams must not unmount the right-hand session.
+    await page.getByLabel("消息").fill("A stream");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByRole("tab", { name: "材料" }).click();
+    await page.getByText("echo: A stream").waitFor({ timeout: 15000 });
+    await page.getByLabel("消息").waitFor();
+    await waitForIdle();
+
+    // A message on Task A must never be written into Task B's session.
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    await page.getByLabel("消息").fill("B stream");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByText("echo: B stream").waitFor({ timeout: 15000 });
+    assert.equal(await page.getByText("echo: A stream").count(), 0);
+
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+    await page.getByText("echo: A stream").waitFor();
+    assert.equal(await page.getByText("echo: B stream").count(), 0);
+    assert.equal(await page.getByLabel("当前任务模型").inputValue(), "deepseek:deepseek-v4-pro");
+
+    // Switch away before a delayed answer settles; the old stream must not leak into Task B.
+    await page.getByLabel("消息").fill("A late");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    assert.equal(await page.getByText("echo: A late").count(), 0);
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+    await page.getByText("echo: A late").waitFor({ timeout: 15000 });
+
+    const detail = await fetch(`${base}/api/projects/${projectId}/tasks/${taskA}`).then((response) => response.json()) as any;
+    assert.equal(detail.task.id, taskA);
+    assert.equal(detail.task.modelId, "deepseek-v4-pro");
+    assert.equal(detail.sessionFile, "tasks/task-a/session.jsonl");
+    assert.deepEqual(seen.filter((entry) => entry.taskId === taskA).map((entry) => entry.modelId), ["deepseek-v4-pro", "deepseek-v4-pro"]);
+    assert.deepEqual(seen.filter((entry) => entry.taskId === taskB).map((entry) => entry.modelId), ["deepseek-flash"]);
+    assert.deepEqual(pageErrors, []);
+  } finally {
+    await browser.close();
     await app.close();
     rmSync(root, { recursive: true, force: true });
   }
