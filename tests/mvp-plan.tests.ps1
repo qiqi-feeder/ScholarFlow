@@ -165,7 +165,7 @@ Assert-Rejected { Assert-WorkspaceIteration ($plan + "`n| WT99 | 单测 | U01 | 
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| WT01 | 待实施 |', '| WT01 | 已完成 |')) $workspaceDiscussion } 'Workspace milestone is not pending'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 未执行 |', '| 已通过 |')) $workspaceDiscussion } 'Workspace acceptance was promoted'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U99 |')) $workspaceDiscussion } 'Unknown workspace product requirement'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U02 |')) $workspaceDiscussion } 'Product requirement has no workspace tests'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U02 |').Replace('、U07', '')) $workspaceDiscussion } 'Product requirement has no workspace tests'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| 无 |')) $workspaceDiscussion } 'lacks product traceability'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 内容遮挡确认/取消按钮、会话无法展开、对照区水平溢出 |', '| |')) $workspaceDiscussion } 'Incomplete WT row'
 Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, authorization, links and $negativeCaseCount negative cases passed. Documentation only; workspace WT tests remain unexecuted."

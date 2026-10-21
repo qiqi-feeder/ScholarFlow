@@ -45,6 +45,21 @@ function Assert-FrontendRequirements([string]$text, [string]$implementationPlan)
     $rules = Read-RequirementRows (Get-RequirementSection $text 7) 'I' 3
     $checks = Read-RequirementRows (Get-RequirementSection $text 12) 'FT' 6
     $implementationChecks = Read-RequirementRows $implementationPlan 'WT' 7
+    $modelRequirements = Read-RequirementRows (Get-RequirementSection $text 4) 'MS' 3
+    foreach ($number in 1..7) {
+        $id = 'MS{0:D2}' -f $number
+        if (-not $modelRequirements.ContainsKey($id)) { throw "Missing model switching requirement: $id" }
+    }
+    if (-not $rules.ContainsKey('I11') -or -not $checks.ContainsKey('FT11') -or
+        $checks['FT11'][2] -notmatch '\bI11\b' -or $checks['FT11'][4] -notmatch '\bWT16\b' -or
+        -not $checks['FT11'][3].Contains('MS01–MS07')) {
+        throw 'Missing model switching acceptance traceability'
+    }
+    if (-not $implementationChecks.ContainsKey('WT16') -or
+        -not $implementationChecks['WT16'][3].Contains('FT11/MS01–MS07') -or
+        -not $implementationPlan.Contains('WT02、WT03、WT16')) {
+        throw 'Model switching has no implementation milestone/test assignment'
+    }
     foreach ($number in 1..6) {
         $id = 'SC{0:D2}' -f $number
         if (-not $scenarios.ContainsKey($id)) { throw "Missing core scenario: $id" }
@@ -158,10 +173,16 @@ Assert-Rejected { Assert-FrontendRequirements ($document.Replace('阅读与笔�
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| 文档与页内容加载，显示材料名/位置，不清空笔记草稿 |', '| |')) $plan } 'Incomplete empty/loading/error states'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| G01、P03、P06、P08、P10 |', '| G99 |')) $plan } 'Unknown acceptance page'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| I03、I10 |', '| I99 |')) $plan } 'Unknown interaction rule'
-Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| I03、I10 |', '| I03 |')) $plan } 'Interaction has no acceptance coverage'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('、I10', '')) $plan } 'Interaction has no acceptance coverage'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| WT08 | 待验证 |', '| WT99 | 待验证 |')) $plan } 'Unknown implementation test'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| WT08 | 待验证 |', '| 无 | 待验证 |')) $plan } 'Incomplete frontend acceptance traceability'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| 待验证 |', '| 已通过 |')) $plan } 'Unimplemented frontend check was promoted'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| MS04 |', '| MS99 |')) $plan } 'Missing model switching requirement: MS04'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| 回答期间禁用切换 |', '| |')) $plan } 'Incomplete requirement row: MS04'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| FT11 |', '| FT99 |')) $plan } 'Missing model switching acceptance traceability'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| WT16 | 待验证 |', '| WT13 | 待验证 |')) $plan } 'Missing model switching acceptance traceability'
+Assert-Rejected { Assert-FrontendRequirements $document ($plan.Replace('WT02、WT03、WT16', 'WT02、WT03')) } 'Model switching has no implementation milestone/test assignment'
+Assert-Rejected { Assert-FrontendRequirements $document ($plan.Replace('FT11/MS01–MS07', '未关联模型需求')) } 'Model switching has no implementation milestone/test assignment'
 Assert-Rejected { Assert-RequirementLinks '[missing](missing-frontend-prd.md)' } 'Broken frontend requirement link'
 Assert-Rejected { Assert-FrontendRequirements ($document + [char]0xFFFD) $plan } 'Invalid requirements encoding'
 Write-Output "Frontend product requirements: users/scenarios, page modules, states, interactions, prototype handoff and $negativeCaseCount negative cases passed. Documentation only; frontend implementation remains pending."
