@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "prefs": {
+    "chatWidth": 360,
+    "navCollapsed": false,
+    "lastView": "reading"
+  },
+  "projects": {
+    "prj_fixture_a": {
+      "activeTaskId": "tsk_a1",
+      "tasks": {
+        "tsk_a1": {
+          "view": "reading",
+          "layout": "single",
+          "tabs": [
+            {
+              "objectType": "material",
+              "objectId": "mat_a1",
+              "title": "Fixture paper A",
+              "pinned": true,
+              "version": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "activeObjectKey": "material:mat_a1",
+          "reading": {
+            "page": 3,
+            "scroll": 0.42
+          },
+          "selectedRunId": null,
+          "draftIds": ["draft_a1"],
+          "composer": {
+            "text": "Synthetic draft; never auto-send.",
+            "clientId": "fixture-client-a1",
+            "references": [
+              {
+                "objectType": "material",
+                "objectId": "mat_a1",
+                "version": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "locator": {
+                  "page": 3,
+                  "text": "Fixture quoted text"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "prj_fixture_b": {
+      "activeTaskId": "tsk_b1",
+      "tasks": {
+        "tsk_b1": {
+          "view": "writing",
+          "layout": "split",
+          "tabs": [
+            {
+              "objectType": "manuscript",
+              "objectId": "main",
+              "title": "main.tex",
+              "pinned": true,
+              "version": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          ],
+          "activeObjectKey": "manuscript:main",
+          "reading": null,
+          "selectedRunId": null,
+          "draftIds": [],
+          "composer": {
+            "text": "",
+            "clientId": "fixture-client-b1",
+            "references": []
+          }
+        }
+      }
+    }
+  },
+  "note": "Synthetic fixture for isolation, draft, layout and reference-shape tests. It must not contain credentials, logs, datasets or real user content."
+}

@@ -1,0 +1,219 @@
+{
+  "schema": 1,
+  "project": "projects/251310333590789772",
+  "projectTitle": "ScholarFlow 科研工作台原型设计",
+  "projectUpdatedAt": "2026-10-21T17:13:10.346221Z",
+  "readAt": "2026-10-21T17:42:58.619Z",
+  "readAtLocal": "2026-10-22T01:42:58.619+08:00",
+  "method": "Stitch MCP get_screen + download_file (read-only; project not modified)",
+  "screenshots": [
+    {
+      "key": "SB01",
+      "file": "SB01.jpg",
+      "resource": "projects/251310333590789772/files/791299237173394323",
+      "mime": "image/jpeg",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 177560,
+      "title": "ScholarFlow 极简科研 AI IDE 工作台 (参考 AionUi 风格)",
+      "role": "视觉原稿",
+      "screen": "projects/251310333590789772/screens/8fc29cdfbd134d8a8b65083f5989b934",
+      "sha256": "258119136d2b96612ee661b196b753beacca3f244a972cc0dfccff528f8cc730"
+    },
+    {
+      "key": "SB02",
+      "file": "SB02.jpg",
+      "resource": "projects/251310333590789772/files/16083974333605716198",
+      "mime": "image/jpeg",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 170276,
+      "title": "ScholarFlow 材料阅读与选区引用 (P03/P04)",
+      "role": "视觉原稿",
+      "screen": "projects/251310333590789772/screens/a9cc6868af11461c8e2919a8c75bddcd",
+      "sha256": "2987befe9a1359ea9952de536bd527faf3f8a6deeff7e5493dafeab44b483260"
+    },
+    {
+      "key": "SB03",
+      "file": "SB03.jpg",
+      "resource": "projects/251310333590789772/files/10835916616388952133",
+      "mime": "image/jpeg",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 200552,
+      "title": "ScholarFlow 实验管理与指标对比 (P06/P07)",
+      "role": "视觉原稿",
+      "screen": "projects/251310333590789772/screens/fefc530a924645208f8feba7d63543d4",
+      "sha256": "04932de80d9d922a85ffb4e185aa6c6a575872c080b363b3580092c2fd6cf74c"
+    },
+    {
+      "key": "SB04",
+      "file": "SB04.jpg",
+      "resource": "projects/251310333590789772/files/7009707662353359890",
+      "mime": "image/jpeg",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 223884,
+      "title": "ScholarFlow 稿件编辑与 PDF 对照 (P08)",
+      "role": "视觉原稿",
+      "screen": "projects/251310333590789772/screens/b0e0ed0532684c0bba4da8c0d5138551",
+      "sha256": "41100acb50c3b74db9288dd88efdae8050185bf886eae948bea0af45ea464b54"
+    },
+    {
+      "key": "SB05",
+      "file": "SB05.jpg",
+      "resource": "projects/251310333590789772/files/17483781982863987734",
+      "mime": "image/jpeg",
+      "width": 1280,
+      "height": 1024,
+      "bytes": 210984,
+      "title": "ScholarFlow 审稿意见与修订 (P09)",
+      "role": "视觉原稿",
+      "screen": "projects/251310333590789772/screens/3ee648ba087b4d4cb383285c38f7be92",
+      "sha256": "fd3c8ba22f7b7b6561502d62692085433b03e8cbaf49b03373c94e450e61c71f"
+    },
+    {
+      "key": "SB06",
+      "file": "SB06.png",
+      "resource": "projects/251310333590789772/screens/0946e12b728e4bf1a9c2ee816fc3d5ba/fileEntries/screenshot",
+      "mime": "image/png",
+      "bytes": 910608,
+      "title": "ScholarFlow 文献阅读 (论文库展开状态)",
+      "role": "辅助状态参考",
+      "screen": "projects/251310333590789772/screens/0946e12b728e4bf1a9c2ee816fc3d5ba",
+      "width": 2560,
+      "height": 2048,
+      "sha256": "681b1e36acb2d75a4f61b49ab88b74e9379c05720cf251a0358fcf270406c210"
+    },
+    {
+      "key": "SB07",
+      "file": "SB07.png",
+      "resource": "projects/251310333590789772/screens/8f1f08dcd38d4a0da68b218aec38b00c/fileEntries/screenshot",
+      "mime": "image/png",
+      "bytes": 821412,
+      "title": "ScholarFlow 文献阅读 (专注阅读与列表收起状态)",
+      "role": "辅助状态参考",
+      "screen": "projects/251310333590789772/screens/8f1f08dcd38d4a0da68b218aec38b00c",
+      "width": 2560,
+      "height": 2048,
+      "sha256": "4e26963e12924bfa8a4959390651b18cccc23de3e3a3cf4f1c271ac801a54173"
+    }
+  ],
+  "htmlSummaries": [
+    {
+      "key": "SB01",
+      "source": "projects/251310333590789772/files/5843124505054030448",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 37442,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB01.jpg"
+    },
+    {
+      "key": "SB02",
+      "source": "projects/251310333590789772/files/5187491596774804556",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 37140,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB02.jpg"
+    },
+    {
+      "key": "SB03",
+      "source": "projects/251310333590789772/files/2943677220851048933",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 37045,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB03.jpg"
+    },
+    {
+      "key": "SB04",
+      "source": "projects/251310333590789772/files/13220915054285099835",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 42983,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB04.jpg"
+    },
+    {
+      "key": "SB05",
+      "source": "projects/251310333590789772/files/17841393442214004762",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 44658,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB05.jpg"
+    },
+    {
+      "key": "SB06",
+      "source": "projects/251310333590789772/screens/0946e12b728e4bf1a9c2ee816fc3d5ba/fileEntries/html",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 41108,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB06.png"
+    },
+    {
+      "key": "SB07",
+      "source": "projects/251310333590789772/screens/8f1f08dcd38d4a0da68b218aec38b00c/fileEntries/html",
+      "title": "ScholarFlow - Academic AI IDE Workstation",
+      "htmlBytes": 30333,
+      "externalHosts": [
+        "fonts.googleapis.com",
+        "fonts.gstatic.com",
+        "cdn.tailwindcss.com?plugins=forms,container-queries"
+      ],
+      "screenshot": "SB07.png"
+    }
+  ],
+  "excluded": [
+    {
+      "key": "EX01",
+      "screen": "projects/251310333590789772/screens/ab6b71c263744d298bcc758c94c70751",
+      "title": "ScholarFlow 文献阅读 (论文库展开·单列舒适阅读与横向选区浮层)",
+      "used": false
+    },
+    {
+      "key": "EX02",
+      "screen": "projects/251310333590789772/screens/c779435d514a49a5bff06f8e97ef6497",
+      "title": "ScholarFlow 实验管理与指标对比 (固定列横向滚动·状态分离·可折叠日志)",
+      "used": false
+    },
+    {
+      "key": "EX03",
+      "screen": "projects/251310333590789772/screens/58b36ec27552416996cc8065959ea116",
+      "title": "ScholarFlow 稿件编辑与 PDF 对照 (源码/PDF/对照三模切换·防折行)",
+      "used": false
+    },
+    {
+      "key": "EX04",
+      "screen": "projects/251310333590789772/screens/f29c34379d87493dbac7a329e97efd5f",
+      "title": "ScholarFlow 审稿意见与修订 (去重列表·任务与会话一致·单/双对照)",
+      "used": false
+    }
+  ],
+  "notes": [
+    "Screenshots are the visual baseline; SB06/SB07 are auxiliary state references only.",
+    "Full HTML was not committed. html-summaries.json keeps extracted structure/text for review and deliberately excludes prototype-only data from product storage.",
+    "The prototype uses CDN Tailwind and Google Fonts; production must use the existing local React/Vite stack and system fonts, not CDN runtime dependencies."
+  ]
+}

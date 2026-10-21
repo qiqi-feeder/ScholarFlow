@@ -1,6 +1,6 @@
 # ScholarFlow 运行指南（MVP）
 
-本指南对应 2026-10-20 的软件切片。真实 DeepSeek 调用、Conda 目标实验和科研验收尚未执行，限制见 [验证记录](VERIFICATION.md)。
+本指南对应 2026-10-22 的软件切片。真实 DeepSeek 流式工具循环已通过；Conda 目标实验和科研验收尚未执行，限制见 [验证记录](VERIFICATION.md) 与 [W00 基线](verification/workspace-redesign/W00-baseline.md)。
 
 ## 1. 前置条件
 
@@ -103,8 +103,9 @@ node --import tsx scripts/verify-pi-session.ts
 
 ## 8. 尚未完成
 
-- 真实 DeepSeek 流式工具循环与压缩后检索（缺 Key）。
-- 真实论文基线、一次受控修改和科研验收（缺验收卡目标、Conda/Python、数据/GPU）。
+- 真实 DeepSeek 流式工具循环已通过；压缩后检索、无效 Key/限流/断线/停止回答故障矩阵仍未完成。
+- 真实论文基线、一次受控修改和科研验收（缺验收卡目标、目标数据/官方脚本/GPU 预算；Conda/Python 解释器已存在）。
 - Pi 对照评测、干净检出发布回归。
-- 投稿包解包到新目录后的独立重编译演练。
 - 旧静态 Demo 的缺失资源修复。
+
+W00 工作台基线与 W01 入口见 [W00 基线](verification/workspace-redesign/W00-baseline.md)；W01–W05 尚未实施。

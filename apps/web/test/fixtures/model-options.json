@@ -1,0 +1,31 @@
+{
+  "default": {
+    "provider": "deepseek",
+    "id": "deepseek-flash"
+  },
+  "options": [
+    {
+      "provider": "deepseek",
+      "id": "deepseek-flash",
+      "name": "DeepSeek V4.1 Flash",
+      "available": true,
+      "reason": null
+    },
+    {
+      "provider": "deepseek",
+      "id": "deepseek-v4-pro",
+      "name": "DeepSeek V4 Pro",
+      "available": true,
+      "reason": null
+    },
+    {
+      "provider": "deepseek",
+      "id": "retired-fixture-model",
+      "name": "Retired fixture model",
+      "available": false,
+      "reason": "Model is no longer offered by the provider."
+    }
+  ],
+  "busyPolicy": "disable-selection-until-idle",
+  "note": "Synthetic capability snapshot for UI state tests. Runtime options must come from Pi; never include API keys or claim unconfigured providers are available."
+}

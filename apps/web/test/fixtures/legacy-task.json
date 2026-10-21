@@ -1,0 +1,12 @@
+{
+  "id": "tsk_legacy_fixture",
+  "projectId": "prj_fixture_a",
+  "title": "Legacy task before task-level model selection",
+  "objective": "Exercise opening an existing task whose row has no model columns.",
+  "status": "idle",
+  "sessionFile": "tasks/tsk_legacy_fixture/pi/2026-10-20T12-08-04-584Z_fixture.jsonl",
+  "contextVersion": 1,
+  "createdAt": "2026-10-20T12:08:04.584Z",
+  "updatedAt": "2026-10-20T12:09:04.584Z",
+  "note": "Synthetic fixture. Intentionally has no modelProvider/modelId; a migrated database must still open it and inherit the current default until the user switches explicitly."
+}

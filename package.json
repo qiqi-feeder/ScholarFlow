@@ -18,7 +18,7 @@
     "build": "vite build --config apps/web/vite.config.ts",
     "worker": "tsx packages/experiment-worker/src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test \"packages/research/test/*.test.ts\" \"apps/server/test/*.test.ts\" \"packages/experiment-worker/test/*.test.ts\"",
+    "test": "node --import tsx --test \"packages/research/test/*.test.ts\" \"apps/server/test/*.test.ts\" \"packages/experiment-worker/test/*.test.ts\" \"apps/web/test/workspace*.test.ts\"",
     "test:browser": "node --import tsx --test apps/web/test/browser.test.ts",
     "verify": "npm run typecheck && npm run test && npm run build"
   },

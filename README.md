@@ -30,9 +30,10 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 ## 文档
 
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
+- [W00 工作台基线](docs/verification/workspace-redesign/W00-baseline.md)：Stitch SB01–SB07 证据、旧库备份、权限/模型基线、WT01 结果与 W01 入口；实施默认值见同目录文档。
 - [前端产品需求](docs/FRONTEND_PRODUCT_REQUIREMENTS.md)：目标用户、使用场景、页面模块、交互/空状态/加载状态与移动端要求；视觉沿用 Stitch 原稿，实施修正与原稿/排除清单见 PLAN 第 8.7 节，不再等待继续改稿。
 - [产品讨论：当前共识](docs/WORKSPACE_PRODUCT_DISCUSSION.md)：精简保留常驻会话、对象工作区、模型切换及文献/Agent 框架，删除过时和重复说明。
-- [Agent 能力与工作区反馈架构](docs/AGENT_CAPABILITY_ARCHITECTURE.md)：每任务一个主 Agent、Pi 动态工具装配、上下文控制、文献获取及真实产物反馈；各工作区工具细节后续讨论，实施批次和测试见 PLAN 第 9 节。
+- [Agent 能力与工作区反馈架构](docs/AGENT_CAPABILITY_ARCHITECTURE.md)：每任务一个主 Agent、Pi 动态工具装配、上下文控制、文献获取及真实产物反馈；各工作区工具细节后续讨论，实施批次和测试见 PLAN 第 8 节。
 - [运行指南](docs/RUN_GUIDE.md)：安装、配置、工作流、故障恢复与安全边界。
 - [验证记录](docs/VERIFICATION.md)：实际命令、测试结果、真实检索/构建证据与未执行项。
 - [DISCOVERY](docs/DISCOVERY.md)：需求来源、决策记录与当前阶段边界。
@@ -40,7 +41,7 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 - [产品设计](docs/PRODUCT_DESIGN.md)、[技术方案](docs/TECHNICAL_DESIGN.md)、[实现路线](docs/IMPLEMENTATION_ROADMAP.md)：历史规划参考。
 - [Harness 调研](docs/research/HARNESS_SURVEY_2026-10-20.md)：12 个上游实现的机制与证据。
 
-计划/需求文档验证：`./tests/mvp-plan.tests.ps1`、`./tests/discovery-docs.tests.ps1`、`./tests/workspace-product-docs.tests.ps1`、`./tests/frontend-product-docs.tests.ps1`、`node --test tests/agent-capability-docs.test.mjs`。当前 Light Workspace 资源缺失及验证限制见 DISCOVERY；文档检查不代表真实功能验收。
+计划/需求文档验证：`./tests/mvp-plan.tests.ps1`、`./tests/workspace-baseline-docs.tests.ps1`、`./tests/discovery-docs.tests.ps1`、`./tests/workspace-product-docs.tests.ps1`、`./tests/frontend-product-docs.tests.ps1`、`node --test tests/agent-capability-docs.test.mjs`。当前 Light Workspace 资源缺失及验证限制见 DISCOVERY；文档检查不代表真实功能验收。
 
 ## 旧方案与静态 Demo
 

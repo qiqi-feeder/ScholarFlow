@@ -1,6 +1,6 @@
-# 验证记录（2026-10-20）
+# 验证记录（更新至 2026-10-22）
 
-本文件记录实际执行过的命令、环境和结果，以及尚未执行的验收项。它不替代 [PLAN](../PLAN.md) 的验收标准；“部分”或“未执行”不会被写成完成。
+本文件记录实际执行过的命令、环境和结果，以及尚未执行的验收项。它不替代 [PLAN](../PLAN.md) 的验收标准；“部分”或“未执行”不会被写成完成。2026-10-22 的 W00 工作台基线记录在 [docs/verification/workspace-redesign/W00-baseline.md](verification/workspace-redesign/W00-baseline.md)，不改变 V01–V16 状态。
 
 ## 1. 环境
 
@@ -31,7 +31,7 @@ node --import tsx scripts/verify-pi-session.ts
 | 检查 | 结果 |
 | --- | --- |
 | `npm run typecheck` | 通过，无错误 |
-| `npm test` | 57 个 Node 测试全部通过，0 失败（research、server、worker、agent 工具与 Pi 会话） |
+| `npm test` | 61 个 Node 测试全部通过，0 失败（research、server、worker、agent 工具、Pi 会话与 4 个 Web 工作区夹具契约测试） |
 | `npm run build` | 通过，Vite 生成 `apps/web/dist` |
 | `npm run test:browser` | 1 个 Chrome E2E 通过 |
 | Pi 生命周期脚本 | Session 持久化并可重开；发现 5 个 Skill 与 Pi 内置工具；脚本本身不读取宿主配置，因此仍报告 shell 中没有 `DEEPSEEK_API_KEY` |
@@ -123,9 +123,19 @@ server 集成测试在存在 TeX 的机器上执行了真实构建：
 
 ```powershell
 npm install
-npm run verify        # typecheck + 56 Node tests + web build
+npm run verify        # typecheck + 61 Node tests + web build
 npm run test:browser  # requires `npm run build` first and Chrome/Edge
 node --import tsx scripts/verify-pi-session.ts
 ```
 
 浏览器测试依赖本机 Chrome 或 Edge。LaTeX 测试在缺少 TeX 时会明确失败或返回诊断；该失败不能被当作通过。真实模型/目标实验测试需要用户配置，不包含在默认 `npm test` 中，也不会用桩自动标记通过。
+
+## 8. W00 工作台基线（2026-10-22）
+
+W00 已完成 Stitch SB01–SB07 读取与本地证据保存、旧库备份/完整性检查、权限/模型能力盘点和 Web 工作区测试夹具；WT01 通过。详情、截图哈希、命令输出和限制见 [W00 基线](verification/workspace-redesign/W00-baseline.md) 与 [实施默认值](verification/workspace-redesign/W00-implementation-defaults.md)。
+
+- 新增 4 个夹具契约测试并接入 `npm test`；当前 61 项 Node 测试全部通过。
+- 旧库备份 `PRAGMA integrity_check = ok`；旧任务仍可打开，新增模型列迁移尚未实施。
+- 已配置 DeepSeek 的 `deepseek-flash` 与 `deepseek-v4-pro` 可用；没有执行真实切换或模型调用。
+- `tests/workspace-light.tests.ps1` 仍因旧 Demo 缺少 `document.svg` 失败；文档测试脚本已补 UTF-8 BOM，可在 Windows PowerShell 5.1 执行。
+- W01–W05 和 WT02–WT19 仍未执行，不能把本节当作工作台改版完成或科研验收通过。

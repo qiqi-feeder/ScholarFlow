@@ -1,0 +1,41 @@
+{
+  "runs": [
+    {
+      "runId": "run_fixture_smoke",
+      "from": "running",
+      "event": "worker_restart",
+      "to": "unknown",
+      "verification": "unverified",
+      "terminal": false,
+      "notification": "Status unknown; verify the process and artifacts. Do not retry automatically."
+    },
+    {
+      "runId": "run_fixture_smoke",
+      "from": "running",
+      "event": "exit_zero",
+      "to": "succeeded",
+      "verification": "unverified",
+      "terminal": true,
+      "notification": "Process exited zero; scientific verification is still required."
+    },
+    {
+      "runId": "run_fixture_smoke",
+      "from": "running",
+      "event": "exit_nonzero",
+      "to": "failed",
+      "verification": "unverified",
+      "terminal": true,
+      "notification": "Run failed; inspect the log and exit code."
+    },
+    {
+      "runId": "run_fixture_smoke",
+      "from": "running",
+      "event": "user_cancel",
+      "to": "cancelled",
+      "verification": "unverified",
+      "terminal": true,
+      "notification": "Run cancelled independently of stopping the chat answer."
+    }
+  ],
+  "note": "Synthetic fixture for cross-view notification and state-label tests. unknown is never a success and exit zero is never reproduction success."
+}
