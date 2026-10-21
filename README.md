@@ -30,8 +30,8 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 ## 文档
 
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
-- [前端产品需求](docs/FRONTEND_PRODUCT_REQUIREMENTS.md)：面向后续原型的目标用户、使用场景、页面模块、交互/空状态/加载状态与移动端要求；视觉细节待原型确认。
-- [工作台产品形态讨论](docs/WORKSPACE_PRODUCT_DISCUSSION.md)：2026-10-21 确认右侧常驻会话、任务工作区方向；记录改动范围、待定项与后续验收，尚未实施界面改版。
+- [前端产品需求](docs/FRONTEND_PRODUCT_REQUIREMENTS.md)：目标用户、使用场景、页面模块、交互/空状态/加载状态与移动端要求；视觉沿用 Stitch 原稿，实施修正与原稿/排除清单见 PLAN 第 8.7 节，不再等待继续改稿。
+- [工作台产品形态讨论](docs/WORKSPACE_PRODUCT_DISCUSSION.md)：记录右侧常驻会话、任务工作区、模型切换，以及 2026-10-22 采用 Stitch 原稿准备实现的决定；尚未实施界面改版。
 - [运行指南](docs/RUN_GUIDE.md)：安装、配置、工作流、故障恢复与安全边界。
 - [验证记录](docs/VERIFICATION.md)：实际命令、测试结果、真实检索/构建证据与未执行项。
 - [DISCOVERY](docs/DISCOVERY.md)：需求来源、决策记录与当前阶段边界。

@@ -28,14 +28,15 @@ function Read-RequirementRows([string]$text, [string]$prefix, [int]$width) {
 
 function Assert-FrontendRequirements([string]$text, [string]$implementationPlan) {
     if (-not $text.Contains('本轮仅编写文档与文档校验，不实施功能代码。') -or
-        -not $text.Contains('视觉和交互细节待原型确认，未实施新前端。')) {
+        -not $text.Contains('视觉方向已确认，布局和交互问题在实现中修正，未实施新前端。')) {
         throw 'Missing requirements-only implementation boundary'
     }
     if (-not $text.Contains('这是全局模块 G01，不是只在“任务页面”才能看到的一张独立页面。')) {
         throw 'Conversation lost its persistent workspace scope'
     }
-    if (-not $text.Contains('不指定亮色/暗色、品牌色、字体、圆角、阴影、图标体系或卡片风格')) {
-        throw 'Prototype visual decisions were prematurely fixed'
+    if (-not $text.Contains('视觉以 Stitch 原稿为准，不采用最后一轮改乱后的变体。') -or
+        -not $text.Contains('不再等待新一轮原型确认')) {
+        throw 'Missing accepted visual baseline or implementation handoff'
     }
     if ($text.Contains([string][char]0xFFFD)) { throw 'Invalid requirements encoding' }
     if ($text -match '(?i)[A-Z]:[\\/]Users[\\/]') { throw 'Personal absolute path in product requirements' }
@@ -46,6 +47,9 @@ function Assert-FrontendRequirements([string]$text, [string]$implementationPlan)
     $checks = Read-RequirementRows (Get-RequirementSection $text 12) 'FT' 6
     $implementationChecks = Read-RequirementRows $implementationPlan 'WT' 7
     $modelRequirements = Read-RequirementRows (Get-RequirementSection $text 4) 'MS' 3
+    if (-not $checks.ContainsKey('FT12') -or $checks['FT12'][4] -ne 'WT17、WT18、WT19') {
+        throw 'Missing prototype correction acceptance traceability'
+    }
     foreach ($number in 1..7) {
         $id = 'MS{0:D2}' -f $number
         if (-not $modelRequirements.ContainsKey($id)) { throw "Missing model switching requirement: $id" }
@@ -150,7 +154,7 @@ foreach ($entry in @($readme, $plan)) {
     if (-not $entry.Contains('(docs/FRONTEND_PRODUCT_REQUIREMENTS.md)')) { throw 'Missing frontend requirements entry point' }
 }
 if (-not $readme.Contains('./tests/frontend-product-docs.tests.ps1')) { throw 'Missing frontend document verification command' }
-if (-not $plan.Contains('先核对并确认原型，再进入页面/组件设计与功能接入')) { throw 'Missing prototype-first handoff' }
+if (-not $plan.Contains('以 Stitch 原稿与已登记修正项进入页面/组件设计与功能接入')) { throw 'Missing accepted-prototype implementation handoff' }
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
     $caught = $null
@@ -161,7 +165,9 @@ function Assert-Rejected([scriptblock]$action, [string]$expected) {
 
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('本轮仅编写文档与文档校验，不实施功能代码。', '立即实施功能。')) $plan } 'requirements-only implementation boundary'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('这是全局模块 G01，不是只在“任务页面”才能看到的一张独立页面。', '仅在任务页面显示会话。')) $plan } 'persistent workspace scope'
-Assert-Rejected { Assert-FrontendRequirements ($document.Replace('不指定亮色/暗色、品牌色、字体、圆角、阴影、图标体系或卡片风格', '固定旧版视觉风格')) $plan } 'visual decisions were prematurely fixed'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('视觉以 Stitch 原稿为准，不采用最后一轮改乱后的变体。', '直接采用最新变体。')) $plan } 'accepted visual baseline'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('不再等待新一轮原型确认', '继续等待新一轮原型确认')) $plan } 'implementation handoff'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| FT12 |', '| FT99 |')) $plan } 'prototype correction acceptance traceability'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('## 2. 目标用户', '## 用户未登记')) $plan } 'Missing requirement section: 2'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| SC06 |', '| SC99 |')) $plan } 'Missing core scenario'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('| P04 | 材料阅读与笔记 |', '| P99 | 材料阅读与笔记 |')) $plan } 'Missing core page'

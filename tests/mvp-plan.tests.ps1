@@ -129,9 +129,69 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     }
 }
 
+function Assert-StitchHandoff([string]$text) {
+    $section = [regex]::Match($text, '(?ms)^### 8\.7 Stitch 原稿与实现修正清单.*\z').Value
+    if (-not $section -or -not $section.Contains('视觉以 Stitch 原稿为准，不采用最后一轮改乱后的变体。') -or
+        -not $text.Contains('不再以等待用户提供新原型或继续修改 Stitch 为前置条件')) {
+        throw 'Missing accepted Stitch baseline or implementation readiness'
+    }
+    $sources = Read-PlanRows $section 'SB' 5
+    $excluded = Read-PlanRows $section 'EX' 3
+    $issues = Read-PlanRows $section 'UI' 7
+    $milestones = Read-PlanRows $text 'W' 6
+    $checks = Read-PlanRows $text 'WT' 7
+    $baselineIds = @('8fc29cdfbd134d8a8b65083f5989b934', 'a9cc6868af11461c8e2919a8c75bddcd',
+        'fefc530a924645208f8feba7d63543d4', 'b0e0ed0532684c0bba4da8c0d5138551',
+        '3ee648ba087b4d4cb383285c38f7be92', '0946e12b728e4bf1a9c2ee816fc3d5ba', '8f1f08dcd38d4a0da68b218aec38b00c')
+    $excludedIds = @('ab6b71c263744d298bcc758c94c70751', 'c779435d514a49a5bff06f8e97ef6497',
+        '58b36ec27552416996cc8065959ea116', 'f29c34379d87493dbac7a329e97efd5f')
+    if ($sources.Count -ne 7 -or $excluded.Count -ne 4 -or $issues.Count -ne 9) { throw 'Incomplete Stitch handoff inventory' }
+    foreach ($index in 0..6) {
+        $id = 'SB{0:D2}' -f ($index + 1)
+        $expected = 'projects/251310333590789772/screens/' + $baselineIds[$index]
+        if (-not $sources.ContainsKey($id) -or $sources[$id][2].Trim('`') -ne $expected) {
+            throw 'Wrong Stitch baseline resource'
+        }
+        $role = if ($index -lt 5) { '视觉原稿' } else { '辅助状态参考' }
+        if ($sources[$id][4] -ne $role) { throw 'Wrong Stitch baseline role' }
+        if ($sources[$id][3].Trim('`') -notmatch '^projects/251310333590789772/(files/\d+|screens/[a-f0-9]{32}/fileEntries/screenshot)$') {
+            throw 'Invalid Stitch screenshot resource'
+        }
+    }
+    foreach ($index in 0..3) {
+        $id = 'EX{0:D2}' -f ($index + 1)
+        if (-not $excluded.ContainsKey($id) -or
+            $excluded[$id][2].Trim('`') -ne ('projects/251310333590789772/screens/' + $excludedIds[$index])) {
+            throw 'Wrong rejected Stitch variant'
+        }
+    }
+    foreach ($number in 1..9) {
+        $id = 'UI{0:D2}' -f $number
+        if (-not $issues.ContainsKey($id)) { throw 'Missing UI correction' }
+        $row = $issues[$id]
+        if ($row[6] -ne '待实施') { throw 'UI correction falsely closed' }
+        $nodes = @([regex]::Matches($row[4], 'W\d{2}') | ForEach-Object { $_.Value })
+        $tests = @([regex]::Matches($row[5], 'WT\d{2}') | ForEach-Object { $_.Value })
+        if ($nodes.Count -eq 0 -or $tests.Count -eq 0) { throw 'UI correction missing execution traceability' }
+        $assigned = @{}
+        foreach ($node in $nodes) {
+            if (-not $milestones.ContainsKey($node)) { throw 'UI correction references unknown milestone' }
+            foreach ($test in [regex]::Matches($milestones[$node][4], 'WT\d{2}')) { $assigned[$test.Value] = $true }
+        }
+        foreach ($test in $tests) {
+            if (-not $checks.ContainsKey($test)) { throw 'UI correction references unknown test' }
+            if (-not $assigned.ContainsKey($test)) { throw 'UI correction test not assigned to its milestones' }
+        }
+    }
+    foreach ($number in 17..19) {
+        if (-not $checks.ContainsKey(('WT{0:D2}' -f $number))) { throw 'Missing prototype correction test' }
+    }
+}
+
 Assert-PlanGraph $plan
 Assert-PlanLinks $plan
 Assert-WorkspaceIteration $plan $workspaceDiscussion
+Assert-StitchHandoff $plan
 if ($plan.Contains([string][char]0xFFFD)) { throw 'Invalid plan encoding' }
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
@@ -168,4 +228,15 @@ Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U99 |')
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U02 |').Replace('、U07', '')) $workspaceDiscussion } 'Product requirement has no workspace tests'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| 无 |')) $workspaceDiscussion } 'lacks product traceability'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 内容遮挡确认/取消按钮、会话无法展开、对照区水平溢出 |', '| |')) $workspaceDiscussion } 'Incomplete WT row'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('不再以等待用户提供新原型或继续修改 Stitch 为前置条件', '等待新一轮原型')) } 'implementation readiness'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| SB07 |', '| SB99 |')) } 'Wrong Stitch baseline resource'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('8fc29cdfbd134d8a8b65083f5989b934', 'ab6b71c263744d298bcc758c94c70751')) } 'Wrong Stitch baseline resource'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| 辅助状态参考 |', '| 视觉原稿 |')) } 'Wrong Stitch baseline role'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('f29c34379d87493dbac7a329e97efd5f', '00000000000000000000000000000000')) } 'Wrong rejected Stitch variant'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| UI09 |', '| UI99 |')) } 'Missing UI correction'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| WT03 | 待实施 |', '| WT03 | 已完成 |')) } 'UI correction falsely closed'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W99 | WT03 | 待实施 |')) } 'unknown milestone'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | WT99 | 待实施 |')) } 'unknown test'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | WT01 | 待实施 |')) } 'not assigned to its milestones'
+Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | 无 | 待实施 |')) } 'missing execution traceability'
 Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, authorization, links and $negativeCaseCount negative cases passed. Documentation only; workspace WT tests remain unexecuted."
