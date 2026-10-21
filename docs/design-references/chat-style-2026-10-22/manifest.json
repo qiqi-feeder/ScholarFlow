@@ -1,0 +1,86 @@
+{
+  "source": {
+    "filename": "original-872ca32a04d476dde52d317f3e36cfd5.mp4",
+    "sha256": "1b3f181a4d11f164dc550c42ece53dff0e46943f977fb7637cbe561ced08501c",
+    "width": 2880,
+    "height": 2160,
+    "duration_seconds": 8.98
+  },
+  "processing": "Native-resolution video frames; crop only. Overview thumbnails are resized for browsing. No generative editing.",
+  "frames": [
+    {
+      "file": "01-home-collapsed.png",
+      "label": "首页：导航收起",
+      "timestamp_seconds": 4.6,
+      "crop_xyxy": [
+        125,
+        140,
+        2755,
+        2020
+      ],
+      "width": 2630,
+      "height": 1880,
+      "sha256": "fd8b2e5762d678dda67d51ac46b282726ba8a2f5dcedd031c7e5f3ae2f31ff1e"
+    },
+    {
+      "file": "02-home-expanded.png",
+      "label": "首页：导航展开",
+      "timestamp_seconds": 8.6,
+      "crop_xyxy": [
+        125,
+        140,
+        2755,
+        2020
+      ],
+      "width": 2630,
+      "height": 1880,
+      "sha256": "9232541908e55cf530c6470b80b3111492b964998cc66ee75b796c23fc6cc1db"
+    },
+    {
+      "file": "03-cards-and-shortcuts.png",
+      "label": "卡片与快捷操作",
+      "timestamp_seconds": 4.6,
+      "crop_xyxy": [
+        760,
+        960,
+        2250,
+        1450
+      ],
+      "width": 1490,
+      "height": 490,
+      "sha256": "4d68f9d9ca19e8d572dd0f3900a5bffc82fbe677e25a101c0355ef48f4bf426d"
+    },
+    {
+      "file": "04-composer.png",
+      "label": "输入框细节",
+      "timestamp_seconds": 4.6,
+      "crop_xyxy": [
+        705,
+        1580,
+        2300,
+        1875
+      ],
+      "width": 1595,
+      "height": 295,
+      "sha256": "4815fc114f578186880fbbbae369da1cb857096d6f073065a1735c68350a6fe6"
+    },
+    {
+      "file": "05-navigation.png",
+      "label": "侧边导航细节",
+      "timestamp_seconds": 8.6,
+      "crop_xyxy": [
+        130,
+        155,
+        725,
+        2005
+      ],
+      "width": 595,
+      "height": 1850,
+      "sha256": "f0ab5db78a939f9c0a6f3543ff5f0d5d92e737afaefe1433ad6e3a100773a6a6"
+    }
+  ],
+  "overview": {
+    "file": "00-overview.png",
+    "sha256": "6243554a67a7aee4381709c7c1902bad81e2b42eebb0a873949ff6921e658f26"
+  }
+}
