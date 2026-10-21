@@ -68,10 +68,12 @@ function Assert-PlanLinks([string]$text) {
 function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     $section = [regex]::Match($text, '(?ms)^## 8\. 本轮工作台改版实施计划.*\z').Value
     if (-not $section) { throw 'Missing workspace iteration plan' }
-    if (-not $section.Contains('授权边界：本次只更新计划及文档校验，不实施功能代码。')) {
+    if (-not $section.Contains('授权边界：W00 只做基线、文档与测试夹具，不实施业务功能。') -and
+        -not $section.Contains('授权边界：本次只更新计划及文档校验，不实施功能代码。')) {
         throw 'Workspace plan lost documentation-only authorization'
     }
-    if (-not $section.Contains('状态：待实施；本轮功能与 WT 验收均未执行。')) {
+    $baselineComplete = $section.Contains('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。')
+    if (-not $baselineComplete -and -not $section.Contains('状态：待实施；本轮功能与 WT 验收均未执行。')) {
         throw 'Workspace plan lost its unimplemented status'
     }
     if (-not $section.Contains('不通过新界面绕过后端约束') -or -not $section.Contains('不顺带扩大 Agent 写权限')) {
@@ -89,7 +91,11 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     $coveredProduct = @{}
     foreach ($id in $milestones.Keys) {
         $row = $milestones[$id]
-        if ($row[5] -ne '待实施') { throw "Workspace milestone is not pending: $id" }
+        if ($id -eq 'W00' -and $baselineComplete) {
+            if ($row[5] -notmatch '^已完成：' -or -not $row[5].Contains('WT01')) {
+                throw 'Workspace baseline lacks completion evidence'
+            }
+        } elseif ($row[5] -ne '待实施') { throw "Workspace milestone is not pending: $id" }
         $deps = @([regex]::Matches($row[1], 'W\d+') | ForEach-Object { $_.Value })
         if ($row[1] -ne '无' -and $deps.Count -eq 0) { throw "Invalid workspace dependency: $id" }
         foreach ($dep in $deps) {
@@ -105,7 +111,9 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     }
     foreach ($id in $checks.Keys) {
         $row = $checks[$id]
-        if ($row[6] -ne '未执行') { throw "Workspace acceptance was promoted: $id" }
+        if ($id -eq 'WT01' -and $baselineComplete) {
+            if ($row[6] -notmatch '^通过：W00 基线') { throw 'Workspace baseline acceptance lacks evidence' }
+        } elseif ($row[6] -ne '未执行') { throw "Workspace acceptance was promoted: $id" }
         if (-not $usedChecks.ContainsKey($id)) { throw "Unassigned workspace test: $id" }
         $references = @([regex]::Matches($row[2], 'U\d+') | ForEach-Object { $_.Value })
         if ($references.Count -eq 0) { throw "Workspace test lacks product traceability: $id" }
@@ -169,7 +177,10 @@ function Assert-StitchHandoff([string]$text) {
         $id = 'UI{0:D2}' -f $number
         if (-not $issues.ContainsKey($id)) { throw 'Missing UI correction' }
         $row = $issues[$id]
-        if ($row[6] -ne '待实施') { throw 'UI correction falsely closed' }
+        if ($id -eq 'UI09' -and $milestones['W00'][5] -match '^已完成：') {
+            if ($row[6] -notmatch '^已完成：W00 保存 SB01–SB07/EX01–EX04' -or
+                $milestones['W00'][5] -notmatch '^已完成：') { throw 'UI baseline completion lacks evidence' }
+        } elseif ($row[6] -ne '待实施') { throw 'UI correction falsely closed' }
         $nodes = @([regex]::Matches($row[4], 'W\d{2}') | ForEach-Object { $_.Value })
         $tests = @([regex]::Matches($row[5], 'WT\d{2}') | ForEach-Object { $_.Value })
         if ($nodes.Count -eq 0 -or $tests.Count -eq 0) { throw 'UI correction missing execution traceability' }
@@ -212,8 +223,8 @@ Assert-Rejected { Assert-PlanGraph ($plan.Replace('| M0 | 无 |', '| M0 | |')) }
 Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 集成 |', '| V01 | |')) } 'Incomplete V row'
 Assert-Rejected { Assert-PlanLinks '[missing](no-such-mvp-plan-file.md)' } 'Broken plan link'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('## 8. 本轮工作台改版实施计划', '## 8. 无本轮计划')) $workspaceDiscussion } 'Missing workspace iteration plan'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('授权边界：本次只更新计划及文档校验，不实施功能代码。', '授权立即实施。')) $workspaceDiscussion } 'documentation-only authorization'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('状态：待实施；本轮功能与 WT 验收均未执行。', '状态：已完成。')) $workspaceDiscussion } 'unimplemented status'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('授权边界：W00 只做基线、文档与测试夹具，不实施业务功能。', '授权立即实施。').Replace('授权边界：本次只更新计划及文档校验，不实施功能代码。', '授权立即实施。')) $workspaceDiscussion } 'documentation-only authorization'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。', '状态：已完成。').Replace('状态：待实施；本轮功能与 WT 验收均未执行。', '状态：已完成。')) $workspaceDiscussion } 'unimplemented status'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('不顺带扩大 Agent 写权限', '允许任意写权限')) $workspaceDiscussion } 'permission boundary'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('本轮不能标全部完成', '所有情况均可完成')) $workspaceDiscussion } 'completion evidence boundary'
 Assert-Rejected { Assert-WorkspaceIteration ($plan + "`n| W00 | 无 | duplicate | Web | WT01 | 待实施 |") $workspaceDiscussion } 'Duplicate W ID'
@@ -222,7 +233,7 @@ Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| W01 | W00 |', '| W
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| W01 | W00 |', '| W01 | W02 |')) $workspaceDiscussion } 'Cyclic workspace dependencies'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| WT01 | 基线/兼容 |', '| WT99 | 基线/兼容 |')) $workspaceDiscussion } 'Unknown workspace test'
 Assert-Rejected { Assert-WorkspaceIteration ($plan + "`n| WT99 | 单测 | U01 | positive | negative | evidence | 未执行 |") $workspaceDiscussion } 'Unassigned workspace test'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| WT01 | 待实施 |', '| WT01 | 已完成 |')) $workspaceDiscussion } 'Workspace milestone is not pending'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| WT02、WT03、WT16 | 待实施 |', '| WT02、WT03、WT16 | 已完成 |')) $workspaceDiscussion } 'Workspace milestone is not pending'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 未执行 |', '| 已通过 |')) $workspaceDiscussion } 'Workspace acceptance was promoted'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U99 |')) $workspaceDiscussion } 'Unknown workspace product requirement'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| U07 |', '| U02 |').Replace('、U07', '')) $workspaceDiscussion } 'Product requirement has no workspace tests'
@@ -239,4 +250,18 @@ Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 
 Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | WT99 | 待实施 |')) } 'unknown test'
 Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | WT01 | 待实施 |')) } 'not assigned to its milestones'
 Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| W01 | WT03 | 待实施 |', '| W01 | 无 | 待实施 |')) } 'missing execution traceability'
-Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, authorization, links and $negativeCaseCount negative cases passed. Documentation only; workspace WT tests remain unexecuted."
+if ($plan.Contains('状态：W00 基线已完成（WT01 通过）')) {
+    Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| WT01 | 已完成：', '| WT01 | 待实施：')) $workspaceDiscussion } 'baseline lacks completion evidence'
+    Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 通过：W00 基线', '| 待核对：W00 基线')) $workspaceDiscussion } 'baseline acceptance lacks evidence'
+    Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| 已完成：W00 保存 SB01–SB07/EX01–EX04', '| 待实施：W00 保存 SB01–SB07/EX01–EX04')) } 'UI baseline completion lacks evidence'
+}
+
+# A documentation-only change may be committed separately from a W00 evidence update.
+# Validate the original pending baseline as well as an evidenced completed baseline.
+$pendingPlan = $plan.Replace('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。', '状态：待实施；本轮功能与 WT 验收均未执行。')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W00 \|[^\r\n]*\|) 已完成：[^\r\n]+$', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT01 \|[^\r\n]*\|) 通过：[^\r\n]+$', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+$', '$1 待实施 |')
+Assert-WorkspaceIteration $pendingPlan $workspaceDiscussion
+Assert-StitchHandoff $pendingPlan
+Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Documentation only; WT02-WT19 remain unexecuted."
