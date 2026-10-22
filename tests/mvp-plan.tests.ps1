@@ -94,6 +94,7 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     $coveredProduct = @{}
     $implementedChecks = @{}
     $reviewPending = @{}
+    $reviewFailed = @{}
     foreach ($id in $milestones.Keys) {
         $row = $milestones[$id]
         if ($id -eq 'W00' -and $baselineComplete) {
@@ -109,8 +110,13 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
                 -not $row[5].Contains('WT03') -or -not $row[5].Contains('WT16')) {
                 throw 'Workspace shell milestone lacks completion evidence'
             }
-        } elseif ($id -match '^W0[2-5]$' -and $row[5] -match '^(已完成|待用户确认)：') {
+        } elseif ($id -match '^W0[2-5]$' -and $row[5] -match '^(已完成|待用户确认|验收未通过)：') {
             $reviewPending[$id] = $row[5] -match '^待用户确认：'
+            $reviewFailed[$id] = $row[5] -match '^验收未通过：'
+            if ($reviewFailed[$id] -and (-not $row[5].Contains('W02-W05-review-issues.md') -or
+                -not @([regex]::Matches($row[4], 'WT\d+') | Where-Object { $checks[$_.Value][6] -match '^不通过：' }).Count)) {
+                throw 'Rejected workspace milestone lacks failed acceptance evidence'
+            }
             if ($reviewPending[$id] -and -not @([regex]::Matches($row[4], 'WT\d+') | Where-Object { $checks[$_.Value][6] -match '^待确认：' }).Count) {
                 throw 'Pending user review has no pending acceptance'
             }
@@ -143,7 +149,7 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
         } elseif ($w01Complete -and @('WT02', 'WT03', 'WT16') -contains $id) {
             if ($row[6] -notmatch '^通过：W01 ') { throw 'Workspace shell acceptance lacks evidence' }
         } elseif ($implementedChecks.ContainsKey($id)) {
-            $expectedStatus = if ($reviewPending[$implementedChecks[$id]]) { '^(通过|待确认)：' } else { '^通过：' }
+            $expectedStatus = if ($reviewFailed[$implementedChecks[$id]]) { '^(通过|不通过|待复验)：' } elseif ($reviewPending[$implementedChecks[$id]]) { '^(通过|待确认)：' } else { '^通过：' }
             if ($row[6] -notmatch ($expectedStatus + $implementedChecks[$id] + ' ')) { throw 'Completed workspace acceptance lacks evidence' }
         } elseif ($row[6] -ne '未执行') { throw "Workspace acceptance was promoted: $id" }
         if (-not $usedChecks.ContainsKey($id)) { throw "Unassigned workspace test: $id" }
@@ -212,8 +218,10 @@ function Assert-StitchHandoff([string]$text) {
         if ($id -eq 'UI09' -and $milestones['W00'][5] -match '^已完成：') {
             if ($row[6] -notmatch '^已完成：W00 保存 SB01–SB07/EX01–EX04' -or
                 $milestones['W00'][5] -notmatch '^已完成：') { throw 'UI baseline completion lacks evidence' }
+        } elseif ($row[6] -match '^待复验：') {
+            if ($milestones['W05'][5] -notmatch '^验收未通过：' -or -not $row[6].Contains('W02-W05-review-issues.md')) { throw 'UI review lacks failure evidence' }
         } elseif ($row[6] -match '^已完成：') {
-            if ($milestones['W05'][5] -notmatch '^已完成：' -or $row[6] -notmatch '\[.+?\]\((docs/verification/workspace-redesign/[^)]+\.md)\)' -or
+            if ($milestones['W05'][5] -notmatch '^(已完成|验收未通过)：' -or $row[6] -notmatch '\[.+?\]\((docs/verification/workspace-redesign/[^)]+\.md)\)' -or
                 -not (Test-Path -LiteralPath (Join-Path $repositoryRoot $Matches[1]))) { throw 'UI correction falsely closed' }
             foreach ($check in [regex]::Matches($row[5], 'WT\d{2}')) {
                 if ($checks.ContainsKey($check.Value) -and $checks[$check.Value][6] -notmatch '^通过：') { throw 'UI correction has unpassed acceptance' }
@@ -308,10 +316,10 @@ $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT02 \|[^\r\n]*\|) (?:�
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT03 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT16 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI0[1-8] \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI0[1-8] \|[^\r\n]*\|) (?:已完成|待复验)：[^\r\n]+(?=\r?$)', '$1 待实施 |')
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^状态：W00 基线已完成[^\r\n]+', '状态：待实施；本轮功能与 WT 验收均未执行。')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W0[2-5] \|[^\r\n]*\|) (?:已完成|待用户确认)：[^\r\n]+(?=\r?$)', '$1 待实施 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT\d+ \|[^\r\n]*\|) (?:通过|待确认)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W0[2-5] \|[^\r\n]*\|) (?:已完成|待用户确认|验收未通过)：[^\r\n]+(?=\r?$)', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT\d+ \|[^\r\n]*\|) (?:通过|待确认|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
 Assert-WorkspaceIteration $pendingPlan $workspaceDiscussion
 Assert-Rejected { Assert-WorkspaceIteration ($pendingPlan.Replace('| 未执行 |', '| 已通过 |')) $workspaceDiscussion } 'Workspace acceptance was promoted'
 if ($plan -match '待用户确认：') {

@@ -1,5 +1,7 @@
 # 验证记录（更新至 2026-10-22）
 
+最新工作台独立验收：W02、W03、W05 待修复复验，W04 本次通过；WT06、WT09、WT10、WT13 不通过，具体反例与已通过的当前检查见 [剩余验收问题](verification/workspace-redesign/W02-W05-review-issues.md)。其余段落保留历史执行记录。
+
 最新工作台结论：W00–W05、WT01–WT19 已按阶段完成，W02 视觉由用户确认。最终适用检查为类型/构建、72 项 Node 测试（71 通过、1 项双模型真实调用默认跳过）、2 项浏览器回归、1 项显式执行的真实 DeepSeek 引用/工具/宿主重启验证。详细证据与截图见 [W05 验收](verification/workspace-redesign/W05-regression.md)。下文 W00/W01 的“未实施/验收失败”保留为当时历史，以 W01 修复复验和 W05 为当前结论；不改变 V09/V13/V15/V16 的独立验收边界。
 
 本文件记录实际执行过的命令、环境和结果，以及尚未执行的验收项。它不替代 [PLAN](../PLAN.md) 的验收标准；“部分”或“未执行”不会被写成完成。2026-10-22 的 W00 工作台基线记录在 [docs/verification/workspace-redesign/W00-baseline.md](verification/workspace-redesign/W00-baseline.md)，W01 外壳与模型记录在同目录 [W01-shell-models.md](verification/workspace-redesign/W01-shell-models.md)，不改变 V01–V16 状态。
