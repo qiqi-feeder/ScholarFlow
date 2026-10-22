@@ -7,6 +7,8 @@ export interface Project {
   updatedAt: string;
 }
 
+export type { MessageReference, ResolvedReference } from "@scholarflow/research";
+
 export interface Task {
   id: string;
   projectId: string;

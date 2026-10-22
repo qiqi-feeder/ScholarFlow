@@ -24,6 +24,8 @@ import {
   type StreamEvent,
   type Task,
   type TaskModel,
+  type MessageReference,
+  type ResolvedReference,
 } from "./api";
 
 type Tab = WorkView;
@@ -176,6 +178,7 @@ export default function App() {
   const [drafts, setDrafts] = useStoredState<Record<string, string>>("scholarflow.workspace.drafts.v1", {}, (v): v is Record<string, string> => !!v && typeof v === "object" && Object.values(v).every((text) => typeof text === "string"));
   const [mobileChat, setMobileChat] = useState(false);
   const draftKey = `${projectId}/${taskId}`;
+  const [references, setReferences] = useStoredState<ResolvedReference[]>(`scholarflow.workspace.references.v1.${owner}`, [], (v): v is ResolvedReference[] => Array.isArray(v) && v.length <= 8 && v.every((r) => r && r.projectId === projectId && typeof r.id === "string" && typeof r.version === "string" && typeof r.text === "string"));
   const message = drafts[draftKey] ?? "";
   const setMessage = (value: string) => setDrafts((previous) => ({ ...previous, [draftKey]: value }));
   const streamAbort = useRef<AbortController | null>(null);
@@ -454,15 +457,20 @@ export default function App() {
     const target = { projectId, taskId };
     setBusy(true);
     const text = message;
+    const sentReferences = references;
     setMessage("");
+    setReferences([]);
     try {
       await post(`/api/projects/${projectId}/tasks/${taskId}/messages`, {
         text,
         clientId: `msg_${crypto.randomUUID()}`,
+        references: sentReferences,
       });
     } catch (err) {
       fail(err);
       setDrafts((previous) => ({ ...previous, [`${target.projectId}/${target.taskId}`]: previous[`${target.projectId}/${target.taskId}`] || text }));
+      // Keep failed attachments on their original task, even if the user switched.
+      setReferences(sentReferences);
     } finally {
       setBusy(false);
     }
@@ -536,6 +544,24 @@ export default function App() {
   const secondaryObject = workspace.tabs.find((o) => objectKey(o) === workspace.secondary);
   const open = (object: WorkObject) => setWorkspace((s) => openObject(s, object));
   const selectObject = (object: WorkObject) => { open(object); setMobileChat(false); setDrawerOpen(false); };
+  const attachReference = async (reference: MessageReference) => {
+    if (!projectId || !taskId || !taskReady()) return;
+    const target = { projectId, taskId, epoch: taskLoadSeq.current };
+    try {
+      const response = await post<{ references: ResolvedReference[] }>(`/api/projects/${projectId}/tasks/${taskId}/references/resolve`, { references: [reference] });
+      if (target.epoch !== taskLoadSeq.current) return;
+      setReferences((previous) => [...previous.filter((r) => !(r.kind === reference.kind && r.id === reference.id && r.file === reference.file && r.page === reference.page && r.start === reference.start)), ...response.references].slice(-8));
+    } catch (err) { if (target.epoch === taskLoadSeq.current) fail(err); }
+  };
+  const referenceObject = (object: WorkObject): MessageReference | null => {
+    if (object.kind === "manuscript") {
+      const version = manuscript?.versions.find((v) => v.files.some((f) => f.path === object.id && f.sha256 === manuscript.files.find((e) => e.path === object.id)?.sha256));
+      if (!version) { setError("请先保存稿件版本，再添加引用。"); return null; }
+      return { kind: "manuscript", id: version.id, file: object.id, version: version.files.find((f) => f.path === object.id)!.sha256 };
+    }
+    return { kind: object.kind, id: object.kind === "review" ? `${taskId}:${object.id}` : object.id, version: object.version ?? "",
+      ...(object.kind === "material" && materials.find((m) => m.id === object.id)?.mediaType === "application/pdf" ? { page: workspace.reading[object.id] ?? 1 } : {}) };
+  };
   const renderMaterial = (object: WorkObject) => {
     const material = materials.find((m) => m.id === object.id);
     if (!material) return <p role="status">材料已不可用，请关闭标签或重新选择。</p>;
@@ -544,7 +570,7 @@ export default function App() {
       {material.mediaType === "application/pdf"
         ? <PdfPreview title={`原文 ${material.title}`} url={`/api/projects/${projectId}/materials/${material.id}/file`} page={workspace.reading[material.id] ?? 1} onPage={(page) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: page } }))} />
         : <iframe title={`原文 ${material.title}`} sandbox="allow-same-origin" src={`/api/projects/${projectId}/materials/${material.id}/file`} />}
-      <details><summary>笔记与来源</summary><p>{material.note || "暂无可读文本；可查看原始文件或导入可读版本。"}</p><p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
+      <details><summary>笔记与来源</summary>{material.note ? <ReferenceText text={material.note} onReference={(selection) => void attachReference({ kind: "material", id: material.id, version: material.sha256, ...selection })} /> : <p>暂无可读文本；可查看原始文件或导入可读版本。</p>}<p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
     </section>;
   };
 
@@ -685,6 +711,7 @@ export default function App() {
         ) : (
           <>
             <div className="workspace-toolbar"><div className="workspace-view-title"><Icon name={tab} size={17} /><h3>{tab === "materials" ? "文献阅读" : tab === "manuscript" ? "稿件工作区" : TABS.find((t) => t.id === tab)?.label}</h3></div><div className="workspace-tools"><label><Icon name="compare" size={15} /><select aria-label="工作区布局" value={workspace.layout} onChange={(e) => setWorkspace((s) => ({ ...s, layout: e.target.value as typeof s.layout }))}><option value="single">单内容</option><option value="split">双内容对照</option><option value="list-detail">列表与详情</option></select></label><button className="icon-button" aria-label="返回工作视图" title="返回工作视图" onClick={() => setWorkspace((s) => ({ ...s, active: null }))}><Icon name="work" size={16} /></button></div></div>
+            {activeObject && <div className="reference-action"><button disabled={!taskReady()} onClick={() => { const reference = referenceObject(activeObject); if (reference) void attachReference(reference); }}>引用当前内容</button><span>仅加入下一条消息；打开内容不会自动发送</span></div>}
             {workspace.tabs.length > 0 && <nav className="object-tabs" aria-label="已打开内容">{workspace.tabs.map((object) => <span className={workspace.active === objectKey(object) ? "is-active" : ""} key={objectKey(object)}><button className="object-tab-title" aria-pressed={workspace.active === objectKey(object)} onClick={() => open(object)}>{object.title}</button><button className="tab-action" aria-label={`固定 ${object.title}`} title={object.pinned ? "取消固定" : "固定标签"} aria-pressed={!!object.pinned} onClick={() => setWorkspace((s) => ({ ...s, tabs: s.tabs.map((o) => objectKey(o) === objectKey(object) ? { ...o, pinned: !o.pinned } : o) }))}><Icon name="pin" size={13} /></button><button className="tab-action" aria-label={`对照 ${object.title}`} title="加入对照" onClick={() => setWorkspace((s) => ({ ...s, secondary: objectKey(object), layout: "split" }))}><Icon name="compare" size={13} /></button><button className="tab-action" aria-label={`关闭 ${object.title}`} title="关闭标签" onClick={() => { if (object.kind === "manuscript" && dirtyFiles.includes(object.id)) { open(object); setCloseRequest(object); } else setWorkspace((s) => closeObject(s, objectKey(object))); }}><Icon name="close" size={13} /></button></span>)}</nav>}
             {tab === "materials" && activeObject?.kind === "material" && <div className={`object-content ${workspace.layout === "split" ? "split" : ""}`}>{renderMaterial(activeObject)}{workspace.layout === "split" && secondaryObject?.kind === "material" && secondaryObject.id !== activeObject.id && renderMaterial(secondaryObject)}</div>}
             {tab === "review" && <section className="card review-panel">
@@ -764,6 +791,7 @@ export default function App() {
                   taskId={taskId}
                   data={manuscript}
                   build={currentManuscriptBuild}
+                  onReference={(reference) => void attachReference(reference)}
                   onChanged={() => { setError(null); void loadProject(projectId); }}
                   fail={fail}
                 />
@@ -817,6 +845,8 @@ export default function App() {
           modelAvailable={modelAvailable}
           switchingModel={switchingModel}
           onSwitchModel={(provider, id) => void switchTaskModel(provider, id)}
+          references={references}
+          removeReference={(index) => setReferences((items) => items.filter((_, i) => i !== index))}
         />
       </aside>
     </div>
@@ -895,7 +925,14 @@ function OverviewPanel(props: {
   );
 }
 
+function ReferenceText({ text, onReference }: { text: string; onReference: (selection: { start: number; end: number; quote: string }) => void }) {
+  const [selection, setSelection] = useState({ start: 0, end: 0, quote: "" });
+  return <div className="reference-text"><textarea aria-label="可引用来源文本" value={text} readOnly rows={6} onSelect={(e) => { const t = e.currentTarget; setSelection({ start: t.selectionStart, end: t.selectionEnd, quote: text.slice(t.selectionStart, t.selectionEnd) }); }} /><button disabled={!selection.quote || selection.quote.length > 4000} onClick={() => onReference(selection)}>引用所选文本</button></div>;
+}
+
 function ChatPanel(props: {
+  references: ResolvedReference[];
+  removeReference: (index: number) => void;
   detail: TaskDetail | null;
   events: StreamEvent[];
   liveText: string;
@@ -921,7 +958,7 @@ function ChatPanel(props: {
     if (followAnswer.current && chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight;
   }, [props.events.length, props.liveText]);
   const eventNodes = props.events.filter((event) =>
-    ["user_message", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
+    ["user_message", "message_context", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
   );
   if (!props.detail) {
     return (
@@ -970,6 +1007,7 @@ function ChatPanel(props: {
           void props.sendMessage();
         }}
       >
+        {props.references.length > 0 && <div className="reference-list" aria-label="本条消息引用">{props.references.map((r, index) => <div key={`${r.kind}-${r.id}-${index}`}><span title={r.text}>{r.title}{r.page ? ` · 第 ${r.page} 页` : ""}{r.quote ? " · 选区" : ""}</span><button type="button" aria-label={`移除引用 ${r.title}`} onClick={() => props.removeReference(index)}>×</button></div>)}</div>}
         <textarea
           rows={3}
           value={props.message}
@@ -1031,6 +1069,7 @@ function ChatPanel(props: {
 }
 
 function ChatEvent({ event }: { event: StreamEvent }) {
+  if (event.type === "message_context") return <details className="message-references"><summary>本条消息引用 · {event.data.references.length} 项</summary>{event.data.references.map((r: ResolvedReference, i: number) => <div key={i}><strong>{r.title}{r.page ? ` · 第 ${r.page} 页` : ""}</strong><p className="small">来源 {r.kind}/{r.id} · 版本 {r.version.slice(0, 12)}</p><pre>{r.text}</pre></div>)}</details>;
   if (event.type === "user_message") {
     return <div className="message user"><Markdown text={event.data.text} /></div>;
   }
@@ -1610,6 +1649,7 @@ function ResultsPanel(props: {
 }
 
 function ManuscriptPanel(props: {
+  onReference: (reference: MessageReference) => void;
   projectId: string;
   taskId: string | null;
   requestedFile?: string | null;
@@ -1638,6 +1678,7 @@ function ManuscriptPanel(props: {
   useEffect(() => { props.onDirtyFiles?.(Object.keys(fileDrafts)); }, [fileDrafts, props.onDirtyFiles]);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
+  const [selection, setSelection] = useState({ start: 0, end: 0, quote: "" });
   const [exported, setExported] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restoreVersion, setRestoreVersion] = useState("");
@@ -1789,14 +1830,18 @@ function ManuscriptPanel(props: {
         <label>稿件视图<select aria-label="稿件视图" value={editorMode} onChange={(e) => setEditorMode(e.target.value)}><option value="source">源码</option><option value="pdf">PDF</option><option value="compare">源码与 PDF 对照</option></select></label>
         <div className="row space-between">
           <h3>{file}</h3>
-          <button onClick={() => void save()} disabled={busy || conflict || !remote}>保存新版本</button>
+          <div className="row"><button disabled={dirty || !selection.quote || selection.quote.length > 4000 || busy} onClick={() => {
+            const version = props.data?.versions.find((v) => v.files.some((f) => f.path === file && f.sha256 === remote?.hash));
+            if (!version) { props.fail(new Error("请先保存稿件版本再引用选区")); return; }
+            props.onReference({ kind: "manuscript", id: version.id, version: remote!.hash, file, ...selection });
+          }}>引用稿件选区</button><button onClick={() => void save()} disabled={busy || conflict || !remote}>保存新版本</button></div>
         </div>
         {conflict && <div role="alert" className="notice warn-box">草稿与服务端版本冲突，禁止覆盖。<button onClick={() => { setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; }); }}>放弃本地草稿</button><details><summary>比较服务端正文</summary><pre>{remote?.content}</pre></details></div>}
         {dirty && <p role="status">未保存修改 · 本地草稿保留</p>}
         {stale && <p className="pdf-stale-note" role="status">源码已修改，当前 PDF 对应上次成功构建；请重新构建。</p>}
         {editorMode === "compare" && <div className="compare-side-toggle" role="group" aria-label="窄屏对照内容"><button aria-pressed={compareSide === "source"} onClick={() => setCompareSide("source")}>源码</button><button aria-pressed={compareSide === "pdf"} onClick={() => setCompareSide("pdf")}>PDF</button><span>空间不足时切换查看，另一侧位置保留</span></div>}
         <div className={`source-preview ${editorMode}`} data-side={compareSide}>
-          {editorMode !== "pdf" && <div className="code-editor"><div className="code-gutter" aria-hidden="true">{content.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}</div><textarea className="editor" value={content} disabled={!remote || remote.owner !== draftOwner} onScroll={(event) => { if (event.currentTarget.previousElementSibling) event.currentTarget.previousElementSibling.scrollTop = event.currentTarget.scrollTop; }} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} /></div>}
+          {editorMode !== "pdf" && <div className="code-editor"><div className="code-gutter" aria-hidden="true">{content.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}</div><textarea className="editor" value={content} disabled={!remote || remote.owner !== draftOwner} onSelect={(event) => { const target = event.currentTarget; setSelection({ start: target.selectionStart, end: target.selectionEnd, quote: target.value.slice(target.selectionStart, target.selectionEnd) }); }} onScroll={(event) => { if (event.currentTarget.previousElementSibling) event.currentTarget.previousElementSibling.scrollTop = event.currentTarget.scrollTop; }} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} /></div>}
           {editorMode !== "source" && (props.build ? <PdfPreview title="稿件 PDF" url={`/api/projects/${props.projectId}/manuscript/pdf?v=${props.build.version}`} /> : <p>尚无成功构建，请先构建 PDF。</p>)}
         </div>
       </section>

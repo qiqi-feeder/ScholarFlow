@@ -11,7 +11,8 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { resolveInsideRoot, type ProjectRecord, type TaskRecord } from "@scholarflow/research";
+import { resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference } from "@scholarflow/research";
+import { referencePrompt } from "./references.js";
 import type { AppConfig } from "./config.js";
 import type { ContextService } from "./context.js";
 import type { EventHub } from "./events.js";
@@ -49,7 +50,7 @@ export interface TaskModelSelection {
 }
 
 export interface AgentServiceLike {
-  sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void>;
+  sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string, references?: ResolvedReference[]): Promise<void>;
   stop(taskId: string): Promise<{ stopped: boolean }>;
   isRunning(taskId: string): boolean;
   listModels?(): Promise<ModelOption[]>;
@@ -436,19 +437,19 @@ export class PiAgentService implements AgentServiceLike {
     }
   }
 
-  async sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void> {
+  async sendMessage(project: ProjectRecord, task: TaskRecord, text: string, clientId: string, references: ResolvedReference[] = []): Promise<void> {
     if (this.busyTasks.has(task.id)) {
       throw new AgentBusyError("this task is answering or switching models; wait for it to become idle");
     }
     this.busyTasks.add(task.id);
     try {
-      await this.sendMessageInner(project, task, text, clientId);
+      await this.sendMessageInner(project, task, text, clientId, references);
     } finally {
       this.busyTasks.delete(task.id);
     }
   }
 
-  private async sendMessageInner(project: ProjectRecord, task: TaskRecord, text: string, clientId: string): Promise<void> {
+  private async sendMessageInner(project: ProjectRecord, task: TaskRecord, text: string, clientId: string, references: ResolvedReference[]): Promise<void> {
     let loaded: LoadedTask;
     try {
       loaded = await this.load(project, task);
@@ -468,13 +469,14 @@ export class PiAgentService implements AgentServiceLike {
     const userEvent = this.deps.repositories.appendEvent(project.id, task.id, "user_message", {
       text,
       clientId,
+      references,
     });
     this.deps.repositories.setClientMessageSeq(task.id, clientId, userEvent.seq);
     this.deps.events.publish(userEvent);
     const runningEvent = this.deps.repositories.appendEvent(project.id, task.id, "agent_status", { status: "running" });
     this.deps.events.publish(runningEvent);
     try {
-      await loaded.session.prompt(text);
+      await loaded.session.prompt(referencePrompt(text, references));
     } catch (error) {
       const message = (error as Error).message ?? String(error);
       const friendly = /api key|auth|unauthorized|401|403/i.test(message)

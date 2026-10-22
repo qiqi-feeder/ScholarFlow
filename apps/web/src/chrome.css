@@ -265,3 +265,14 @@ button.object-item[aria-pressed="true"] { color: #1d4ed8; background: #eff6ff; b
   .composer textarea { min-height: 80px; }
   .reader iframe { min-height: 400px; }
 }
+.reference-action { display:flex; align-items:center; gap:8px; padding:5px 16px; background:white; border-bottom:1px solid #e2e8f0; }
+.reference-action span { font-size:11px; color:#64748b; }
+.reference-action button { font-size:11px; padding:4px 8px; }
+.reference-list { max-height:130px; overflow:auto; display:grid; gap:4px; padding:4px; }
+.reference-list > div { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:12px; background:#f1f5f9; border-radius:4px; padding:3px 6px; }
+.reference-list span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reference-list button { padding:0 5px; }
+.message-references { font-size:12px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:8px; }
+.message-references pre { max-height:200px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+.reference-text textarea { width:100%; }
+@media(max-width:900px) { .reference-action span { display:none; } }

@@ -31,6 +31,7 @@ import { Repositories } from "./repos.js";
 import { ExperimentService, RunValidationError } from "./runs.js";
 import { CrossrefSearch } from "./search.js";
 import { SkillService } from "./skills.js";
+import { ReferenceError, resolveReferences } from "./references.js";
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -434,13 +435,25 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             if (agent.isRunning(task.id)) {
               throw new HttpError(409, "this task is answering or switching models; wait for it to become idle", "AGENT_BUSY");
             }
+            let references;
+            try { references = resolveReferences(repositories, project, task, body.references); }
+            catch (error) { throw new HttpError(400, error instanceof ReferenceError ? error.message : "引用文件不可用，请重新选择", "INVALID_REFERENCE"); }
             if (!repositories.claimClientMessage(task.id, clientId)) {
               return json(res, 200, { accepted: false, duplicate: true, latestSeq: repositories.latestEventSeq(task.id) });
             }
+            if (references.length) {
+              const event = repositories.appendEvent(project.id, task.id, "message_context", { clientId, references });
+              events.publish(event);
+            }
             void agent
-              .sendMessage(project, task, text, clientId)
+              .sendMessage(project, task, text, clientId, references)
               .catch((error) => logger(`agent message failed: ${(error as Error).message}`));
             return json(res, 202, { accepted: true, duplicate: false, latestSeq: repositories.latestEventSeq(task.id) });
+          }
+          if (method === "POST" && action === "references/resolve") {
+            const body = await readJson(req);
+            try { return json(res, 200, { references: resolveReferences(repositories, project, task, body.references) }); }
+            catch (error) { throw new HttpError(400, error instanceof ReferenceError ? error.message : "引用文件不可用，请重新选择", "INVALID_REFERENCE"); }
           }
           if (method === "POST" && action === "stop") {
             const result = await agent.stop(task.id);

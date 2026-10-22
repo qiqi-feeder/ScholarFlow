@@ -4,6 +4,24 @@ export type RunKind = "smoke" | "target";
 export type VerificationStatus = "unverified" | "verified" | "partial";
 export type AdmissionStatus = "sufficient" | "insufficient" | "unverified";
 export type PlanStatus = "draft" | "confirmed" | "rejected";
+
+/** Explicit, bounded, per-message source. Titles and excerpts are host resolved. */
+export interface MessageReference {
+  kind: "material" | "plan" | "run" | "result" | "manuscript" | "review";
+  id: string;
+  version: string;
+  file?: string;
+  page?: number;
+  start?: number;
+  end?: number;
+  quote?: string;
+}
+export interface ResolvedReference extends MessageReference {
+  projectId: string;
+  taskId: string | null;
+  title: string;
+  text: string;
+}
 export type MaterialKind = "paper" | "repository" | "dataset" | "note" | "other";
 
 export interface ProjectRecord {
