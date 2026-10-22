@@ -108,4 +108,25 @@ node --import tsx scripts/verify-pi-session.ts
 - Pi 对照评测、干净检出发布回归。
 - 旧静态 Demo 的缺失资源修复。
 
-W00 工作台基线与 W01 入口见 [W00 基线](verification/workspace-redesign/W00-baseline.md)；W01 外壳与任务级模型已有实现，但独立验收未通过，问题见 [W01 验收问题](verification/workspace-redesign/W01-review-issues.md)，原实现证据见 [W01 外壳与模型](verification/workspace-redesign/W01-shell-models.md)；W02–W05 尚未实施。
+工作台 W00–W05 已完成，WT01–WT19 证据见 [W05 交付验收](verification/workspace-redesign/W05-regression.md)；W02 视觉由用户查看后确认。真实科研目标请先确认 [科研验收执行卡](RESEARCH_ACCEPTANCE_CARD.md)，AF 能力批次仍是独立后续设计。
+
+## 9. 工作台改版操作与恢复
+
+- 左侧图标只切工作视图；顶部项目/任务选择决定会话归属。导航可收起，手机用“工作区/会话”和导航抽屉切换。
+- 在左侧打开具体对象后点“引用当前内容”，或在材料“笔记与来源”的可读文本、已保存稿件源码中选区后引用。输入区显示本条引用，可移除；打开文件不会自动发送。PDF 支持整篇/页码，摘要不冒充该页精确文本，不支持 OCR。
+- 引用发送时重新验证版本；失效/已删除/版本变化会明确拒绝，保留草稿。移除后重新添加以确认当前版本。历史引用保留接收时的文本快照，不随文件后来变化覆盖。
+- 聊天中点“查看产物/查看来源”才打开经宿主验证的对象。快照展示来源任务和版本，下方当前稿件可能更新；不会自动覆盖未保存稿件。
+- 后台通知覆盖所有工作视图和其他任务/项目，点击“查看运行”才定位来源；同一转移去重。首次打开建立基线，不承诺应用关闭期间离线通知。停止回答仍不会取消实验。
+- 布局、阅读页码、输入与编辑草稿、引用按浏览器和任务保存；存储禁用/配额不足时提示并保留内存。刷新或重启不自动提交消息、批准实验或覆盖稿件。关闭脏稿件可保存/放弃/取消。
+
+显式有界真实 API 复验（会发送两个逻辑消息，其中一次包含工具循环；临时测试项目清理后仅保留脱敏证据）：
+
+```powershell
+$env:SCHOLARFLOW_REAL_WORKSPACE_TEST='1'
+$env:SCHOLARFLOW_EVIDENCE_DIR='docs/verification/workspace-redesign/W05-evidence'
+npm run test:real-workspace
+Remove-Item Env:SCHOLARFLOW_REAL_WORKSPACE_TEST
+Remove-Item Env:SCHOLARFLOW_EVIDENCE_DIR
+```
+
+默认 `npm test` 不执行该调用。文档/证据验证另运行 `node --test tests/workspace-delivery-docs.test.mjs`。

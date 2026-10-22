@@ -420,15 +420,18 @@ export default function App() {
   useEffect(() => {
     if (!pendingOpen) return;
     if (projectId !== pendingOpen.projectId) { setProjectId(pendingOpen.projectId); return; }
-    const targetTask = pendingOpen.taskId ?? taskId;
+    const targetTask = pendingOpen.taskId ?? (tasks.some((task) => task.id === taskId) ? taskId : tasks[0]?.id);
     if (targetTask && taskId !== targetTask) { void loadTask(pendingOpen.projectId, targetTask); return; }
     if (!detail || detail.task.id !== targetTask || taskLoading) return;
     const r = pendingOpen;
-    setWorkspace((state) => openObject(state, { kind: r.kind, id: r.kind === "manuscript" ? r.file! : r.kind === "review" ? r.id.split(":")[1]! : r.id, title: r.title, version: r.version }));
+    setWorkspace((state) => {
+      const next = openObject(state, { kind: r.kind, id: r.kind === "manuscript" ? r.file! : r.kind === "review" ? r.id.split(":")[1]! : r.id, title: r.title, version: r.version });
+      return r.kind === "material" && r.page ? { ...next, reading: { ...next.reading, [r.id]: r.page } } : next;
+    });
     setSourcePreview(r);
     setPendingOpen(null);
     setMobileChat(false);
-  }, [pendingOpen, projectId, taskId, detail, taskLoading, loadTask]);
+  }, [pendingOpen, projectId, taskId, detail, taskLoading, loadTask, tasks]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -603,6 +606,10 @@ export default function App() {
   };
   const attachReference = async (reference: MessageReference) => {
     if (!projectId || !taskId || !taskReady()) return;
+    if (busy) { setError("当前消息仍在提交，请稍后再添加引用。"); return; }
+    if (references.length >= 8 && !references.some((r) => r.kind === reference.kind && r.id === reference.id && r.file === reference.file && r.page === reference.page && r.start === reference.start)) {
+      setError("每条消息最多引用 8 个来源，请先移除一项。"); return;
+    }
     const target = { projectId, taskId, epoch: taskLoadSeq.current };
     try {
       const response = await post<{ references: ResolvedReference[] }>(`/api/projects/${projectId}/tasks/${taskId}/references/resolve`, { references: [reference] });
@@ -772,6 +779,7 @@ export default function App() {
             <div className="workspace-toolbar"><div className="workspace-view-title"><Icon name={tab} size={17} /><h3>{tab === "materials" ? "文献阅读" : tab === "manuscript" ? "稿件工作区" : TABS.find((t) => t.id === tab)?.label}</h3></div><div className="workspace-tools"><label><Icon name="compare" size={15} /><select aria-label="工作区布局" value={workspace.layout} onChange={(e) => setWorkspace((s) => ({ ...s, layout: e.target.value as typeof s.layout }))}><option value="single">单内容</option><option value="split">双内容对照</option><option value="list-detail">列表与详情</option></select></label><button className="icon-button" aria-label="返回工作视图" title="返回工作视图" onClick={() => setWorkspace((s) => ({ ...s, active: null }))}><Icon name="work" size={16} /></button></div></div>
             {activeObject && <div className="reference-action"><button disabled={!taskReady()} onClick={() => { const reference = referenceObject(activeObject); if (reference) void attachReference(reference); }}>引用当前内容</button><span>仅加入下一条消息；打开内容不会自动发送</span></div>}
             {workspace.tabs.length > 0 && <nav className="object-tabs" aria-label="已打开内容">{workspace.tabs.map((object) => <span className={workspace.active === objectKey(object) ? "is-active" : ""} key={objectKey(object)}><button className="object-tab-title" aria-pressed={workspace.active === objectKey(object)} onClick={() => open(object)}>{object.title}</button><button className="tab-action" aria-label={`固定 ${object.title}`} title={object.pinned ? "取消固定" : "固定标签"} aria-pressed={!!object.pinned} onClick={() => setWorkspace((s) => ({ ...s, tabs: s.tabs.map((o) => objectKey(o) === objectKey(object) ? { ...o, pinned: !o.pinned } : o) }))}><Icon name="pin" size={13} /></button><button className="tab-action" aria-label={`对照 ${object.title}`} title="加入对照" onClick={() => setWorkspace((s) => ({ ...s, secondary: objectKey(object), layout: "split" }))}><Icon name="compare" size={13} /></button><button className="tab-action" aria-label={`关闭 ${object.title}`} title="关闭标签" onClick={() => { if (object.kind === "manuscript" && dirtyFiles.includes(object.id)) { open(object); setCloseRequest(object); } else setWorkspace((s) => closeObject(s, objectKey(object))); }}><Icon name="close" size={13} /></button></span>)}</nav>}
+            {sourcePreview && <section className="card source-snapshot" aria-label="来源快照"><div className="row space-between"><strong>{sourcePreview.title} · 来源快照</strong><button onClick={() => setSourcePreview(null)}>关闭来源快照</button></div><p className="small">来源任务 {sourcePreview.taskId ?? "项目共享"} · 版本 {sourcePreview.version.slice(0, 12)}{sourcePreview.page ? ` · 第 ${sourcePreview.page} 页` : ""}</p><pre>{sourcePreview.text}</pre><p className="muted small">下方为当前工作视图；此快照对应点击核对的版本，不会覆盖本地草稿。</p></section>}
             {tab === "materials" && activeObject?.kind === "material" && <div className={`object-content ${workspace.layout === "split" ? "split" : ""}`}>{renderMaterial(activeObject)}{workspace.layout === "split" && secondaryObject?.kind === "material" && secondaryObject.id !== activeObject.id && renderMaterial(secondaryObject)}</div>}
             {tab === "review" && <section className="card review-panel">
               <div className="row space-between"><h3>所选审稿意见</h3><span className="badge">回应草稿</span></div>
@@ -779,7 +787,6 @@ export default function App() {
               <label htmlFor="review-draft">逐条回应</label><p className="muted">记录修改、依据及仍需核对的事项。内容按当前任务和意见保留。</p>
               <textarea id="review-draft" rows={9} placeholder="围绕这条意见整理回应草稿…" aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} />
             </section>}
-            {sourcePreview && <section className="card source-snapshot" aria-label="来源快照"><div className="row space-between"><strong>{sourcePreview.title} · 来源快照</strong><button onClick={() => setSourcePreview(null)}>关闭来源快照</button></div><p className="small">来源任务 {sourcePreview.taskId ?? "项目共享"} · 版本 {sourcePreview.version.slice(0, 12)}{sourcePreview.page ? ` · 第 ${sourcePreview.page} 页` : ""}</p><pre>{sourcePreview.text}</pre><p className="muted small">下方为当前工作视图；此快照对应点击核对的版本，不会覆盖本地草稿。</p></section>}
             <div className="workspace-content">
               {tab === "work" && (
                 <OverviewPanel

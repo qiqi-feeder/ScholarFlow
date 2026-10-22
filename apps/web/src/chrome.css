@@ -282,4 +282,5 @@ button.object-item[aria-pressed="true"] { color: #1d4ed8; background: #eff6ff; b
 .activity-notices span { min-width:0; overflow-wrap:anywhere; }
 .activity-notices button { padding:3px 6px; flex-shrink:0; }
 .source-snapshot pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:240px; overflow:auto; font-size:12px; }
+.source-snapshot pre, .message-references pre { background:#f8fafc; color:#334155; border:1px solid #e2e8f0; }
 .system-note button { font-size:11px; padding:2px 6px; margin-left:6px; }

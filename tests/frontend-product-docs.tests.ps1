@@ -191,4 +191,4 @@ Assert-Rejected { Assert-FrontendRequirements $document ($plan.Replace('WT02、W
 Assert-Rejected { Assert-FrontendRequirements $document ($plan.Replace('FT11/MS01–MS07', '未关联模型需求')) } 'Model switching has no implementation milestone/test assignment'
 Assert-Rejected { Assert-RequirementLinks '[missing](missing-frontend-prd.md)' } 'Broken frontend requirement link'
 Assert-Rejected { Assert-FrontendRequirements ($document + [char]0xFFFD) $plan } 'Invalid requirements encoding'
-Write-Output "Frontend product requirements: users/scenarios, page modules, states, interactions, prototype handoff and $negativeCaseCount negative cases passed. Documentation only; frontend implementation remains pending."
+Write-Output "Frontend product requirements: users/scenarios, page modules, states, interactions, prototype handoff and $negativeCaseCount negative cases passed. Documentation contracts only; implementation status follows PLAN and runtime evidence."

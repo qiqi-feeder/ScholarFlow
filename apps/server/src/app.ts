@@ -452,6 +452,9 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
               throw new HttpError(409, "this task is answering or switching models; wait for it to become idle", "AGENT_BUSY");
             }
             let references;
+            if (Array.isArray(body.references) && body.references.some((reference) => !reference || typeof reference !== "object" || !(reference as Record<string, unknown>).version)) {
+              throw new HttpError(400, "请先解析并确认引用版本，再发送消息", "INVALID_REFERENCE");
+            }
             try { references = resolveReferences(repositories, project, task, body.references); }
             catch (error) { throw new HttpError(400, error instanceof ReferenceError ? error.message : "引用文件不可用，请重新选择", "INVALID_REFERENCE"); }
             if (!repositories.claimClientMessage(task.id, clientId)) {
@@ -943,7 +946,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
 
   const close = async () => {
     await agent.dispose();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    const closed = new Promise<void>((resolve) => server.close(() => resolve()));
+    // Event streams are long-lived; graceful shutdown must release them rather
+    // than waiting forever for a browser to close its SSE connection.
+    server.closeAllConnections();
+    await closed;
     db.close();
   };
 

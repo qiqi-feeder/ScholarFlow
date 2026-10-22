@@ -255,6 +255,7 @@ test("WT09/WT10: host-resolved references reject forgery, snapshot exact excerpt
     assert.equal(resolved.body.references[0].taskId, task.id);
     const invalid = [
       [ref, ref], Array(9).fill(ref), [{ ...ref, version: "wrong" }], [{ ...ref, quote: "forged" }], [{ ...ref, start: -1 }],
+      [{ ...ref, version: "" }],
       [{ ...ref, end: 10000 }], [{ kind: "material", id: "../../config", version: "" }], [{ ...ref, page: 1 }],
       [{ kind: "review", id: `${otherTask.id}:0`, version: "" }], [{ kind: "unknown", id: material.id, version: "" }],
     ];
@@ -304,6 +305,24 @@ test("WT09/WT10: host-resolved references reject forgery, snapshot exact excerpt
     } finally { await reopened.close(); }
   } finally {
     // app.close is not safe after the explicit database reopen check.
+    if (harness.app.server.listening) await harness.app.close();
+    rmSync(harness.root, { recursive: true, force: true });
+  }
+});
+
+test("host shutdown releases active SSE connections without waiting for the browser", { timeout: 5000 }, async () => {
+  const harness = await start({ withAgent: false });
+  try {
+    const project = (await api(harness, "POST", "/api/projects", { name: "SSE shutdown" })).body.project;
+    const task = (await api(harness, "POST", `/api/projects/${project.id}/tasks`, { title: "Stream", objective: "Close cleanly" })).body.task;
+    const response = await fetch(`${harness.base}/api/projects/${project.id}/tasks/${task.id}/events/stream`);
+    const reader = response.body!.getReader();
+    await reader.read();
+    const started = Date.now();
+    await harness.app.close();
+    assert.ok(Date.now() - started < 2000);
+    await reader.cancel();
+  } finally {
     if (harness.app.server.listening) await harness.app.close();
     rmSync(harness.root, { recursive: true, force: true });
   }

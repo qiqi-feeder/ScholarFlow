@@ -324,6 +324,19 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     await page.getByLabel(`原文 ${paper.material.title} 缩放`, { exact: true }).selectOption("100");
     await page.setViewportSize({ width: 1440, height: 900 });
     await captureReview(page, "reading-1440");
+    // A restored full attachment list must reject the ninth item visibly,
+    // rather than silently evicting a source from the pending message.
+    await page.evaluate(({ projectId, taskId, material }) => {
+      const key = `scholarflow.workspace.references.v1.${projectId}.${taskId}`;
+      localStorage.setItem(key, JSON.stringify({ schema: 1, owner: key, value: Array.from({ length: 8 }, (_, index) => ({ kind: "material", id: material.id, version: material.sha256, page: index + 2, projectId, taskId, title: `缓存上限测试 ${index}`, text: "受控的本地恢复夹具" })) }));
+    }, { projectId: seeded.projectId, taskId: reviewTask.task.id, material: paper.material });
+    await page.reload();
+    await page.getByLabel("本条消息引用", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "引用当前内容", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "每条消息最多引用 8 个来源" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: /^移除引用 / }).count(), 8);
+    for (let index = 0; index < 8; index++) await page.getByRole("button", { name: /^移除引用 / }).first().click();
+    await page.getByRole("alert").getByRole("button", { name: "关闭", exact: true }).click();
     await page.getByRole("button", { name: "引用当前内容", exact: true }).click();
     await page.getByLabel("本条消息引用", { exact: true }).waitFor();
     await page.reload();
@@ -342,6 +355,7 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     await page.locator(".message-references").getByRole("button", { name: "查看来源", exact: true }).click();
     await page.getByLabel("来源快照", { exact: true }).waitFor();
     assert.match(await page.getByLabel("来源快照", { exact: true }).innerText(), /第 1 页/);
+    await captureReview(page, "references-1440");
     await page.getByRole("button", { name: "关闭来源快照", exact: true }).click();
     await page.getByRole("tab", { name: "实验", exact: true }).click();
     await page.locator(".status-succeeded").first().waitFor();
@@ -434,6 +448,7 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
       assert.equal(await page.getByRole("tab", { name: view!, exact: true }).getAttribute("aria-selected"), "true");
       assert.equal(await page.getByLabel("消息", { exact: true }).inputValue(), "后台运行期间保留的输入草稿");
       assert.equal(await page.locator(".chat-head h3").innerText(), "文献阅读与稿件核对");
+      await captureReview(page, `${name}-1440`);
       await page.waitForResponse((r) => r.url().endsWith("/api/activity"));
       assert.equal(await page.getByLabel("后台运行通知").getByRole("button", { name: `关闭通知 ${name}`, exact: true }).count(), 1);
       if (name === "background-failure") {

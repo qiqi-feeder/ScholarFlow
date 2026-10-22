@@ -134,4 +134,4 @@ Assert-Rejected { Assert-DiscussionLinks '[missing](missing-workspace-discussion
 Assert-Rejected { Assert-DiscussionNavigation ($readme.Replace('(docs/WORKSPACE_PRODUCT_DISCUSSION.md)', '(missing.md)')) $plan $discovery } 'Missing discussion entry point'
 Assert-Rejected { Assert-DiscussionNavigation $readme $plan ($discovery.Replace('| C19 |', '| 历史决定 |')) } 'Missing confirmed discovery decision'
 Assert-Rejected { Assert-Discussion ($document + [char]0xFFFD) } 'Invalid text encoding'
-Write-Output 'Workspace product discussion: decision provenance, scope ownership, scenario/acceptance coverage, links and 18 negative cases passed. Documentation only; UI acceptance remains unexecuted.'
+Write-Output 'Workspace product discussion: decision provenance, scope ownership, scenario/acceptance coverage, links and 18 negative cases passed. Documentation contracts only; runtime results are recorded separately.'
