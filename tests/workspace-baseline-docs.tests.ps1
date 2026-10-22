@@ -96,7 +96,9 @@ function Assert-W01Review([string]$text, [string]$plan) {
         '1/2 通过', 'ERR_DLOPEN_FAILED', '关闭条件', '复验与状态更新',
         'd2d974ed71e69b2f6054d1442d75fc80d765fe7a', '## 4. 修复与实际复验',
         '2/2 浏览器用例通过', '64 通过、0 失败', '390×844', '旧 GET/PUT',
-        '两个实际可用 DeepSeek 模型各一次有界请求')) {
+        '两个实际可用 DeepSeek 模型各一次有界请求',
+        '## 5. 独立再次复核', '2503b220969eadea59ed3a5f3de4411210e87145',
+        '独立复核通过，R01–R03 和 V01–V02 关闭有效', '2/2 通过')) {
         if (-not $text.Contains($required)) { throw "W01 review missing: $required" }
     }
     foreach ($id in @('W01-R01', 'W01-R02', 'W01-R03')) {
@@ -242,6 +244,8 @@ Assert-Rejected { Assert-W01Review ($w01Review.Replace('| W01-R01 |', '| W01-R99
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('| 已关闭：复验通过 |', '| 已关闭 |')) $plan } 'falsely closed'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('d2d974ed71e69b2f6054d1442d75fc80d765fe7a', 'missing-commit')) $plan } 'review missing'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('64 通过、0 失败', '未验证')) $plan } 'review missing'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('## 5. 独立再次复核', '## 5. 未复核')) $plan } 'review missing'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('2503b220969eadea59ed3a5f3de4411210e87145', 'unknown-head')) $plan } 'review missing'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('postedTo=Task B', 'postedTo=Task A')) $plan } 'review missing'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('../../../apps/web/src/App.tsx', 'missing.tsx')) $plan } 'Broken W01 review link'
 Assert-Rejected { Assert-W01Review $w01Review ($plan.Replace('W01-review-issues.md', 'missing.md')) } 'does not link W01 review'
