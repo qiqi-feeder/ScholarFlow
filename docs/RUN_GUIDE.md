@@ -108,4 +108,4 @@ node --import tsx scripts/verify-pi-session.ts
 - Pi 对照评测、干净检出发布回归。
 - 旧静态 Demo 的缺失资源修复。
 
-W00 工作台基线与 W01 入口见 [W00 基线](verification/workspace-redesign/W00-baseline.md)；W01 外壳与任务级模型已完成，证据见 [W01 外壳与模型](verification/workspace-redesign/W01-shell-models.md)；W02–W05 尚未实施。
+W00 工作台基线与 W01 入口见 [W00 基线](verification/workspace-redesign/W00-baseline.md)；W01 外壳与任务级模型已有实现，但独立验收未通过，问题见 [W01 验收问题](verification/workspace-redesign/W01-review-issues.md)，原实现证据见 [W01 外壳与模型](verification/workspace-redesign/W01-shell-models.md)；W02–W05 尚未实施。

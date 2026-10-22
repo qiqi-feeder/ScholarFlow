@@ -138,11 +138,11 @@ W00 已完成 Stitch SB01–SB07 读取与本地证据保存、旧库备份/完�
 - 旧库备份 `PRAGMA integrity_check = ok`；旧任务仍可打开，新增模型列迁移尚未实施。
 - 已配置 DeepSeek 的 `deepseek-flash` 与 `deepseek-v4-pro` 可用；没有执行真实切换或模型调用。
 - `tests/workspace-light.tests.ps1` 仍因旧 Demo 缺少 `document.svg` 失败；文档测试脚本已补 UTF-8 BOM，可在 Windows PowerShell 5.1 执行。
-- W00 时 W01–W05 和 WT02–WT19 尚未执行；后续 W01 已完成，见第 9 节。
+- W00 时 W01–W05 和 WT02–WT19 尚未执行；后续 W01 已有实现，但独立验收未通过，见第 9 节。
 
 ## 9. W01 外壳与任务级模型（2026-10-22）
 
-W01 已完成工作台外壳拆分、项目/任务导航、右侧常驻会话、任务切换隔离，以及任务级模型选择/持久化/忙时拒绝。WT02、WT03、WT16 通过；详情见 [W01 外壳与模型](verification/workspace-redesign/W01-shell-models.md)。
+W01 已完成工作台外壳拆分、项目/任务导航、右侧常驻会话、任务切换隔离，以及任务级模型选择/持久化/忙时拒绝。原实现阶段记为 WT02、WT03、WT16 通过；2026-10-22 独立验收修正为 **W01 验收未通过，WT03、WT16 不通过，WT02 待完整复验**。问题、复现和实际结果见 [W01 验收问题](verification/workspace-redesign/W01-review-issues.md)；下列结果为原实现记录，详情见 [W01 外壳与模型](verification/workspace-redesign/W01-shell-models.md)。
 
 - `npm run typecheck`、`npm run build` 通过；`npm test` 64 通过、1 项真实调用测试默认跳过；`npm run test:browser` 2 项通过。
 - 旧任务迁移集成测试确认新增 nullable 模型列、保留 `review_text`/相对 `sessionFile`；旧任务首次使用才固定模型。

@@ -73,7 +73,9 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
         throw 'Workspace plan lost documentation-only authorization'
     }
     $w01Complete = $section.Contains('W01 外壳与任务级模型已完成（WT02、WT03、WT16 通过）')
-    $baselineComplete = $w01Complete -or $section.Contains('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。')
+    $w01Rejected = $section.Contains('W01 验收未通过，待修复复验（WT03、WT16 不通过；WT02 待完整复验）')
+    if ($w01Rejected -and $w01Complete) { throw 'Conflicting W01 acceptance status' }
+    $baselineComplete = $w01Rejected -or $w01Complete -or $section.Contains('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。')
     if (-not $baselineComplete -and -not $section.Contains('状态：待实施；本轮功能与 WT 验收均未执行。')) {
         throw 'Workspace plan lost its unimplemented status'
     }
@@ -95,6 +97,10 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
         if ($id -eq 'W00' -and $baselineComplete) {
             if ($row[5] -notmatch '^已完成：' -or -not $row[5].Contains('WT01')) {
                 throw 'Workspace baseline lacks completion evidence'
+            }
+        } elseif ($id -eq 'W01' -and $w01Rejected) {
+            if ($row[5] -notmatch '^验收未通过：' -or -not $row[5].Contains('W01-review-issues.md')) {
+                throw 'Rejected W01 milestone lost issue evidence'
             }
         } elseif ($id -eq 'W01' -and $w01Complete) {
             if ($row[5] -notmatch '^已完成：' -or -not $row[5].Contains('WT02') -or
@@ -119,6 +125,11 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
         $row = $checks[$id]
         if ($id -eq 'WT01' -and $baselineComplete) {
             if ($row[6] -notmatch '^通过：W00 基线') { throw 'Workspace baseline acceptance lacks evidence' }
+        } elseif ($w01Rejected -and @('WT02', 'WT03', 'WT16') -contains $id) {
+            $expectedStatus = if ($id -eq 'WT02') { '^待复验：' } else { '^不通过：' }
+            if ($row[6] -notmatch $expectedStatus -or -not $row[6].Contains('W01-review-issues.md')) {
+                throw 'Rejected W01 acceptance was promoted or lost issue evidence'
+            }
         } elseif ($w01Complete -and @('WT02', 'WT03', 'WT16') -contains $id) {
             if ($row[6] -notmatch '^通过：W01 ') { throw 'Workspace shell acceptance lacks evidence' }
         } elseif ($row[6] -ne '未执行') { throw "Workspace acceptance was promoted: $id" }
@@ -232,7 +243,7 @@ Assert-Rejected { Assert-PlanGraph ($plan.Replace('| V01 | 集成 |', '| V01 | |
 Assert-Rejected { Assert-PlanLinks '[missing](no-such-mvp-plan-file.md)' } 'Broken plan link'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('## 8. 本轮工作台改版实施计划', '## 8. 无本轮计划')) $workspaceDiscussion } 'Missing workspace iteration plan'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('授权边界：W00 只做基线、文档与测试夹具，不实施业务功能。', '授权立即实施。').Replace('授权边界：本次只更新计划及文档校验，不实施功能代码。', '授权立即实施。')) $workspaceDiscussion } 'documentation-only authorization'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。', '状态：已完成。').Replace('状态：W00 基线已完成（WT01 通过）；W01 外壳与任务级模型已完成（WT02、WT03、WT16 通过）；W02–W05 与 WT04–WT15、WT17–WT19 待实施。', '状态：已完成。').Replace('状态：待实施；本轮功能与 WT 验收均未执行。', '状态：已完成。')) $workspaceDiscussion } 'unimplemented status'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。', '状态：已完成。').Replace('状态：W00 基线已完成（WT01 通过）；W01 外壳与任务级模型已完成（WT02、WT03、WT16 通过）；W02–W05 与 WT04–WT15、WT17–WT19 待实施。', '状态：已完成。').Replace('状态：W00 基线已完成（WT01 通过）；W01 验收未通过，待修复复验（WT03、WT16 不通过；WT02 待完整复验）；W02–W05 与其余 WT 待实施。', '状态：已完成。').Replace('状态：待实施；本轮功能与 WT 验收均未执行。', '状态：已完成。')) $workspaceDiscussion } 'unimplemented status'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('不顺带扩大 Agent 写权限', '允许任意写权限')) $workspaceDiscussion } 'permission boundary'
 Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('本轮不能标全部完成', '所有情况均可完成')) $workspaceDiscussion } 'completion evidence boundary'
 Assert-Rejected { Assert-WorkspaceIteration ($plan + "`n| W00 | 无 | duplicate | Web | WT01 | 待实施 |") $workspaceDiscussion } 'Duplicate W ID'
@@ -264,17 +275,21 @@ if ($plan.Contains('状态：W00 基线已完成（WT01 通过）')) {
     Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| 已完成：W00 保存 SB01–SB07/EX01–EX04', '| 待实施：W00 保存 SB01–SB07/EX01–EX04')) } 'UI baseline completion lacks evidence'
 }
 
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 验收未通过：WT03、WT16', '| 已完成：WT03、WT16')) $workspaceDiscussion } 'Rejected W01 milestone'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 不通过：W01-R01', '| 通过：W01-R01')) $workspaceDiscussion } 'Rejected W01 acceptance'
+
 # A documentation-only change may be committed separately from a W00 evidence update.
 # Validate the original pending baseline as well as an evidenced completed baseline.
 $pendingPlan = $plan.Replace('状态：W00 基线已完成（WT01 通过）；W01–W05 功能与 WT02–WT19 验收待实施。', '状态：待实施；本轮功能与 WT 验收均未执行。')
 $pendingPlan = $pendingPlan.Replace('状态：W00 基线已完成（WT01 通过）；W01 外壳与任务级模型已完成（WT02、WT03、WT16 通过）；W02–W05 与 WT04–WT15、WT17–WT19 待实施。', '状态：待实施；本轮功能与 WT 验收均未执行。')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W00 \|[^\r\n]*\|) 已完成：[^\r\n]+$', '$1 待实施 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W01 \|[^\r\n]*\|) 已完成：[^\r\n]+$', '$1 待实施 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT01 \|[^\r\n]*\|) 通过：[^\r\n]+$', '$1 未执行 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT02 \|[^\r\n]*\|) 通过：[^\r\n]+$', '$1 未执行 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT03 \|[^\r\n]*\|) 通过：[^\r\n]+$', '$1 未执行 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT16 \|[^\r\n]*\|) 通过：[^\r\n]+$', '$1 未执行 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+$', '$1 待实施 |')
+$pendingPlan = $pendingPlan.Replace('状态：W00 基线已完成（WT01 通过）；W01 验收未通过，待修复复验（WT03、WT16 不通过；WT02 待完整复验）；W02–W05 与其余 WT 待实施。', '状态：待实施；本轮功能与 WT 验收均未执行。')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W00 \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W01 \|[^\r\n]*\|) (?:已完成|验收未通过)：[^\r\n]+(?=\r?$)', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT01 \|[^\r\n]*\|) 通过：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT02 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT03 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT16 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
 Assert-WorkspaceIteration $pendingPlan $workspaceDiscussion
 Assert-StitchHandoff $pendingPlan
-Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Documentation only; WT04-WT15 and WT17-WT19 remain unexecuted."
+Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Documentation only; W01 is rejected pending fixes and revalidation; W02-W05 remain unexecuted."

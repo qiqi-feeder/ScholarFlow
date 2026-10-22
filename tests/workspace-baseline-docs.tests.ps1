@@ -73,7 +73,8 @@ function Assert-Defaults([string]$text) {
 
 function Assert-W01([string]$text) {
     foreach ($required in @(
-        'W01 完成，WT02、WT03、WT16 通过',
+        'W01 验收未通过，待修复复验',
+        'W01-review-issues.md',
         'GET /api/models',
         'model_changed',
         'deepseek-flash',
@@ -83,6 +84,30 @@ function Assert-W01([string]$text) {
         'npm run test:browser'
     )) {
         if (-not $text.Contains($required)) { throw "W01 evidence missing: $required" }
+    }
+}
+
+function Assert-W01Review([string]$text, [string]$plan) {
+    foreach ($required in @('W01 验收未通过，待修复复验',
+        '1e9e6c8487d6e5eed34f5ff39f46d506eaf8d824',
+        'displayedTask=Task A', 'postedTo=Task B',
+        'serverModel=deepseek-flash', 'displayedModel=deepseek:deepseek-v4-pro',
+        'modelSelectVisible=false', 'W01-V01', 'W01-V02',
+        '1/2 通过', 'ERR_DLOPEN_FAILED', '关闭条件', '复验与状态更新')) {
+        if (-not $text.Contains($required)) { throw "W01 review missing: $required" }
+    }
+    foreach ($id in @('W01-R01', 'W01-R02', 'W01-R03')) {
+        $rows = [regex]::Matches($text, ('(?m)^\| ' + $id + ' \|[^\r\n]+(?=\r?$)'))
+        if ($rows.Count -ne 1 -or $rows[0].Value -notmatch '\| 待修复复验 \|$') {
+            throw "W01 review issue is missing, duplicated or falsely closed: $id"
+        }
+    }
+    foreach ($match in [regex]::Matches($text, '\[[^\]]+\]\(([^)]+)\)')) {
+        $target = Join-Path $evidenceRoot $match.Groups[1].Value
+        if (-not (Test-Path -LiteralPath $target)) { throw 'Broken W01 review link' }
+    }
+    if (-not $plan.Contains('(docs/verification/workspace-redesign/W01-review-issues.md)')) {
+        throw 'Plan does not link W01 review'
     }
 }
 
@@ -128,11 +153,11 @@ function Assert-Manifest($manifest, [string]$root) {
 }
 
 function Assert-EvidenceIndex([string]$index, [string]$plan) {
-    foreach ($required in @('W00-baseline.md', 'W00-implementation-defaults.md', 'W01-shell-models.md', 'design-baseline/README.md')) {
+    foreach ($required in @('W00-baseline.md', 'W00-implementation-defaults.md', 'W01-shell-models.md', 'W01-review-issues.md', 'design-baseline/README.md')) {
         if (-not $index.Contains($required)) { throw "Evidence index missing: $required" }
     }
     if (-not $index.Contains('WT01 通过')) { throw 'Evidence index lost WT01 result' }
-    if (-not $index.Contains('WT02、WT03、WT16 通过')) { throw 'Evidence index lost W01 result' }
+    if (-not $index.Contains('W01 验收未通过，WT03、WT16 不通过，WT02 待完整复验')) { throw 'Evidence index lost W01 result' }
     if (-not $plan.Contains('(docs/verification/workspace-redesign/W00-baseline.md)')) {
         throw 'Plan does not link W00 baseline'
     }
@@ -144,6 +169,7 @@ function Assert-EvidenceIndex([string]$index, [string]$plan) {
 $baseline = Read-Text $baselinePath
 $defaults = Read-Text $defaultsPath
 $w01 = Read-Text (Join-Path $evidenceRoot 'W01-shell-models.md')
+$w01Review = Read-Text (Join-Path $evidenceRoot 'W01-review-issues.md')
 $index = Read-Text (Join-Path $evidenceRoot 'README.md')
 $plan = Read-Text (Join-Path $repositoryRoot 'PLAN.md')
 $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -151,11 +177,13 @@ $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | Convert
 Assert-Baseline $baseline
 Assert-Defaults $defaults
 Assert-W01 $w01
+Assert-W01Review $w01Review $plan
 Assert-Manifest $manifest $repositoryRoot
 Assert-EvidenceIndex $index $plan
 Assert-NoSensitive $baseline 'W00 baseline'
 Assert-NoSensitive $defaults 'W00 defaults'
 Assert-NoSensitive $w01 'W01 evidence'
+Assert-NoSensitive $w01Review 'W01 review'
 Assert-NoSensitive $index 'evidence index'
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
@@ -200,5 +228,10 @@ Assert-Rejected { Assert-W01 ($w01.Replace('GET /api/models', 'missing route')) 
 Assert-Rejected { Assert-EvidenceIndex ($index.Replace('W01-shell-models.md', 'missing.md')) $plan } 'Evidence index missing'
 Assert-Rejected { Assert-EvidenceIndex $index ($plan.Replace('W01-shell-models.md', 'missing.md')) } 'does not link W01 evidence'
 Assert-Rejected { Assert-NoSensitive ($w01 + ' sk-abcdefghijklmnop') } 'API-key-like'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('| W01-R01 |', '| W01-R99 |')) $plan } 'issue is missing'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('| 待修复复验 |', '| 已关闭 |')) $plan } 'falsely closed'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('postedTo=Task B', 'postedTo=Task A')) $plan } 'review missing'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('../../../apps/web/src/App.tsx', 'missing.tsx')) $plan } 'Broken W01 review link'
+Assert-Rejected { Assert-W01Review $w01Review ($plan.Replace('W01-review-issues.md', 'missing.md')) } 'does not link W01 review'
 
-Write-Output "Workspace W00/W01 evidence: Stitch SB01-SB07, exclusions, hashes, baseline/shell model evidence, credential/path guards and $negativeCaseCount negative cases passed. WT01-WT03/WT16 only; W02-W05 remain unexecuted."
+Write-Output "Workspace W00/W01 evidence: Stitch SB01-SB07, exclusions, hashes, baseline/shell model evidence, credential/path guards and $negativeCaseCount negative cases passed. WT01 only accepted; W01 requires fixes and revalidation; W02-W05 remain unexecuted."
