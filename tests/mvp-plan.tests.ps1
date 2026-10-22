@@ -93,6 +93,7 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
     $usedChecks = @{}
     $coveredProduct = @{}
     $implementedChecks = @{}
+    $reviewPending = @{}
     foreach ($id in $milestones.Keys) {
         $row = $milestones[$id]
         if ($id -eq 'W00' -and $baselineComplete) {
@@ -108,7 +109,11 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
                 -not $row[5].Contains('WT03') -or -not $row[5].Contains('WT16')) {
                 throw 'Workspace shell milestone lacks completion evidence'
             }
-        } elseif ($id -match '^W0[2-5]$' -and $row[5] -match '^已完成：') {
+        } elseif ($id -match '^W0[2-5]$' -and $row[5] -match '^(已完成|待用户确认)：') {
+            $reviewPending[$id] = $row[5] -match '^待用户确认：'
+            if ($reviewPending[$id] -and -not @([regex]::Matches($row[4], 'WT\d+') | Where-Object { $checks[$_.Value][6] -match '^待确认：' }).Count) {
+                throw 'Pending user review has no pending acceptance'
+            }
             if ($row[5] -notmatch '\[.+?\]\((docs/verification/workspace-redesign/[^)]+\.md)\)') { throw 'Completed workspace milestone lacks evidence' }
             if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot $Matches[1]))) { throw 'Completed workspace milestone has missing evidence' }
             foreach ($check in [regex]::Matches($row[4], 'WT\d+')) { $implementedChecks[$check.Value] = $id }
@@ -138,7 +143,8 @@ function Assert-WorkspaceIteration([string]$text, [string]$discussion) {
         } elseif ($w01Complete -and @('WT02', 'WT03', 'WT16') -contains $id) {
             if ($row[6] -notmatch '^通过：W01 ') { throw 'Workspace shell acceptance lacks evidence' }
         } elseif ($implementedChecks.ContainsKey($id)) {
-            if ($row[6] -notmatch ('^通过：' + $implementedChecks[$id] + ' ')) { throw 'Completed workspace acceptance lacks evidence' }
+            $expectedStatus = if ($reviewPending[$implementedChecks[$id]]) { '^(通过|待确认)：' } else { '^通过：' }
+            if ($row[6] -notmatch ($expectedStatus + $implementedChecks[$id] + ' ')) { throw 'Completed workspace acceptance lacks evidence' }
         } elseif ($row[6] -ne '未执行') { throw "Workspace acceptance was promoted: $id" }
         if (-not $usedChecks.ContainsKey($id)) { throw "Unassigned workspace test: $id" }
         $references = @([regex]::Matches($row[2], 'U\d+') | ForEach-Object { $_.Value })
@@ -298,8 +304,12 @@ $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT03 \|[^\r\n]*\|) (?:�
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT16 \|[^\r\n]*\|) (?:通过|不通过|待复验)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^状态：W00 基线已完成[^\r\n]+', '状态：待实施；本轮功能与 WT 验收均未执行。')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W0[2-5] \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
-$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT\d+ \|[^\r\n]*\|) 通过：[^\r\n]+(?=\r?$)', '$1 未执行 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| W0[2-5] \|[^\r\n]*\|) (?:已完成|待用户确认)：[^\r\n]+(?=\r?$)', '$1 待实施 |')
+$pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT\d+ \|[^\r\n]*\|) (?:通过|待确认)：[^\r\n]+(?=\r?$)', '$1 未执行 |')
 Assert-WorkspaceIteration $pendingPlan $workspaceDiscussion
+if ($plan -match '待用户确认：') {
+    Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('待用户确认：', '已完成：')) $workspaceDiscussion } 'Completed workspace acceptance lacks evidence'
+    Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('待确认：W02', '通过：W02')) $workspaceDiscussion } 'Pending user review has no pending acceptance'
+}
 Assert-StitchHandoff $pendingPlan
-Write-Output "MVP/workspace plan structure: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Functional results are recorded separately; W02-W05 remain unexecuted."
+Write-Output "MVP/workspace plan structure: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Functional results and user review status are recorded separately."

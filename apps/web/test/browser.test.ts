@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -64,6 +64,37 @@ async function expectModel(page: Page, id: string) {
   }, id);
 }
 
+async function openNavigation(page: Page) {
+  if (await page.locator(".nav-panel").isVisible()) return;
+  for (const name of ["打开导航", "打开内容导航", "展开导航"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    if (await button.isVisible()) { await button.click(); return; }
+  }
+  throw new Error("navigation has no reachable entry");
+}
+
+async function chooseTask(page: Page, title: string) {
+  await openNavigation(page);
+  const menu = page.locator(".task-switcher");
+  if (await menu.getAttribute("open") === null) await menu.locator("summary").click();
+  await menu.getByRole("button", { name: new RegExp(title) }).click();
+}
+
+async function chooseProject(page: Page, title: string) {
+  await openNavigation(page);
+  const menu = page.locator(".project-switcher");
+  if (await menu.getAttribute("open") === null) await menu.locator("summary").click();
+  await menu.getByRole("button", { name: new RegExp(title) }).click();
+}
+
+async function captureReview(page: Page, name: string) {
+  if (await page.locator(".pdf-preview:visible").count()) await page.locator('.pdf-preview:visible canvas[data-rendered="true"]').first().waitFor({ state: "visible" });
+  if (!process.env.SCHOLARFLOW_EVIDENCE_DIR) return;
+  mkdirSync(process.env.SCHOLARFLOW_EVIDENCE_DIR, { recursive: true });
+  await page.locator(".workspace").evaluate((node) => { node.scrollTop = 0; });
+  await page.screenshot({ path: path.join(process.env.SCHOLARFLOW_EVIDENCE_DIR, `${name}.png`) });
+}
+
 async function seed(base: string): Promise<{ projectId: string; taskId: string; dataDir: string }> {
   const projectResponse = await fetch(`${base}/api/projects`, {
     method: "POST",
@@ -124,7 +155,7 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     },
   });
   const base = await startServer(app);
-  await seed(base);
+  const seeded = await seed(base);
   const browser: Browser = await chromium.launch({
     executablePath: chrome,
     headless: true,
@@ -139,7 +170,7 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
   try {
     await page.goto(base, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "Browser Lab" }).waitFor();
-    await page.getByRole("button", { name: /Chart baseline/ }).click();
+    await chooseTask(page, "Chart baseline");
     await page.getByRole("heading", { name: "Chart baseline" }).waitFor();
     await page.getByText("事件流已连接").waitFor();
 
@@ -237,15 +268,135 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     assert.equal(await page.locator('input[type="password"]').inputValue(), "");
 
     // A new project is independent; switching back restores the task for the first project.
+    await openNavigation(page);
+    await page.locator(".project-switcher > summary").click();
     await page.getByRole("button", { name: "＋ 新建项目" }).click();
     await page.getByLabel("项目名称").fill("Second Project");
     await page.getByRole("button", { name: "创建" }).click();
     await page.getByRole("heading", { name: "Second Project" }).waitFor();
-    await page.getByRole("button", { name: /Browser Lab/ }).click();
+    await chooseProject(page, "Browser Lab");
     await page.getByRole("heading", { name: "Chart baseline" }).waitFor();
 
     assert.deepEqual(pageErrors, []);
     assert.equal(await page.evaluate(() => document.body.innerText.includes("sk-test")), false);
+
+    // Review imagery uses actual local files, the completed CPU smoke and a
+    // real LaTeX build. This task has no fabricated assistant conversation.
+    const reviewTask = await fetch(`${base}/api/projects/${seeded.projectId}/tasks`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "文献阅读与稿件核对", objective: "界面验收样例：阅读本地构建的稿件，核对真实 smoke 产物。", reviewText: "请说明 smoke 结果的适用范围。\n\n请核对图表与原始指标的来源。" }),
+    }).then((r) => r.json()) as any;
+    const reviewProject = app.services.repositories.getProject(seeded.projectId)!;
+    const reviewSource = app.services.manuscript.readFile(reviewProject, "main.tex");
+    // The stock template has no citations. This review specimen explicitly
+    // includes its bibliography so the real BibTeX invocation is meaningful.
+    app.services.manuscript.saveFile(reviewProject, reviewTask.task.id, "main.tex", reviewSource.replace("\\bibliography{refs}", "\\nocite{*}\n\\bibliography{refs}"));
+    const reviewBuild = app.services.manuscript.build(reviewProject, reviewTask.task.id);
+    assert.ok(reviewBuild.ok, JSON.stringify(reviewBuild.diagnostics));
+    const built = app.services.manuscript.pdfFor(app.services.repositories.getProject(seeded.projectId)!);
+    const paper = await fetch(`${base}/api/projects/${seeded.projectId}/materials`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: reviewTask.task.id, path: path.relative(seeded.dataDir, built.path).split(path.sep).join("/") }),
+    }).then((r) => r.json()) as any;
+    await page.getByRole("button", { name: "刷新", exact: true }).click();
+    await chooseTask(page, "文献阅读与稿件核对");
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    await page.locator(".object-library").getByRole("button", { name: paper.material.title, exact: true }).click();
+    await page.getByTitle(`原文 ${paper.material.title}`).waitFor();
+    const readerUrl = `${base}/api/projects/${seeded.projectId}/materials/${paper.material.id}/file`;
+    const renderedPdf = page.locator('.pdf-preview:visible canvas[data-rendered="true"]').first();
+    await renderedPdf.waitFor({ state: "visible" });
+    assert.ok(await renderedPdf.evaluate((node) => {
+      const canvas = node as HTMLCanvasElement;
+      const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+      let ink = 0;
+      for (let index = 0; index < pixels.length; index += 4) if (pixels[index]! < 180 && pixels[index + 3]! > 0) ink += 1;
+      return ink > 500;
+    }), "PDF must contain rendered content, not a blank canvas or plugin placeholder");
+    const pagePicker = page.getByLabel(`原文 ${paper.material.title} 页码`, { exact: true });
+    await page.getByRole("button", { name: `原文 ${paper.material.title} 下一页`, exact: true }).click();
+    assert.equal(await pagePicker.inputValue(), "2");
+    await page.getByRole("img", { name: `原文 ${paper.material.title} 第 2 页`, exact: true }).waitFor();
+    await page.getByLabel(`原文 ${paper.material.title} 缩放`, { exact: true }).selectOption("125");
+    const savedReaderPage = await pagePicker.inputValue();
+    await page.getByRole("button", { name: `原文 ${paper.material.title} 上一页`, exact: true }).click();
+    assert.equal(savedReaderPage, "2");
+    await page.getByLabel(`原文 ${paper.material.title} 缩放`, { exact: true }).selectOption("100");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await captureReview(page, "reading-1440");
+    await page.getByRole("tab", { name: "实验", exact: true }).click();
+    await page.locator(".status-succeeded").first().waitFor();
+    await captureReview(page, "experiments-1440");
+    await page.getByRole("tab", { name: "结果", exact: true }).click();
+    await page.getByRole("heading", { name: "UI smoke result" }).waitFor();
+    await captureReview(page, "results-1440");
+    await page.getByRole("tab", { name: "稿件", exact: true }).click();
+    await page.locator(".object-library").getByRole("button", { name: "main.tex", exact: true }).click();
+    await page.getByLabel("稿件视图").selectOption("compare");
+    await page.getByTitle("稿件 PDF").waitFor();
+    await captureReview(page, "writing-1440");
+    await page.setViewportSize({ width: 1024, height: 900 });
+    const sides = page.getByRole("group", { name: "窄屏对照内容" });
+    await sides.getByRole("button", { name: "PDF", exact: true }).click();
+    assert.equal(await editor.isVisible(), false);
+    await page.locator('.pdf-preview:visible canvas[data-rendered="true"]').waitFor();
+    await captureReview(page, "writing-1024");
+    await sides.getByRole("button", { name: "源码", exact: true }).click();
+    assert.match(await editor.inputValue(), /documentclass/);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.getByRole("tab", { name: "审稿", exact: true }).click();
+    await page.locator(".object-library .object-item").first().click();
+    await captureReview(page, "review-1440");
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileViews = page.getByRole("navigation", { name: "工作区与会话" });
+    await captureReview(page, "workspace-390");
+    await mobileViews.getByRole("button", { name: "打开导航", exact: true }).click();
+    await page.getByRole("dialog", { name: "导航菜单" }).waitFor();
+    await captureReview(page, "navigation-390");
+    await page.getByRole("button", { name: "关闭导航", exact: true }).click();
+    await mobileViews.getByRole("button", { name: "打开导航", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("dialog", { name: "导航菜单" }).waitFor();
+    await page.keyboard.press("Escape");
+    assert.equal(await mobileViews.getByRole("button", { name: "打开导航", exact: true }).evaluate((node) => node === document.activeElement), true);
+    await mobileViews.getByRole("button", { name: "会话", exact: true }).click();
+    await page.getByLabel("消息").waitFor();
+    await captureReview(page, "chat-390");
+    assert.equal(await page.locator('.composer [aria-label="当前任务模型"]').isVisible(), true);
+    assert.equal(await page.locator(".nav-panel").isVisible(), false);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const chrome = await page.evaluate(() => ({
+      header: document.querySelector(".global-bar")!.getBoundingClientRect().height,
+      rail: getComputedStyle(document.querySelector(".rail")!).backgroundColor,
+      sidebar: getComputedStyle(document.querySelector(".nav-panel")!).backgroundColor,
+      viewTabs: document.querySelectorAll('.rail [role="tab"] svg').length,
+      logBottom: document.querySelector(".chat-log")!.getBoundingClientRect().bottom,
+      modelTop: document.querySelector('[aria-label="当前任务模型"]')!.getBoundingClientRect().top,
+    }));
+    assert.ok(chrome.header <= 40 && chrome.header >= 32);
+    assert.equal(chrome.rail, "rgb(255, 255, 255)");
+    assert.equal(chrome.sidebar, "rgb(248, 250, 252)");
+    assert.equal(chrome.viewTabs, 8);
+    assert.ok(chrome.modelTop >= chrome.logBottom, "model control belongs below the conversation");
+    const divider = page.getByRole("separator", { name: "会话宽度" });
+    const beforeWidth = Number(await divider.getAttribute("aria-valuenow"));
+    await divider.focus(); await page.keyboard.press("ArrowLeft");
+    assert.equal(Number(await divider.getAttribute("aria-valuenow")), beforeWidth + 16);
+    await page.keyboard.press("ArrowRight");
+    const dividerBox = (await divider.boundingBox())!;
+    await page.mouse.move(dividerBox.x + 3, dividerBox.y + 150);
+    await page.mouse.down(); await page.mouse.move(dividerBox.x - 29, dividerBox.y + 150); await page.mouse.up();
+    assert.equal(Number(await divider.getAttribute("aria-valuenow")), beforeWidth + 32);
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    const invalidPdf = async (route: Route) => route.fulfill({ contentType: "text/html", body: "<html>not a PDF</html>" });
+    await page.route(readerUrl, invalidPdf);
+    await page.getByRole("button", { name: `关闭 ${paper.material.title}`, exact: true }).click();
+    await page.locator(".object-library").getByRole("button", { name: paper.material.title, exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "文件不是有效的可预览 PDF" }).waitFor();
+    await page.unroute(readerUrl, invalidPdf);
+    await page.getByRole("button", { name: "重试预览", exact: true }).click();
+    await page.locator('.pdf-preview:visible canvas[data-rendered="true"]').waitFor();
+    assert.deepEqual(pageErrors, []);
   } finally {
     await browser.close();
     await worker?.stop();
@@ -371,7 +522,7 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
   };
   try {
     await page.goto(base, { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
 
     const modelSelect = page.getByLabel("当前任务模型");
@@ -392,14 +543,14 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await waitForIdle();
 
     // A message on Task A must never be written into Task B's session.
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByRole("heading", { name: "Task B" }).waitFor();
     await page.getByLabel("消息").fill("B stream");
     await page.getByRole("button", { name: "发送" }).click();
     await page.getByText("echo: B stream").waitFor({ timeout: 15000 });
     assert.equal(await page.getByText("echo: A stream").count(), 0);
 
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
     await page.getByText("echo: A stream").waitFor();
     assert.equal(await page.getByText("echo: B stream").count(), 0);
@@ -408,11 +559,11 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     // Switch away before a delayed answer settles; the old stream must not leak into Task B.
     await page.getByLabel("消息").fill("A late");
     await page.getByRole("button", { name: "发送" }).click();
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByRole("heading", { name: "Task B" }).waitFor();
     await new Promise((resolve) => setTimeout(resolve, 1200));
     assert.equal(await page.getByText("echo: A late").count(), 0);
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
     await page.getByText("echo: A late").waitFor({ timeout: 15000 });
 
@@ -457,10 +608,10 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
       await route.fulfill({ contentType: "text/event-stream", body: block + block });
     };
     await page.route(streamUrl, reconnect);
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByRole("heading", { name: "Task B" }).waitFor();
     const reconnected = page.waitForResponse((response) => response.url().includes(`${taskA}/events/stream`) && subscriptions >= 2);
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
     await reconnected;
     assert.ok(resumedAfter >= replay.seq);
@@ -472,13 +623,13 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await page.getByLabel("消息").fill("A private draft");
     const taskUrl = (project: string, task: string) => `${base}/api/projects/${project}/tasks/${task}`;
     const heldB = await holdResponse(page, taskUrl(projectId, taskB));
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await heldB.ready;
     assert.equal(await page.getByLabel("消息").count(), 0);
     assert.equal(await modelSelect.count(), 0);
     assert.equal(await page.getByRole("button", { name: "停止回答" }).count(), 0);
     assert.equal(await page.getByRole("heading", { name: "Task A" }).count(), 0);
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByLabel("消息").waitFor();
     await heldB.release();
     assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
@@ -486,25 +637,25 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
 
     const failB = async (route: Route) => route.fulfill({ status: 503, json: { code: "DETAIL_UNAVAILABLE", error: "controlled detail failure" } });
     await page.route(taskUrl(projectId, taskB), failB);
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByText("任务加载失败，请重试或选择其他任务。").waitFor();
     assert.equal(await page.getByLabel("消息").count(), 0);
     await page.unroute(taskUrl(projectId, taskB), failB);
     await page.getByRole("button", { name: "重试加载任务" }).click();
     await page.getByRole("heading", { name: "Task B" }).waitFor();
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByLabel("消息").waitFor();
     assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
 
     // Two projects, two tasks each: slow C must not resurrect after selecting D
     // or after returning to the first project.
-    await page.getByRole("button", { name: /Other Lab/ }).click();
-    await page.getByRole("button", { name: /Task C/ }).waitFor();
+    await chooseProject(page, "Other Lab");
+    await page.locator(".task-switcher > summary").waitFor();
     const heldC = await holdResponse(page, taskUrl(otherId, taskC));
-    await page.getByRole("button", { name: /Task C/ }).click();
+    await chooseTask(page, "Task C");
     await heldC.ready;
     assert.equal(await page.getByLabel("消息").count(), 0);
-    await page.getByRole("button", { name: /Task D/ }).click();
+    await chooseTask(page, "Task D");
     await page.getByRole("heading", { name: "Task D" }).waitFor();
     await modelSelect.selectOption("deepseek:deepseek-v4-pro");
     await expectModel(page, "deepseek-v4-pro");
@@ -515,7 +666,7 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await stoppedResponse;
     assert.equal(stopped.at(-1), taskD);
     assert.deepEqual(seen.at(-1), { taskId: taskD, modelId: "deepseek-v4-pro" });
-    await page.getByRole("button", { name: /Shell Lab/ }).click();
+    await chooseProject(page, "Shell Lab");
     await page.getByLabel("消息").waitFor();
     await heldC.release();
     assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
@@ -536,9 +687,9 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await modelSelect.selectOption("deepseek:deepseek-flash");
     await oldEpoch.ready;
     await expectModel(page, "deepseek-flash");
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByRole("heading", { name: "Task B" }).waitFor();
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
     await modelSelect.selectOption("deepseek:deepseek-v4-pro");
     await expectModel(page, "deepseek-v4-pro");
@@ -549,13 +700,13 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     const oldWrite = await holdResponse(page, `${taskUrl(projectId, taskA)}/model`);
     await modelSelect.selectOption("deepseek:deepseek-flash");
     await oldWrite.ready;
-    await page.getByRole("button", { name: /Task B/ }).click();
+    await chooseTask(page, "Task B");
     await page.getByRole("heading", { name: "Task B" }).waitFor();
     await fetch(`${taskUrl(projectId, taskA)}/model`, {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ provider: "deepseek", modelId: "deepseek-v4-pro" }),
     });
-    await page.getByRole("button", { name: /Task A/ }).click();
+    await chooseTask(page, "Task A");
     await page.getByRole("heading", { name: "Task A" }).waitFor();
     await oldWrite.release();
     await expectModel(page, "deepseek-v4-pro");
@@ -582,7 +733,7 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await page.keyboard.press("Enter");
     await expectModel(page, "deepseek-flash");
     await mobileNav.getByRole("button", { name: "工作区", exact: true }).tap();
-    await page.getByRole("button", { name: /Task A/ }).waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "打开导航", exact: true }).waitFor({ state: "visible" });
     await mobileNav.getByRole("button", { name: "会话", exact: true }).tap();
     assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -628,6 +779,14 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     assert.equal(seen.length, callsBeforeReading);
     await page.getByLabel("筛选论文").fill("not-present");
     await library.getByText("没有匹配内容；可在工作区创建或导入。").waitFor();
+    await chooseTask(page, "Task B");
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    assert.equal(await page.getByLabel("筛选论文").inputValue(), "");
+    assert.equal(await library.getByRole("button", { name: "reading-a.txt", exact: true }).count(), 0);
+    await library.getByRole("button", { name: "本项目全部", exact: true }).click();
+    await library.getByRole("button", { name: "reading-a.txt", exact: true }).waitFor();
+    await chooseTask(page, "Task A");
+    assert.equal(await page.getByLabel("筛选论文").inputValue(), "not-present");
     await page.getByLabel("筛选论文").fill("");
     await page.getByRole("button", { name: "收起导航", exact: true }).click();
     await page.getByLabel("紧凑任务").selectOption(taskB);

@@ -6,6 +6,7 @@ export interface WorkspaceState {
   reading: Record<string, number>; selectedRunId: string | null;
 }
 export const objectKey = (object: WorkObject) => `${object.kind}:${object.id}`;
+export const objectView = (object: WorkObject): WorkView => ({ material: "materials", plan: "plan", run: "experiments", result: "results", manuscript: "manuscript", review: "review" })[object.kind] as WorkView;
 export const emptyWorkspace = (): WorkspaceState => ({ view: "work", layout: "single", tabs: [], active: null, secondary: null, reading: {}, selectedRunId: null });
 export function validWorkspace(value: unknown): value is WorkspaceState {
   const v = value as WorkspaceState | null;
@@ -21,12 +22,19 @@ export function validWorkspace(value: unknown): value is WorkspaceState {
 export function openObject(state: WorkspaceState, object: WorkObject): WorkspaceState {
   const key = objectKey(object);
   return { ...state, active: key, tabs: [...state.tabs.filter((o) => objectKey(o) !== key), object].slice(-40),
-    view: ({ material: "materials", plan: "plan", run: "experiments", result: "results", manuscript: "manuscript", review: "review" } as const)[object.kind],
+    view: objectView(object),
     selectedRunId: object.kind === "run" ? object.id : state.selectedRunId };
+}
+export function selectView(state: WorkspaceState, view: WorkView): WorkspaceState {
+  const current = state.tabs.find((object) => objectKey(object) === state.active && objectView(object) === view);
+  const matching = current ?? state.tabs.findLast((object) => objectView(object) === view);
+  return { ...state, view, active: matching ? objectKey(matching) : null,
+    layout: view === state.view ? state.layout : view === "experiments" ? "list-detail" : view === "manuscript" ? "split" : "single" };
 }
 export function closeObject(state: WorkspaceState, key: string): WorkspaceState {
   const tabs = state.tabs.filter((o) => objectKey(o) !== key);
-  return { ...state, tabs, active: state.active === key ? (tabs.at(-1) ? objectKey(tabs.at(-1)!) : null) : state.active,
+  const remaining = tabs.findLast((object) => objectView(object) === state.view);
+  return { ...state, tabs, active: state.active === key ? (remaining ? objectKey(remaining) : null) : state.active,
     secondary: state.secondary === key ? null : state.secondary };
 }
 export interface StorageLike { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void }

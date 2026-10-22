@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { closeObject, emptyWorkspace, openObject, readStored, validWorkspace, writeStored, type StorageLike } from "../src/workspace.js";
+import { closeObject, emptyWorkspace, openObject, readStored, selectView, validWorkspace, writeStored, type StorageLike } from "../src/workspace.js";
 test("workspace tabs deduplicate, preserve fixed objects, compare and close safely", () => {
   const a = { kind: "material" as const, id: "a", title: "A", pinned: true };
   let state = openObject(emptyWorkspace(), a);
@@ -14,6 +14,20 @@ test("workspace tabs deduplicate, preserve fixed objects, compare and close safe
   state = closeObject(state, "run:b");
   assert.equal(state.secondary, null);
   assert.equal(state.active, "material:a");
+});
+test("view changes never highlight an unrelated object or discard fixed tabs", () => {
+  let state = openObject(emptyWorkspace(), { kind: "material", id: "paper", title: "Paper", pinned: true });
+  state = openObject(state, { kind: "manuscript", id: "main.tex", title: "main.tex" });
+  state = selectView(state, "materials");
+  assert.equal(state.active, "material:paper");
+  state = selectView(state, "results");
+  assert.equal(state.active, null);
+  assert.equal(state.tabs.length, 2);
+  state = selectView(state, "manuscript");
+  assert.equal(state.active, "manuscript:main.tex");
+  state = closeObject(state, "manuscript:main.tex");
+  assert.equal(state.active, null);
+  assert.equal(state.tabs[0]?.pinned, true);
 });
 test("storage rejects malformed, old, cross-owner and missing-object state without corrupting memory", () => {
   let raw: string | null = null;

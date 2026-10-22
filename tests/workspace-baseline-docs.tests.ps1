@@ -250,4 +250,4 @@ Assert-Rejected { Assert-W01Review ($w01Review.Replace('postedTo=Task B', 'poste
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('../../../apps/web/src/App.tsx', 'missing.tsx')) $plan } 'Broken W01 review link'
 Assert-Rejected { Assert-W01Review $w01Review ($plan.Replace('W01-review-issues.md', 'missing.md')) } 'does not link W01 review'
 
-Write-Output "Workspace W00/W01 evidence structure: baseline, fix commit, regression records, credential/path guards and $negativeCaseCount negative cases passed. Functional results are recorded separately; W02-W05 remain unexecuted."
+Write-Output "Workspace W00/W01 evidence structure: baseline, fix commit, regression records, credential/path guards and $negativeCaseCount negative cases passed. Functional results and user review status are recorded separately."

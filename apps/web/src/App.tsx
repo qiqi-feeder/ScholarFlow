@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
+import { Icon } from "./Icon";
+import { PdfPreview } from "./PdfPreview";
+import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, selectView, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
 import { isString, sameShape, useStoredState } from "./use-workspace";
 import {
   api,
@@ -46,17 +48,6 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "review", label: "审稿" },
   { id: "settings", label: "设置" },
 ];
-
-const VIEW_ICONS: Record<Tab, string> = {
-  work: "任",
-  materials: "材",
-  plan: "案",
-  experiments: "实",
-  results: "果",
-  manuscript: "稿",
-  review: "审",
-  settings: "设",
-};
 
 function ago(value: string | null | undefined): string {
   if (!value) return "—";
@@ -154,13 +145,19 @@ export default function App() {
   const owner = `${projectId ?? "none"}.${taskId ?? "none"}`;
   const [workspace, setWorkspace] = useStoredState(`scholarflow.workspace.state.v1.${owner}`, emptyWorkspace(), validWorkspace);
   const tab = workspace.view;
-  const setTab = (view: Tab) => setWorkspace((s) => ({ ...s, view, layout: view === s.view ? s.layout : view === "experiments" ? "list-detail" : view === "manuscript" ? "split" : "single" }));
+  const setTab = (view: Tab) => setWorkspace((s) => selectView(s, view));
   const [navCollapsed, setNavCollapsed] = useStoredState("scholarflow.workspace.prefs.v1.nav", false, (v): v is boolean => typeof v === "boolean");
   const [chatCollapsed, setChatCollapsed] = useState(false);
-  const [chatWidth, setChatWidth] = useStoredState("scholarflow.workspace.prefs.v1.width", 380, (v): v is number => typeof v === "number" && v >= 300 && v <= 600);
-  const [libraryQuery, setLibraryQuery] = useState("");
-  const [libraryScope, setLibraryScope] = useState("project");
-  const [libraryStatus, setLibraryStatus] = useState("all");
+  const [chatWidth, setChatWidth] = useStoredState("scholarflow.workspace.prefs.v1.width", 360, (v): v is number => typeof v === "number" && v >= 300 && v <= 600);
+  const [library, setLibrary] = useStoredState(`scholarflow.workspace.library.v1.${owner}`, { query: "", scope: "task", status: "all" }, (v): v is { query: string; scope: string; status: string } => !!v && typeof v === "object" && typeof (v as any).query === "string" && ["task", "project"].includes((v as any).scope) && ["all", "readable", "unreadable"].includes((v as any).status));
+  const { query: libraryQuery, scope: libraryScope, status: libraryStatus } = library;
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [projectMenu, setProjectMenu] = useState(false);
+  const [taskMenu, setTaskMenu] = useState(false);
+  const resizingChat = useRef<{ x: number; width: number } | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const drawerTrigger = useRef<HTMLButtonElement | null>(null);
+  const drawerReturnFocus = useRef<HTMLElement | null>(null);
   const [dirtyFiles, setDirtyFiles] = useState<string[]>([]);
   const [closeRequest, setCloseRequest] = useState<WorkObject | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -419,6 +416,8 @@ export default function App() {
   const selectTask = (id: string) => {
     if (!projectId) return;
     void loadTask(projectId, id);
+    setTaskMenu(false);
+    setDrawerOpen(false);
   };
 
   const currentApprovals = detail?.approvals ?? [];
@@ -504,6 +503,26 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const panel = sidebarRef.current;
+    const close = panel?.querySelector<HTMLButtonElement>(".drawer-close");
+    close?.focus();
+    const protectFocus = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setDrawerOpen(false); (drawerReturnFocus.current ?? drawerTrigger.current)?.focus(); }
+      if (event.key !== "Tab" || !panel) return;
+      const focusable = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), select, input, textarea, summary, [tabindex="0"]')].filter((node) => node.getClientRects().length);
+      const first = focusable[0], last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    window.addEventListener("keydown", protectFocus);
+    return () => window.removeEventListener("keydown", protectFocus);
+  }, [drawerOpen]);
+
+  const resizeChat = (width: number) => setChatWidth(Math.max(300, Math.min(600, width)));
+  const openDrawer = () => { drawerReturnFocus.current = document.activeElement as HTMLElement | null; setDrawerOpen(true); };
+
   const objects: WorkObject[] = tab === "materials" ? materials.filter((m) =>
     (!libraryQuery || m.title.toLowerCase().includes(libraryQuery.toLowerCase())) && (libraryScope !== "task" || m.taskId === taskId)
     && (libraryStatus === "all" || (libraryStatus === "readable" ? !!m.note : !m.note)))
@@ -516,57 +535,67 @@ export default function App() {
   const activeObject = workspace.tabs.find((o) => objectKey(o) === workspace.active);
   const secondaryObject = workspace.tabs.find((o) => objectKey(o) === workspace.secondary);
   const open = (object: WorkObject) => setWorkspace((s) => openObject(s, object));
-  const selectObject = (object: WorkObject) => { open(object); setMobileChat(false); };
+  const selectObject = (object: WorkObject) => { open(object); setMobileChat(false); setDrawerOpen(false); };
   const renderMaterial = (object: WorkObject) => {
     const material = materials.find((m) => m.id === object.id);
     if (!material) return <p role="status">材料已不可用，请关闭标签或重新选择。</p>;
     return <section className="card reader"><h3>{material.title}</h3>
-      <label>阅读页码 <input aria-label={`阅读页码 ${material.title}`} type="number" min={1} value={workspace.reading[material.id] ?? 1} onChange={(e) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: Math.max(1, Number(e.target.value)) } }))} /></label>
-      <iframe title={`原文 ${material.title}`} sandbox="allow-same-origin" src={`/api/projects/${projectId}/materials/${material.id}/file#page=${workspace.reading[material.id] ?? 1}`} />
+      {material.mediaType !== "application/pdf" && <label>阅读页码 <input aria-label={`阅读页码 ${material.title}`} type="number" min={1} value={workspace.reading[material.id] ?? 1} onChange={(e) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: Math.max(1, Number(e.target.value)) } }))} /></label>}
+      {material.mediaType === "application/pdf"
+        ? <PdfPreview title={`原文 ${material.title}`} url={`/api/projects/${projectId}/materials/${material.id}/file`} page={workspace.reading[material.id] ?? 1} onPage={(page) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: page } }))} />
+        : <iframe title={`原文 ${material.title}`} sandbox="allow-same-origin" src={`/api/projects/${projectId}/materials/${material.id}/file`} />}
       <details><summary>笔记与来源</summary><p>{material.note || "暂无可读文本；可查看原始文件或导入可读版本。"}</p><p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
     </section>;
   };
 
   return (
-    <div className={`app-shell ${mobileChat ? "show-chat" : ""} ${navCollapsed ? "nav-collapsed" : ""} ${chatCollapsed ? "chat-collapsed" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties}>
+    <div className={`app-shell ${mobileChat ? "show-chat" : ""} ${navCollapsed ? "nav-collapsed" : ""} ${chatCollapsed ? "chat-collapsed" : ""} ${drawerOpen ? "drawer-open" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties}>
+      <header className="global-bar">
+        <div className="app-brand"><Icon name="logo" size={17} /><h1>ScholarFlow</h1><span className="local-label">LOCAL</span></div>
+        <div className="global-context"><h2>{selectedProject?.name ?? "选择或创建项目"}</h2><span className="context-divider">/</span><span className="current-task">{detail?.task.title ?? (taskLoading ? "任务加载中" : "选择任务")}</span>{detail && <StatusBadge status={detail.task.status} />}</div>
+        <div className="global-actions"><span className="connection-status"><span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />{streamState === "connected" ? "事件流已连接" : streamState === "reconnecting" ? "事件流重连中" : "事件流未连接"}</span><button className="icon-button" aria-label="刷新" title="刷新项目" onClick={() => projectId && void loadProject(projectId)} disabled={!projectId}><Icon name="refresh" size={16} /></button><button className="icon-button" aria-label="设置与能力状态" title={`Agent ${health?.agent?.configured ? "已配置" : "未配置"} · TeX ${health?.latex?.pdflatex?.available ? "可用" : "不可用"}`} onClick={() => setTab("settings")}><Icon name="settings" size={16} /></button><button className="icon-button chat-toggle" aria-label={chatCollapsed ? "展开会话" : "收起会话"} title={chatCollapsed ? "展开会话" : "收起会话"} onClick={() => setChatCollapsed((v) => !v)}><Icon name="chat" size={17} /></button></div>
+        {navCollapsed && <div className="compact-context"><select aria-label="紧凑项目" value={projectId ?? ""} onChange={(e) => setProjectId(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><select aria-label="紧凑任务" value={taskId ?? ""} onChange={(e) => selectTask(e.target.value)}><option value="">选择任务</option>{tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></div>}
+      </header>
       <nav className="mobile-session-nav" aria-label="工作区与会话">
+        <button className="icon-button" ref={drawerTrigger} aria-label="打开导航" aria-expanded={drawerOpen} onClick={openDrawer}><Icon name="panel" /></button>
         <button aria-pressed={!mobileChat} onClick={() => setMobileChat(false)}>工作区</button>
         <button aria-pressed={mobileChat} onClick={() => setMobileChat(true)}>会话</button>
       </nav>
-      <aside className="rail" aria-label="工作视图">
-        <div className="rail-logo" title="ScholarFlow">SF</div>
+      <aside className="rail" aria-label="工作视图" role="tablist" aria-orientation="vertical" inert={drawerOpen}>
         {TABS.map((item) => (
           <button
             key={item.id}
             type="button"
+            role="tab"
             className={`rail-button ${tab === item.id ? "active" : ""}`}
-            aria-label={`工作视图：${item.label}`}
+            aria-label={item.label}
             title={item.label}
             aria-pressed={tab === item.id}
+            aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
           >
-            <span aria-hidden="true">{VIEW_ICONS[item.id]}</span>
+            <Icon name={item.id} size={20} />
             {item.id === "experiments" && pendingApprovals.length > 0 && <span className="rail-count">{pendingApprovals.length}</span>}
           </button>
         ))}
         <div className="rail-foot">
-          <button className="rail-button" aria-label={navCollapsed ? "展开导航" : "收起导航"} onClick={() => setNavCollapsed((v) => !v)}>栏</button>
-          <span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />
+          <button className="rail-button nav-toggle" aria-label={navCollapsed ? "展开导航" : "收起导航"} onClick={() => setNavCollapsed((v) => !v)}><Icon name="panel" /></button>
+          <button className="rail-button tablet-nav-toggle" aria-label="打开内容导航" onClick={openDrawer}><Icon name="panel" /></button>
         </div>
       </aside>
 
-      <aside className="nav-panel">
-        {navCollapsed && <><label>项目<select aria-label="紧凑项目" value={projectId ?? ""} onChange={(e) => setProjectId(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>任务<select aria-label="紧凑任务" value={taskId ?? ""} onChange={(e) => selectTask(e.target.value)}><option value="">选择任务</option>{tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label></>}
-        <div className="nav-brand">
-          <h1>ScholarFlow</h1>
-          <p>项目与任务</p>
-        </div>
-        <div className="project-list" aria-label="项目列表">
+      {drawerOpen && <button className="drawer-backdrop" aria-label="关闭导航遮罩" onClick={() => { setDrawerOpen(false); (drawerReturnFocus.current ?? drawerTrigger.current)?.focus(); }} />}
+      <aside className="nav-panel" ref={sidebarRef} data-view={tab} role={drawerOpen ? "dialog" : undefined} aria-modal={drawerOpen ? true : undefined} aria-label={drawerOpen ? "导航菜单" : "内容导航"}>
+        <div className="drawer-heading"><strong>工作导航</strong><button className="icon-button drawer-close" aria-label="关闭导航" onClick={() => { setDrawerOpen(false); (drawerReturnFocus.current ?? drawerTrigger.current)?.focus(); }}><Icon name="close" /></button></div>
+        <label className="drawer-view-picker">工作视图<select aria-label="工作视图" value={tab} onChange={(e) => { setTab(e.target.value as Tab); setDrawerOpen(false); }}>{TABS.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
+        <details className="project-switcher" open={projectMenu}>
+          <summary onClick={(e) => { e.preventDefault(); setProjectMenu((v) => !v); }}><Icon name="logo" size={17} /><span><small>当前项目</small><strong>{selectedProject?.name ?? "选择或创建项目"}</strong></span><Icon name="chevron" size={13} /></summary>
+        <div className="switcher-menu"><div className="project-list" aria-label="项目列表">
           {projects.map((project) => (
             <button
               key={project.id}
               className={`project-item ${project.id === projectId ? "active" : ""}`}
-              onClick={() => setProjectId(project.id)}
+              onClick={() => { setProjectId(project.id); setProjectMenu(false); setDrawerOpen(false); }}
             >
               <span className="project-name">{project.name}</span>
               <span className="project-meta">{project.id.slice(0, 10)}</span>
@@ -574,6 +603,10 @@ export default function App() {
           ))}
         </div>
         <NewProject onCreate={createProject} />
+        </div></details>
+        <details className="task-switcher" open={taskMenu || !taskId}>
+          <summary onClick={(e) => { e.preventDefault(); setTaskMenu((v) => !v); }}><span className={`dot ${detail?.task.status === "running" ? "ok" : ""}`} /><span><small>当前任务</small><strong>{tasks.find((t) => t.id === taskId)?.title ?? "选择一个任务"}</strong></span><Icon name="chevron" size={13} /></summary>
+        <div className="switcher-menu">
         <div className="nav-section-head">
           <h2>任务</h2>
           <button className="secondary small" onClick={() => setShowTaskForm(!showTaskForm)}>
@@ -624,41 +657,21 @@ export default function App() {
             </button>
           ))}
         </div>
-        <div className="sidebar-foot">
-          <span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />
-          {streamState === "connected" ? "事件流已连接" : streamState === "reconnecting" ? "事件流重连中" : "事件流未连接"}
-          <br />
-          <span className="muted">单用户 · 仅回环地址</span>
-        </div>
+        </div></details>
         <div className="object-library">
-          <h3>{TABS.find((t) => t.id === tab)?.label}内容</h3>
-          {tab === "materials" && <><input aria-label="筛选论文" placeholder="筛选标题" value={libraryQuery} onChange={(e) => setLibraryQuery(e.target.value)} /><select aria-label="论文范围" value={libraryScope} onChange={(e) => setLibraryScope(e.target.value)}><option value="project">本项目全部</option><option value="task">当前任务</option></select><select aria-label="材料状态" value={libraryStatus} onChange={(e) => setLibraryStatus(e.target.value)}><option value="all">全部状态</option><option value="readable">有提取文本/摘要</option><option value="unreadable">待补可读文本</option></select></>}
+          <h3><Icon name={tab} size={16} />{tab === "materials" ? "论文库" : tab === "manuscript" ? "稿件目录" : `${TABS.find((t) => t.id === tab)?.label}内容`}<span className="library-count">{objects.length}</span></h3>
+          {tab === "materials" && <><div className="library-scope"><button aria-pressed={libraryScope === "task"} onClick={() => setLibrary((s) => ({ ...s, scope: "task" }))}>当前任务</button><button aria-pressed={libraryScope === "project"} onClick={() => setLibrary((s) => ({ ...s, scope: "project" }))}>本项目全部</button></div><input aria-label="筛选论文" placeholder="搜索标题…" value={libraryQuery} onChange={(e) => setLibrary((s) => ({ ...s, query: e.target.value }))} /><select aria-label="材料状态" value={libraryStatus} onChange={(e) => setLibrary((s) => ({ ...s, status: e.target.value }))}><option value="all">全部状态</option><option value="readable">有提取文本/摘要</option><option value="unreadable">待补可读文本</option></select></>}
           {objects.length === 0 && <p className="muted">没有匹配内容；可在工作区创建或导入。</p>}
-          {objects.map((object) => <button key={objectKey(object)} className="object-item" aria-pressed={workspace.active === objectKey(object)} onClick={() => selectObject(object)}>{object.title}</button>)}
+          {objects.map((object) => <button key={objectKey(object)} className="object-item" aria-label={object.title} aria-pressed={workspace.active === objectKey(object)} onClick={() => selectObject(object)}><span className="object-title"><Icon name={object.kind === "material" ? "materials" : object.kind === "run" ? "experiments" : object.kind === "result" ? "results" : object.kind} size={15} />{object.title}</span>{object.kind === "material" && <span className="object-meta">{materials.find((m) => m.id === object.id)?.source.channel} · {materials.find((m) => m.id === object.id)?.note ? "有摘要 / 提取文本" : "待补可读文本"}</span>}</button>)}
         </div>
+        <div className="nav-footer"><span className="dot ok" />本地工作区<span>单用户</span></div>
       </aside>
 
-      <main className="workspace">
-        <header className="topbar">
-          <div>
-            <h2>{selectedProject?.name ?? "选择或创建项目"}</h2>
-            <p className="muted">{selectedProject?.description || "同一项目共享有来源的材料和运行；聊天历史按任务隔离。"}</p>
-          </div>
-          <div className="topbar-actions">
-            <button className="chip" onClick={() => setChatCollapsed((v) => !v)}>{chatCollapsed ? "展开会话" : "收起会话"}</button>
-            {health && (
-              <button className="chip" onClick={() => setTab("settings")} title={health.latex?.pdflatex?.available ? "LaTeX 可用" : "LaTeX 不可用"}>
-                Agent {health.agent?.configured ? "已配置" : "未配置"} · TeX {health.latex?.pdflatex?.available ? "OK" : "缺"}
-              </button>
-            )}
-            <button className="chip" onClick={() => void loadProject(projectId!)} disabled={!projectId}>刷新</button>
-          </div>
-        </header>
-
+      <main className="workspace" inert={drawerOpen}>
         <ErrorBanner error={error} clear={() => setError(null)} />
-        {settings && !settings.model.configured && (
+        {settings && !settings.model.configured && modelCatalog?.models.length === 0 && (
           <div className="banner warn">
-            {settings.model.provider} 未配置：真实 Agent 对话会返回明确的配置错误，不会生成假回答。前往
+            模型尚未配置，已有材料仍可查看。前往
             <button className="link" onClick={() => setTab("settings")}>设置</button>
             配置 Key。
           </div>
@@ -671,25 +684,15 @@ export default function App() {
           </section>
         ) : (
           <>
-            <nav className="tabs" role="tablist">
-              {TABS.map((item) => (
-                <button
-                  key={item.id}
-                  role="tab"
-                  aria-selected={tab === item.id}
-                  className={tab === item.id ? "active" : ""}
-                  onClick={() => setTab(item.id)}
-                >
-                  {item.label}
-                  {item.id === "experiments" && pendingApprovals.length > 0 && <span className="count">{pendingApprovals.length}</span>}
-                </button>
-              ))}
-            </nav>
-
-            <div className="workspace-toolbar"><label>布局<select aria-label="工作区布局" value={workspace.layout} onChange={(e) => setWorkspace((s) => ({ ...s, layout: e.target.value as typeof s.layout }))}><option value="single">单内容</option><option value="split">双内容对照</option><option value="list-detail">列表与详情</option></select></label><button className="secondary" onClick={() => setWorkspace((s) => ({ ...s, active: null }))}>返回工作视图</button></div>
-            <nav className="object-tabs" aria-label="已打开内容">{workspace.tabs.map((object) => <span key={objectKey(object)}><button aria-pressed={workspace.active === objectKey(object)} onClick={() => open(object)}>{object.title}</button><button aria-label={`固定 ${object.title}`} onClick={() => setWorkspace((s) => ({ ...s, tabs: s.tabs.map((o) => objectKey(o) === objectKey(object) ? { ...o, pinned: !o.pinned } : o) }))}>{object.pinned ? "已固定" : "固定"}</button><button aria-label={`对照 ${object.title}`} onClick={() => setWorkspace((s) => ({ ...s, secondary: objectKey(object), layout: "split" }))}>对照</button><button aria-label={`关闭 ${object.title}`} onClick={() => { if (object.kind === "manuscript" && dirtyFiles.includes(object.id)) { open(object); setCloseRequest(object); } else setWorkspace((s) => closeObject(s, objectKey(object))); }}>×</button></span>)}</nav>
+            <div className="workspace-toolbar"><div className="workspace-view-title"><Icon name={tab} size={17} /><h3>{tab === "materials" ? "文献阅读" : tab === "manuscript" ? "稿件工作区" : TABS.find((t) => t.id === tab)?.label}</h3></div><div className="workspace-tools"><label><Icon name="compare" size={15} /><select aria-label="工作区布局" value={workspace.layout} onChange={(e) => setWorkspace((s) => ({ ...s, layout: e.target.value as typeof s.layout }))}><option value="single">单内容</option><option value="split">双内容对照</option><option value="list-detail">列表与详情</option></select></label><button className="icon-button" aria-label="返回工作视图" title="返回工作视图" onClick={() => setWorkspace((s) => ({ ...s, active: null }))}><Icon name="work" size={16} /></button></div></div>
+            {workspace.tabs.length > 0 && <nav className="object-tabs" aria-label="已打开内容">{workspace.tabs.map((object) => <span className={workspace.active === objectKey(object) ? "is-active" : ""} key={objectKey(object)}><button className="object-tab-title" aria-pressed={workspace.active === objectKey(object)} onClick={() => open(object)}>{object.title}</button><button className="tab-action" aria-label={`固定 ${object.title}`} title={object.pinned ? "取消固定" : "固定标签"} aria-pressed={!!object.pinned} onClick={() => setWorkspace((s) => ({ ...s, tabs: s.tabs.map((o) => objectKey(o) === objectKey(object) ? { ...o, pinned: !o.pinned } : o) }))}><Icon name="pin" size={13} /></button><button className="tab-action" aria-label={`对照 ${object.title}`} title="加入对照" onClick={() => setWorkspace((s) => ({ ...s, secondary: objectKey(object), layout: "split" }))}><Icon name="compare" size={13} /></button><button className="tab-action" aria-label={`关闭 ${object.title}`} title="关闭标签" onClick={() => { if (object.kind === "manuscript" && dirtyFiles.includes(object.id)) { open(object); setCloseRequest(object); } else setWorkspace((s) => closeObject(s, objectKey(object))); }}><Icon name="close" size={13} /></button></span>)}</nav>}
             {tab === "materials" && activeObject?.kind === "material" && <div className={`object-content ${workspace.layout === "split" ? "split" : ""}`}>{renderMaterial(activeObject)}{workspace.layout === "split" && secondaryObject?.kind === "material" && secondaryObject.id !== activeObject.id && renderMaterial(secondaryObject)}</div>}
-            {tab === "review" && <section className="card"><h3>所选审稿意见</h3><p>{activeObject?.kind === "review" ? activeObject.title : "在左侧选择意见；创建任务时可填写原始审稿意见。"}</p><textarea aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} /></section>}
+            {tab === "review" && <section className="card review-panel">
+              <div className="row space-between"><h3>所选审稿意见</h3><span className="badge">回应草稿</span></div>
+              <span className="review-eyebrow">审稿原文</span><blockquote>{activeObject?.kind === "review" ? activeObject.title : "在左侧选择意见；创建任务时可填写原始审稿意见。"}</blockquote>
+              <label htmlFor="review-draft">逐条回应</label><p className="muted">记录修改、依据及仍需核对的事项。内容按当前任务和意见保留。</p>
+              <textarea id="review-draft" rows={9} placeholder="围绕这条意见整理回应草稿…" aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} />
+            </section>}
             <div className="workspace-content">
               {tab === "work" && (
                 <OverviewPanel
@@ -761,7 +764,7 @@ export default function App() {
                   taskId={taskId}
                   data={manuscript}
                   build={currentManuscriptBuild}
-                  onChanged={() => void loadProject(projectId)}
+                  onChanged={() => { setError(null); void loadProject(projectId); }}
                   fail={fail}
                 />
               </div>)}
@@ -784,8 +787,13 @@ export default function App() {
         )}
       </main>
 
-      <aside className="chat-panel" aria-label="任务会话">
-        <label className="chat-resize">会话宽度<input aria-label="会话宽度" type="range" min={300} max={600} value={chatWidth} onChange={(e) => setChatWidth(Number(e.target.value))} /></label>
+      <aside className="chat-panel" aria-label="任务会话" inert={drawerOpen}>
+        <div className="chat-divider" role="separator" aria-label="会话宽度" aria-orientation="vertical" aria-valuemin={300} aria-valuemax={600} aria-valuenow={chatWidth} tabIndex={0}
+          onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); resizingChat.current = { x: event.clientX, width: chatWidth }; }}
+          onPointerMove={(event) => { if (resizingChat.current) resizeChat(resizingChat.current.width + resizingChat.current.x - event.clientX); }}
+          onPointerUp={() => { resizingChat.current = null; }} onPointerCancel={() => { resizingChat.current = null; }}
+          onKeyDown={(event) => { const change = event.key === "ArrowLeft" ? chatWidth + 16 : event.key === "ArrowRight" ? chatWidth - 16 : event.key === "Home" ? 300 : event.key === "End" ? 600 : null; if (change !== null) { event.preventDefault(); resizeChat(change); } }} />
+        <div className="mobile-chat-notice"><ErrorBanner error={error} clear={() => setError(null)} /></div>
         {!detail && taskId && (
           <div role="status">
             {taskLoading ? "正在加载所选任务…" : "任务加载失败，请重试或选择其他任务。"}
@@ -906,8 +914,11 @@ function ChatPanel(props: {
   onSwitchModel: (provider: string, id: string) => void;
 }) {
   const chatEnd = useRef<HTMLDivElement | null>(null);
+  const chatLog = useRef<HTMLDivElement | null>(null);
+  const followAnswer = useRef(true);
+  useEffect(() => { followAnswer.current = true; }, [props.detail?.task.id]);
   useEffect(() => {
-    chatEnd.current?.scrollIntoView({ block: "end" });
+    if (followAnswer.current && chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight;
   }, [props.events.length, props.liveText]);
   const eventNodes = props.events.filter((event) =>
     ["user_message", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
@@ -928,12 +939,51 @@ function ChatPanel(props: {
     <>
       <div className="chat-head">
         <div>
-          <h3>{props.detail.task.title}</h3>
+          <h3><Icon name="chat" size={16} />{props.detail.task.title}</h3>
           <p className="muted">{props.detail.task.objective}</p>
         </div>
         <StatusBadge status={props.detail.task.status} />
       </div>
 
+      {props.pendingApprovals.length > 0 && (
+        <button className="banner warn button-banner" onClick={props.openExperiments}>
+          {props.pendingApprovals.length} 个实验提案等待你批准精确指纹。Agent 不会自行启动。前往实验面板 →
+        </button>
+      )}
+      <div className="chat-log" role="log" aria-live="polite" ref={chatLog} onScroll={(event) => { const log = event.currentTarget; followAnswer.current = log.scrollHeight - log.scrollTop - log.clientHeight < 48; }}>
+        {eventNodes.length === 0 && <p className="muted">发送第一条消息，或先让 Agent 检索材料、形成方案。论文内容只会作为数据，不会成为宿主规则。</p>}
+        {eventNodes.map((event) => (
+          <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} />
+        ))}
+        {props.liveText && (
+          <div className="message assistant">
+            <Markdown text={props.liveText} />
+            <span className="cursor" aria-label="正在生成" />
+          </div>
+        )}
+        <div ref={chatEnd} />
+      </div>
+      <form
+        className="composer"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void props.sendMessage();
+        }}
+      >
+        <textarea
+          rows={3}
+          value={props.message}
+          onChange={(event) => props.setMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              if (!sendDisabled) void props.sendMessage();
+            }
+          }}
+          placeholder="描述目标、上传材料路径，或让 Agent 读取 Skill 并推进当前阶段。Enter 发送，Shift+Enter 换行。"
+          aria-label="消息"
+        />
+        <div className="composer-actions">
       <div className="model-picker">
         <label htmlFor="task-model-select">当前任务模型</label>
         <select
@@ -971,48 +1021,9 @@ function ChatPanel(props: {
         {!props.modelAvailable && <span className="model-warning">所选模型当前不可用，发送已阻止</span>}
       </div>
 
-      {props.pendingApprovals.length > 0 && (
-        <button className="banner warn button-banner" onClick={props.openExperiments}>
-          {props.pendingApprovals.length} 个实验提案等待你批准精确指纹。Agent 不会自行启动。前往实验面板 →
-        </button>
-      )}
-      <div className="chat-log" role="log" aria-live="polite">
-        {eventNodes.length === 0 && <p className="muted">发送第一条消息，或先让 Agent 检索材料、形成方案。论文内容只会作为数据，不会成为宿主规则。</p>}
-        {eventNodes.map((event) => (
-          <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} />
-        ))}
-        {props.liveText && (
-          <div className="message assistant">
-            <Markdown text={props.liveText} />
-            <span className="cursor" aria-label="正在生成" />
-          </div>
-        )}
-        <div ref={chatEnd} />
-      </div>
-      <form
-        className="composer"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void props.sendMessage();
-        }}
-      >
-        <textarea
-          rows={3}
-          value={props.message}
-          onChange={(event) => props.setMessage(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-              event.preventDefault();
-              if (!sendDisabled) void props.sendMessage();
-            }
-          }}
-          placeholder="描述目标、上传材料路径，或让 Agent 读取 Skill 并推进当前阶段。Enter 发送，Shift+Enter 换行。"
-          aria-label="消息"
-        />
-        <div className="composer-actions">
-          <span className="muted">停止回答 ≠ 取消实验</span>
+
           <button type="button" className="secondary" onClick={() => void props.stopAnswer()} disabled={!props.answering && !props.busy}>停止回答</button>
-          <button type="submit" disabled={sendDisabled}>发送</button>
+          <button type="submit" className="send-button" aria-label="发送" title="发送消息" disabled={sendDisabled}><Icon name="send" size={17} /></button>
         </div>
       </form>
     </>
@@ -1619,6 +1630,7 @@ function ManuscriptPanel(props: {
   const content = draft?.content ?? (remote?.owner === draftOwner && remote.file === file ? remote.content : "");
   const setContent = (value: string) => setFileDrafts((s) => ({ ...s, [file]: { content: value, baseHash: draft?.baseHash ?? remote?.hash ?? "" } }));
   const [editorMode, setEditorMode] = useStoredState(`scholarflow.workspace.editor.mode.v1.${draftOwner}`, "source", (v): v is string => ["source", "pdf", "compare"].includes(String(v)));
+  const [compareSide, setCompareSide] = useStoredState(`scholarflow.workspace.editor.side.v1.${draftOwner}`, "source", (v): v is string => v === "source" || v === "pdf");
   const [leaveFile, setLeaveFile] = useState<string | null>(null);
   const fileRequest = useRef(0);
   const dirty = !!draft && draft.content !== remote?.content;
@@ -1781,9 +1793,11 @@ function ManuscriptPanel(props: {
         </div>
         {conflict && <div role="alert" className="notice warn-box">草稿与服务端版本冲突，禁止覆盖。<button onClick={() => { setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; }); }}>放弃本地草稿</button><details><summary>比较服务端正文</summary><pre>{remote?.content}</pre></details></div>}
         {dirty && <p role="status">未保存修改 · 本地草稿保留</p>}
-        <div className={`source-preview ${editorMode}`}>
-          {editorMode !== "pdf" && <textarea className="editor" value={content} disabled={!remote || remote.owner !== draftOwner} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} />}
-          {editorMode !== "source" && (props.build ? <iframe title="稿件 PDF" src={`/api/projects/${props.projectId}/manuscript/pdf?v=${props.build.version}`} /> : <p>尚无成功构建，请先构建 PDF。</p>)}
+        {stale && <p className="pdf-stale-note" role="status">源码已修改，当前 PDF 对应上次成功构建；请重新构建。</p>}
+        {editorMode === "compare" && <div className="compare-side-toggle" role="group" aria-label="窄屏对照内容"><button aria-pressed={compareSide === "source"} onClick={() => setCompareSide("source")}>源码</button><button aria-pressed={compareSide === "pdf"} onClick={() => setCompareSide("pdf")}>PDF</button><span>空间不足时切换查看，另一侧位置保留</span></div>}
+        <div className={`source-preview ${editorMode}`} data-side={compareSide}>
+          {editorMode !== "pdf" && <div className="code-editor"><div className="code-gutter" aria-hidden="true">{content.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}</div><textarea className="editor" value={content} disabled={!remote || remote.owner !== draftOwner} onScroll={(event) => { if (event.currentTarget.previousElementSibling) event.currentTarget.previousElementSibling.scrollTop = event.currentTarget.scrollTop; }} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} /></div>}
+          {editorMode !== "source" && (props.build ? <PdfPreview title="稿件 PDF" url={`/api/projects/${props.projectId}/manuscript/pdf?v=${props.build.version}`} /> : <p>尚无成功构建，请先构建 PDF。</p>)}
         </div>
       </section>
     </div>
