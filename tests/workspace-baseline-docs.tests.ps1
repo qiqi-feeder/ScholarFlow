@@ -73,7 +73,7 @@ function Assert-Defaults([string]$text) {
 
 function Assert-W01([string]$text) {
     foreach ($required in @(
-        'W01 验收未通过，待修复复验',
+        'W01 修复复验通过（WT02、WT03、WT16 通过）',
         'W01-review-issues.md',
         'GET /api/models',
         'model_changed',
@@ -88,17 +88,20 @@ function Assert-W01([string]$text) {
 }
 
 function Assert-W01Review([string]$text, [string]$plan) {
-    foreach ($required in @('W01 验收未通过，待修复复验',
+    foreach ($required in @('W01 修复复验通过（WT02、WT03、WT16 通过）',
         '1e9e6c8487d6e5eed34f5ff39f46d506eaf8d824',
         'displayedTask=Task A', 'postedTo=Task B',
         'serverModel=deepseek-flash', 'displayedModel=deepseek:deepseek-v4-pro',
         'modelSelectVisible=false', 'W01-V01', 'W01-V02',
-        '1/2 通过', 'ERR_DLOPEN_FAILED', '关闭条件', '复验与状态更新')) {
+        '1/2 通过', 'ERR_DLOPEN_FAILED', '关闭条件', '复验与状态更新',
+        'd2d974ed71e69b2f6054d1442d75fc80d765fe7a', '## 4. 修复与实际复验',
+        '2/2 浏览器用例通过', '64 通过、0 失败', '390×844', '旧 GET/PUT',
+        '两个实际可用 DeepSeek 模型各一次有界请求')) {
         if (-not $text.Contains($required)) { throw "W01 review missing: $required" }
     }
     foreach ($id in @('W01-R01', 'W01-R02', 'W01-R03')) {
         $rows = [regex]::Matches($text, ('(?m)^\| ' + $id + ' \|[^\r\n]+(?=\r?$)'))
-        if ($rows.Count -ne 1 -or $rows[0].Value -notmatch '\| 待修复复验 \|$') {
+        if ($rows.Count -ne 1 -or $rows[0].Value -notmatch '\| 已关闭：复验通过 \|$') {
             throw "W01 review issue is missing, duplicated or falsely closed: $id"
         }
     }
@@ -157,7 +160,7 @@ function Assert-EvidenceIndex([string]$index, [string]$plan) {
         if (-not $index.Contains($required)) { throw "Evidence index missing: $required" }
     }
     if (-not $index.Contains('WT01 通过')) { throw 'Evidence index lost WT01 result' }
-    if (-not $index.Contains('W01 验收未通过，WT03、WT16 不通过，WT02 待完整复验')) { throw 'Evidence index lost W01 result' }
+    if (-not $index.Contains('W01 修复复验通过，WT02、WT03、WT16 通过')) { throw 'Evidence index lost W01 result' }
     if (-not $plan.Contains('(docs/verification/workspace-redesign/W00-baseline.md)')) {
         throw 'Plan does not link W00 baseline'
     }
@@ -172,7 +175,11 @@ $w01 = Read-Text (Join-Path $evidenceRoot 'W01-shell-models.md')
 $w01Review = Read-Text (Join-Path $evidenceRoot 'W01-review-issues.md')
 $index = Read-Text (Join-Path $evidenceRoot 'README.md')
 $plan = Read-Text (Join-Path $repositoryRoot 'PLAN.md')
-$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+# PowerShell 7.5+ otherwise converts ISO evidence timestamps to DateTime.
+# Keep the manifest's original string on both older and newer PowerShell.
+$jsonOptions = @{}
+if ((Get-Command ConvertFrom-Json).Parameters.ContainsKey('DateKind')) { $jsonOptions.DateKind = 'String' }
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json @jsonOptions
 
 Assert-Baseline $baseline
 Assert-Defaults $defaults
@@ -203,6 +210,9 @@ Assert-Rejected { Assert-Defaults ($defaults.Replace('不静默 fallback', '静�
 Assert-Rejected { Assert-Defaults ($defaults.Replace('session.setModel', 'custom switch')) } 'missing: session.setModel'
 Assert-Rejected { Assert-Defaults ($defaults.Replace('apps/web/test/fixtures/legacy-task.json', 'missing.json')) } 'missing:.*legacy-task'
 $brokenScreen = $manifest.PSObject.Copy()
+$wrongTime = $manifest.PSObject.Copy()
+$wrongTime.readAt = '2026-10-22T17:42:58.619Z'
+Assert-Rejected { Assert-Manifest $wrongTime $repositoryRoot } 'Missing or wrong Stitch read time'
 $brokenScreen.screenshots = @($manifest.screenshots | Select-Object -First 6)
 Assert-Rejected { Assert-Manifest $brokenScreen $repositoryRoot } 'seven screenshots'
 $badHash = $manifest.PSObject.Copy()
@@ -229,9 +239,11 @@ Assert-Rejected { Assert-EvidenceIndex ($index.Replace('W01-shell-models.md', 'm
 Assert-Rejected { Assert-EvidenceIndex $index ($plan.Replace('W01-shell-models.md', 'missing.md')) } 'does not link W01 evidence'
 Assert-Rejected { Assert-NoSensitive ($w01 + ' sk-abcdefghijklmnop') } 'API-key-like'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('| W01-R01 |', '| W01-R99 |')) $plan } 'issue is missing'
-Assert-Rejected { Assert-W01Review ($w01Review.Replace('| 待修复复验 |', '| 已关闭 |')) $plan } 'falsely closed'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('| 已关闭：复验通过 |', '| 已关闭 |')) $plan } 'falsely closed'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('d2d974ed71e69b2f6054d1442d75fc80d765fe7a', 'missing-commit')) $plan } 'review missing'
+Assert-Rejected { Assert-W01Review ($w01Review.Replace('64 通过、0 失败', '未验证')) $plan } 'review missing'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('postedTo=Task B', 'postedTo=Task A')) $plan } 'review missing'
 Assert-Rejected { Assert-W01Review ($w01Review.Replace('../../../apps/web/src/App.tsx', 'missing.tsx')) $plan } 'Broken W01 review link'
 Assert-Rejected { Assert-W01Review $w01Review ($plan.Replace('W01-review-issues.md', 'missing.md')) } 'does not link W01 review'
 
-Write-Output "Workspace W00/W01 evidence: Stitch SB01-SB07, exclusions, hashes, baseline/shell model evidence, credential/path guards and $negativeCaseCount negative cases passed. WT01 only accepted; W01 requires fixes and revalidation; W02-W05 remain unexecuted."
+Write-Output "Workspace W00/W01 evidence structure: baseline, fix commit, regression records, credential/path guards and $negativeCaseCount negative cases passed. Functional results are recorded separately; W02-W05 remain unexecuted."

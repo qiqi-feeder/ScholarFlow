@@ -275,8 +275,8 @@ if ($plan.Contains('状态：W00 基线已完成（WT01 通过）')) {
     Assert-Rejected { Assert-StitchHandoff ($plan.Replace('| 已完成：W00 保存 SB01–SB07/EX01–EX04', '| 待实施：W00 保存 SB01–SB07/EX01–EX04')) } 'UI baseline completion lacks evidence'
 }
 
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 验收未通过：WT03、WT16', '| 已完成：WT03、WT16')) $workspaceDiscussion } 'Rejected W01 milestone'
-Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 不通过：W01-R01', '| 通过：W01-R01')) $workspaceDiscussion } 'Rejected W01 acceptance'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 已完成：WT02、WT03、WT16', '| 待实施：WT02、WT03、WT16')) $workspaceDiscussion } 'shell milestone lacks completion evidence'
+Assert-Rejected { Assert-WorkspaceIteration ($plan.Replace('| 通过：W01 两项目', '| 未执行：W01 两项目')) $workspaceDiscussion } 'shell acceptance lacks evidence'
 
 # A documentation-only change may be committed separately from a W00 evidence update.
 # Validate the original pending baseline as well as an evidenced completed baseline.
@@ -292,4 +292,4 @@ $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| WT16 \|[^\r\n]*\|) (?:�
 $pendingPlan = [regex]::Replace($pendingPlan, '(?m)^(\| UI09 \|[^\r\n]*\|) 已完成：[^\r\n]+(?=\r?$)', '$1 待实施 |')
 Assert-WorkspaceIteration $pendingPlan $workspaceDiscussion
 Assert-StitchHandoff $pendingPlan
-Write-Output "MVP/workspace plans: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Documentation only; W01 is rejected pending fixes and revalidation; W02-W05 remain unexecuted."
+Write-Output "MVP/workspace plan structure: dependency graphs, product/test traceability, baseline status, authorization, links and $negativeCaseCount negative cases passed. Functional results are recorded separately; W02-W05 remain unexecuted."
