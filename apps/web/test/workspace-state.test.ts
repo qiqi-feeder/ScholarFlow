@@ -7,7 +7,10 @@ test("workspace tabs deduplicate, preserve fixed objects, compare and close safe
   state = openObject(state, { kind: "run", id: "b", title: "B" });
   state = openObject(state, { ...a, version: "v2" });
   assert.equal(state.tabs.length, 2);
-  assert.equal(state.tabs.at(-1)?.version, "v2");
+  assert.equal(state.tabs.find((tab) => tab.id === "a")?.version, "v2");
+  state = openObject(state, { kind: "material", id: "a", title: "A" });
+  assert.equal(state.tabs[0]?.pinned, true);
+  assert.deepEqual(state.tabs.map((tab) => tab.id), ["a", "b"]);
   assert.equal(state.selectedRunId, "b");
   state = { ...state, secondary: "run:b", layout: "split" };
   assert.ok(validWorkspace(state));

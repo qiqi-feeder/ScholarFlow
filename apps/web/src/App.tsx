@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
 import { PdfPreview } from "./PdfPreview";
+import { activityChanges, transitionKey, type RunActivity } from "./activity";
 import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, selectView, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
 import { isString, sameShape, useStoredState } from "./use-workspace";
 import {
@@ -147,7 +148,7 @@ export default function App() {
   const owner = `${projectId ?? "none"}.${taskId ?? "none"}`;
   const [workspace, setWorkspace] = useStoredState(`scholarflow.workspace.state.v1.${owner}`, emptyWorkspace(), validWorkspace);
   const tab = workspace.view;
-  const setTab = (view: Tab) => setWorkspace((s) => selectView(s, view));
+  const setTab = (view: Tab) => { setSourcePreview(null); setWorkspace((s) => selectView(s, view)); };
   const [navCollapsed, setNavCollapsed] = useStoredState("scholarflow.workspace.prefs.v1.nav", false, (v): v is boolean => typeof v === "boolean");
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [chatWidth, setChatWidth] = useStoredState("scholarflow.workspace.prefs.v1.width", 360, (v): v is number => typeof v === "number" && v >= 300 && v <= 600);
@@ -177,6 +178,14 @@ export default function App() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [drafts, setDrafts] = useStoredState<Record<string, string>>("scholarflow.workspace.drafts.v1", {}, (v): v is Record<string, string> => !!v && typeof v === "object" && Object.values(v).every((text) => typeof text === "string"));
   const [mobileChat, setMobileChat] = useState(false);
+  const [notices, setNotices] = useState<RunActivity[]>([]);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const activityPrevious = useRef<Record<string, string> | null>(null);
+  const [seenActivity, setSeenActivity] = useStoredState<Record<string, boolean>>("scholarflow.workspace.activity.v1", {}, (v): v is Record<string, boolean> => !!v && typeof v === "object" && Object.values(v).every((x) => typeof x === "boolean"));
+  const seenActivityRef = useRef(seenActivity);
+  seenActivityRef.current = seenActivity;
+  const [sourcePreview, setSourcePreview] = useState<ResolvedReference | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<ResolvedReference | null>(null);
   const draftKey = `${projectId}/${taskId}`;
   const [references, setReferences] = useStoredState<ResolvedReference[]>(`scholarflow.workspace.references.v1.${owner}`, [], (v): v is ResolvedReference[] => Array.isArray(v) && v.length <= 8 && v.every((r) => r && r.projectId === projectId && typeof r.id === "string" && typeof r.version === "string" && typeof r.text === "string"));
   const message = drafts[draftKey] ?? "";
@@ -381,12 +390,53 @@ export default function App() {
   useEffect(() => () => streamAbort.current?.abort(), []);
 
   useEffect(() => {
-    if (!projectId || !["work", "experiments", "results"].includes(tab)) return;
+    let disposed = false, reading = false;
+    const poll = async () => {
+      if (reading) return;
+      reading = true;
+      try {
+        const { runs } = await api<{ runs: RunActivity[] }>("/api/activity");
+        if (disposed) return;
+        const changes = activityChanges(activityPrevious.current, runs, seenActivityRef.current);
+        activityPrevious.current = changes.next;
+        setActivityError(null);
+        if (changes.notifications.length) {
+          setNotices((items) => [...changes.notifications, ...items].slice(0, 20));
+          const next = { ...seenActivityRef.current };
+          for (const run of changes.notifications) next[transitionKey(run)] = true;
+          const bounded = Object.fromEntries(Object.entries(next).slice(-1000));
+          seenActivityRef.current = bounded;
+          setSeenActivity(bounded);
+        }
+      } catch { if (!disposed) setActivityError("后台运行状态暂时无法更新，正在重试。"); }
+      finally { reading = false; }
+    };
+    void poll();
+    const timer = setInterval(() => void poll(), 2000);
+    return () => { disposed = true; clearInterval(timer); };
+  }, []);
+
+  useEffect(() => { setSourcePreview(null); }, [projectId, taskId]);
+  useEffect(() => {
+    if (!pendingOpen) return;
+    if (projectId !== pendingOpen.projectId) { setProjectId(pendingOpen.projectId); return; }
+    const targetTask = pendingOpen.taskId ?? taskId;
+    if (targetTask && taskId !== targetTask) { void loadTask(pendingOpen.projectId, targetTask); return; }
+    if (!detail || detail.task.id !== targetTask || taskLoading) return;
+    const r = pendingOpen;
+    setWorkspace((state) => openObject(state, { kind: r.kind, id: r.kind === "manuscript" ? r.file! : r.kind === "review" ? r.id.split(":")[1]! : r.id, title: r.title, version: r.version }));
+    setSourcePreview(r);
+    setPendingOpen(null);
+    setMobileChat(false);
+  }, [pendingOpen, projectId, taskId, detail, taskLoading, loadTask]);
+
+  useEffect(() => {
+    if (!projectId) return;
     const timer = setInterval(() => {
       void loadProject(projectId);
     }, 2500);
     return () => clearInterval(timer);
-  }, [projectId, tab, loadProject]);
+  }, [projectId, loadProject]);
 
   const createProject = async (name: string) => {
     try {
@@ -543,7 +593,14 @@ export default function App() {
   const activeObject = workspace.tabs.find((o) => objectKey(o) === workspace.active);
   const secondaryObject = workspace.tabs.find((o) => objectKey(o) === workspace.secondary);
   const open = (object: WorkObject) => setWorkspace((s) => openObject(s, object));
-  const selectObject = (object: WorkObject) => { open(object); setMobileChat(false); setDrawerOpen(false); };
+  const selectObject = (object: WorkObject) => { setSourcePreview(null); open(object); setMobileChat(false); setDrawerOpen(false); };
+  const openSource = async (reference: MessageReference, sourceProject = projectId) => {
+    if (!sourceProject) return;
+    try {
+      const result = await post<{ reference: ResolvedReference }>(`/api/projects/${sourceProject}/objects/open`, { reference });
+      setPendingOpen(result.reference);
+    } catch (err) { fail(err); }
+  };
   const attachReference = async (reference: MessageReference) => {
     if (!projectId || !taskId || !taskReady()) return;
     const target = { projectId, taskId, epoch: taskLoadSeq.current };
@@ -693,7 +750,9 @@ export default function App() {
         <div className="nav-footer"><span className="dot ok" />本地工作区<span>单用户</span></div>
       </aside>
 
+        {notices.length > 0 && <section className="activity-notices" aria-label="后台运行通知" aria-live="polite">{notices.map((run) => <div key={transitionKey(run)}><span>{run.name} · {statusText(run.status)} · {statusText(run.verification)}</span><button onClick={() => void openSource({ kind: "run", id: run.id, version: "" }, run.projectId)}>查看运行</button><button aria-label={`关闭通知 ${run.name}`} onClick={() => setNotices((items) => items.filter((item) => transitionKey(item) !== transitionKey(run)))}>×</button></div>)}</section>}
       <main className="workspace" inert={drawerOpen}>
+        {activityError && <p className="notice" role="status">{activityError}</p>}
         <ErrorBanner error={error} clear={() => setError(null)} />
         {settings && !settings.model.configured && modelCatalog?.models.length === 0 && (
           <div className="banner warn">
@@ -720,6 +779,7 @@ export default function App() {
               <label htmlFor="review-draft">逐条回应</label><p className="muted">记录修改、依据及仍需核对的事项。内容按当前任务和意见保留。</p>
               <textarea id="review-draft" rows={9} placeholder="围绕这条意见整理回应草稿…" aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} />
             </section>}
+            {sourcePreview && <section className="card source-snapshot" aria-label="来源快照"><div className="row space-between"><strong>{sourcePreview.title} · 来源快照</strong><button onClick={() => setSourcePreview(null)}>关闭来源快照</button></div><p className="small">来源任务 {sourcePreview.taskId ?? "项目共享"} · 版本 {sourcePreview.version.slice(0, 12)}{sourcePreview.page ? ` · 第 ${sourcePreview.page} 页` : ""}</p><pre>{sourcePreview.text}</pre><p className="muted small">下方为当前工作视图；此快照对应点击核对的版本，不会覆盖本地草稿。</p></section>}
             <div className="workspace-content">
               {tab === "work" && (
                 <OverviewPanel
@@ -847,6 +907,7 @@ export default function App() {
           onSwitchModel={(provider, id) => void switchTaskModel(provider, id)}
           references={references}
           removeReference={(index) => setReferences((items) => items.filter((_, i) => i !== index))}
+          openSource={(reference) => void openSource(reference, reference.projectId ?? projectId)}
         />
       </aside>
     </div>
@@ -931,6 +992,7 @@ function ReferenceText({ text, onReference }: { text: string; onReference: (sele
 }
 
 function ChatPanel(props: {
+  openSource: (reference: MessageReference & { projectId?: string }) => void;
   references: ResolvedReference[];
   removeReference: (index: number) => void;
   detail: TaskDetail | null;
@@ -958,7 +1020,7 @@ function ChatPanel(props: {
     if (followAnswer.current && chatLog.current) chatLog.current.scrollTop = chatLog.current.scrollHeight;
   }, [props.events.length, props.liveText]);
   const eventNodes = props.events.filter((event) =>
-    ["user_message", "message_context", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
+    ["user_message", "message_context", "artifact_created", "assistant_message", "error", "tool_start", "tool_end", "context_loaded", "plan_drafted", "plan_confirmed", "run_proposed", "run_queued", "run_verified", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "context_compacted", "model_changed"].includes(event.type),
   );
   if (!props.detail) {
     return (
@@ -990,7 +1052,7 @@ function ChatPanel(props: {
       <div className="chat-log" role="log" aria-live="polite" ref={chatLog} onScroll={(event) => { const log = event.currentTarget; followAnswer.current = log.scrollHeight - log.scrollTop - log.clientHeight < 48; }}>
         {eventNodes.length === 0 && <p className="muted">发送第一条消息，或先让 Agent 检索材料、形成方案。论文内容只会作为数据，不会成为宿主规则。</p>}
         {eventNodes.map((event) => (
-          <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} />
+          <ChatEvent key={`${event.type}-${event.seq}-${event.createdAt}`} event={event} openSource={props.openSource} />
         ))}
         {props.liveText && (
           <div className="message assistant">
@@ -1068,8 +1130,8 @@ function ChatPanel(props: {
   );
 }
 
-function ChatEvent({ event }: { event: StreamEvent }) {
-  if (event.type === "message_context") return <details className="message-references"><summary>本条消息引用 · {event.data.references.length} 项</summary>{event.data.references.map((r: ResolvedReference, i: number) => <div key={i}><strong>{r.title}{r.page ? ` · 第 ${r.page} 页` : ""}</strong><p className="small">来源 {r.kind}/{r.id} · 版本 {r.version.slice(0, 12)}</p><pre>{r.text}</pre></div>)}</details>;
+function ChatEvent({ event, openSource }: { event: StreamEvent; openSource: (reference: MessageReference & { projectId?: string }) => void }) {
+  if (event.type === "message_context") return <details className="message-references"><summary>本条消息引用 · {event.data.references.length} 项</summary>{event.data.references.map((r: ResolvedReference, i: number) => <div key={i}><strong>{r.title}{r.page ? ` · 第 ${r.page} 页` : ""}</strong><p className="small">来源 {r.kind}/{r.id} · 版本 {r.version.slice(0, 12)}</p><pre>{r.text}</pre><button onClick={() => openSource(r)}>查看来源</button></div>)}</details>;
   if (event.type === "user_message") {
     return <div className="message user"><Markdown text={event.data.text} /></div>;
   }
@@ -1126,7 +1188,10 @@ function ChatEvent({ event }: { event: StreamEvent }) {
     admission_assessed: "复现准入已评估",
     task_created: "任务已创建",
   };
-  return <div className="system-note">{labels[event.type] ?? event.type}</div>;
+  const kind: MessageReference["kind"] | null = event.type === "material_imported" ? "material" : ["plan_drafted", "plan_confirmed"].includes(event.type) ? "plan" : ["run_queued", "run_verified"].includes(event.type) ? "run" : event.type === "result_created" ? "result" : event.type === "manuscript_built" && event.data.ok ? "manuscript" : null;
+  const id = kind === "material" ? event.data.materialId : kind === "plan" ? event.data.planId : kind === "run" ? event.data.runId : kind === "result" ? event.data.resultId : kind === "manuscript" ? event.data.versionId : null;
+  const reference: MessageReference | null = event.type === "artifact_created" ? event.data.reference : kind && typeof id === "string" ? { kind, id, version: "", ...(kind === "manuscript" ? { file: "main.tex" } : {}) } : null;
+  return <div className="system-note">{event.type === "artifact_created" ? "稿件产物已保存" : labels[event.type] ?? event.type}{reference && <button onClick={() => openSource(reference)}>查看产物</button>}</div>;
 }
 
 function MaterialsPanel(props: {

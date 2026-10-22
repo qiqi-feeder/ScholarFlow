@@ -265,6 +265,8 @@ test("WT09/WT10: host-resolved references reject forgery, snapshot exact excerpt
     }
     const cross = await api(harness, "POST", `/api/projects/${other.id}/tasks/${otherTask.id}/references/resolve`, { references: [ref] });
     assert.equal(cross.status, 400);
+    assert.equal((await api(harness, "POST", `/api/projects/${other.id}/objects/open`, { reference: ref })).status, 400);
+    assert.equal((await api(harness, "POST", `/api/projects/${project.id}/objects/open`, { reference: { kind: "material", id: "../../config", version: "" } })).status, 400);
     assert.equal(captured.length, 0);
     const sent = await api(harness, "POST", `${route}/messages`, { text: "Read selected text", clientId: "reference-once", references: [ref] });
     assert.equal(sent.status, 202);
@@ -476,6 +478,20 @@ test("plan confirmation, approval, worker execution, verification and result pro
     assert.ok(context.body.entries.some((entry: any) => entry.kind === "run_result" && entry.sourceId === runId));
     assert.ok(context.body.entries.some((entry: any) => entry.kind === "result_analysis"));
     assert.match(context.body.markdown, new RegExp(runId));
+    const opened: any[] = [];
+    for (const reference of [{ kind: "plan", id: planId, version: "" }, { kind: "run", id: runId, version: "" }, { kind: "result", id: analysis.body.result.id, version: "" }]) {
+      const result = await api(harness, "POST", `/api/projects/${projectId}/objects/open`, { reference });
+      assert.equal(result.status, 200, JSON.stringify(result.body));
+      assert.equal(result.body.reference.taskId, taskId);
+      assert.equal(result.body.reference.id, reference.id);
+      assert.equal(result.body.reference.version.length, 64);
+      opened.push(result.body.reference);
+    }
+    const activity = await api(harness, "GET", "/api/activity");
+    const activityRun = activity.body.runs.find((r: any) => r.id === runId);
+    assert.equal(activityRun.status, "succeeded");
+    assert.equal(activityRun.taskId, taskId);
+    assert.equal(JSON.stringify(activity.body).includes("snapshotPath"), false);
 
     const replacement = await api(harness, "POST", `/api/projects/${projectId}/results/analyze`, {
       taskId,
@@ -488,6 +504,8 @@ test("plan confirmation, approval, worker execution, verification and result pro
     const old = results.body.results.find((result: any) => result.id === analysis.body.result.id);
     const next = results.body.results.find((result: any) => result.id === replacement.body.result.id);
     assert.equal(old.status, "superseded");
+    const stale = await api(harness, "POST", `/api/projects/${projectId}/objects/open`, { reference: opened[2] });
+    assert.equal(stale.status, 400, "old result status/version must not silently open as current");
     assert.ok(old.reportPath);
     assert.ok(next.affectedArtifacts.some((item: string) => item.includes("manuscript/main.tex")));
     assert.ok(next.affectedArtifacts.includes(old.reportPath));

@@ -583,6 +583,9 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       parameters: Type.Object({ path: Type.String(), content: Type.String() }),
       execute: async (_id, params) => {
         const version = ctx.manuscript.saveFile(ctx.project, ctx.task.id, params.path, params.content);
+        ctx.events.publish(ctx.repositories.appendEvent(ctx.project.id, ctx.task.id, "artifact_created", {
+          reference: { kind: "manuscript", id: version.id, file: params.path, version: version.files.find((f) => f.path === params.path)!.sha256 },
+        }));
         return ok(`Saved ${params.path}; manuscript version ${version.version} (${version.id}).`, {
           version: version.version,
           files: version.files,
@@ -601,6 +604,9 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       parameters: Type.Object({}),
       execute: async () => {
         const result = ctx.manuscript.build(ctx.project, ctx.task.id);
+        if (result.ok) ctx.events.publish(ctx.repositories.appendEvent(ctx.project.id, ctx.task.id, "artifact_created", {
+          reference: { kind: "manuscript", id: result.version.id, file: "main.tex", version: result.version.files.find((f) => f.path === "main.tex")!.sha256 },
+        }));
         return ok(
           summarize({
             ok: result.ok,

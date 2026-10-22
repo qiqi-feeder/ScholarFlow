@@ -298,6 +298,12 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         }
 
         // Projects
+        if (method === "GET" && url.pathname === "/api/activity") {
+          return json(res, 200, { runs: repositories.listRunRecords().map((run) => ({
+            projectId: run.projectId, taskId: run.taskId, id: run.id, name: run.name, status: run.status,
+            finishedAt: run.finishedAt, verification: run.verificationStatus,
+          })) });
+        }
         if (method === "GET" && url.pathname === "/api/projects") {
           return json(res, 200, { projects: repositories.listProjects().map(projectSummary) });
         }
@@ -315,6 +321,16 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         if (!projectMatch) throw new HttpError(404, "API route not found", "NOT_FOUND");
         const project = projectFor(projectMatch[1]!);
         const rest = projectMatch[2] ?? "";
+
+        if (method === "POST" && rest === "objects/open") {
+          const body = await readJson(req);
+          const task = repositories.listTasks(project.id)[0];
+          if (!task) throw new HttpError(404, "项目中没有可打开来源的任务", "NOT_FOUND");
+          try {
+            const references = resolveReferences(repositories, project, task, [body.reference]);
+            return json(res, 200, { reference: references[0] });
+          } catch (error) { throw new HttpError(400, error instanceof ReferenceError ? error.message : "来源文件不可用", "INVALID_REFERENCE"); }
+        }
 
         if (method === "GET" && rest === "") return json(res, 200, { project: projectSummary(project) });
         if (method === "PATCH" && rest === "") {
@@ -812,6 +828,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
               ok: result.ok,
               diagnostics: result.diagnostics,
               version: result.version.version,
+              versionId: result.version.id,
               pdfPath: result.pdfPath,
             });
             events.publish(event);

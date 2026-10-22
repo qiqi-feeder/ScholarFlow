@@ -140,6 +140,13 @@ test("research tools are registered and execute against real project records", a
     });
     assert.equal(smoke.details.status, "pending");
     assert.equal(app.services.repositories.listApprovals(task.id).length, 1);
+    const saved = await call("save_manuscript_file", { path: "main.tex", content: "\\documentclass{article}\\begin{document}Versioned source\\end{document}" });
+    assert.match(saved.content[0].text, /Saved main.tex/);
+    const artifact = app.services.repositories.listEvents(task.id).find((e) => e.type === "artifact_created")!;
+    const reference = (artifact.data as any).reference;
+    assert.equal(reference.kind, "manuscript");
+    assert.equal(reference.file, "main.tex");
+    assert.equal(app.services.repositories.getManuscript(reference.id)?.files.find((f) => f.path === "main.tex")?.sha256, reference.version);
 
     await assert.rejects(
       call("propose_experiment", {

@@ -21,7 +21,10 @@ export function validWorkspace(value: unknown): value is WorkspaceState {
 }
 export function openObject(state: WorkspaceState, object: WorkObject): WorkspaceState {
   const key = objectKey(object);
-  return { ...state, active: key, tabs: [...state.tabs.filter((o) => objectKey(o) !== key), object].slice(-40),
+  const existing = state.tabs.find((item) => objectKey(item) === key);
+  const updated = { ...existing, ...object };
+  if (object.pinned === undefined && existing?.pinned !== undefined) updated.pinned = existing.pinned;
+  return { ...state, active: key, tabs: existing ? state.tabs.map((item) => objectKey(item) === key ? updated : item) : [...state.tabs, updated].slice(-40),
     view: objectView(object),
     selectedRunId: object.kind === "run" ? object.id : state.selectedRunId };
 }

@@ -339,6 +339,10 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     assert.equal(await page.getByLabel("本条消息引用", { exact: true }).count(), 0);
     await page.getByText("本条消息引用 · 1 项", { exact: true }).click();
     assert.match(await page.locator(".message-references").innerText(), /全文提取摘要/);
+    await page.locator(".message-references").getByRole("button", { name: "查看来源", exact: true }).click();
+    await page.getByLabel("来源快照", { exact: true }).waitFor();
+    assert.match(await page.getByLabel("来源快照", { exact: true }).innerText(), /第 1 页/);
+    await page.getByRole("button", { name: "关闭来源快照", exact: true }).click();
     await page.getByRole("tab", { name: "实验", exact: true }).click();
     await page.locator(".status-succeeded").first().waitFor();
     await captureReview(page, "experiments-1440");
@@ -411,6 +415,38 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
     await page.unroute(readerUrl, invalidPdf);
     await page.getByRole("button", { name: "重试预览", exact: true }).click();
     await page.locator('.pdf-preview:visible canvas[data-rendered="true"]').waitFor();
+    // WT11/WT12: real CPU runs from another task, across reading/settings.
+    const backgroundProject = app.services.repositories.getProject(seeded.projectId)!;
+    const backgroundTask = app.services.repositories.getTask(seeded.taskId)!;
+    const backgroundPlan = app.services.repositories.getConfirmedPlan(seeded.taskId)!;
+    writeFileSync(path.join(seeded.dataDir, "workspace", "fail.mjs"), "process.exit(2);\n");
+    await page.getByLabel("消息", { exact: true }).fill("后台运行期间保留的输入草稿");
+    for (const [name, script, view, status] of [["background-success", "smoke.mjs", "材料", "成功"], ["background-failure", "fail.mjs", "设置", "失败"]]) {
+      await page.getByRole("tab", { name: view!, exact: true }).click();
+      const proposal = app.services.experiments.propose(backgroundProject, backgroundTask, {
+        name: name!, kind: "smoke", planId: backgroundPlan.id, program: process.execPath, args: [script!], cwd: "workspace",
+        metrics: [{ key: "value", label: "Value", direction: "lower", file: "metrics.json", pointer: "/value" }], timeoutSeconds: 10,
+      });
+      app.services.experiments.approve(backgroundProject, backgroundTask, proposal.approvalId);
+      const notice = page.getByLabel("后台运行通知").locator("div").filter({ hasText: name! }).first();
+      await notice.waitFor({ timeout: 30000 });
+      assert.match(await notice.innerText(), new RegExp(status!));
+      assert.equal(await page.getByRole("tab", { name: view!, exact: true }).getAttribute("aria-selected"), "true");
+      assert.equal(await page.getByLabel("消息", { exact: true }).inputValue(), "后台运行期间保留的输入草稿");
+      assert.equal(await page.locator(".chat-head h3").innerText(), "文献阅读与稿件核对");
+      await page.waitForResponse((r) => r.url().endsWith("/api/activity"));
+      assert.equal(await page.getByLabel("后台运行通知").getByRole("button", { name: `关闭通知 ${name}`, exact: true }).count(), 1);
+      if (name === "background-failure") {
+        await notice.getByRole("button", { name: "查看运行", exact: true }).click();
+        await page.getByLabel("来源快照", { exact: true }).waitFor();
+        assert.equal(await page.locator(".chat-head h3").innerText(), "Chart baseline");
+        assert.match(await page.getByLabel("来源快照", { exact: true }).innerText(), /failed/);
+      }
+    }
+    await page.reload();
+    await page.getByRole("heading", { name: "Chart baseline", exact: true }).waitFor();
+    await page.waitForResponse((r) => r.url().endsWith("/api/activity"));
+    assert.equal(await page.getByLabel("后台运行通知").count(), 0);
     assert.deepEqual(pageErrors, []);
   } finally {
     await browser.close();
