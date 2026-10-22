@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { chromium, type Browser, type Page } from "playwright-core";
+import { chromium, type Browser, type Page, type Route } from "playwright-core";
 import { ExperimentWorker } from "@scholarflow/experiment-worker";
 import { createApp, type CreatedApp } from "../../server/src/app.js";
 import type { AgentServiceLike } from "../../server/src/agent.js";
@@ -23,6 +23,45 @@ async function startServer(app: CreatedApp): Promise<string> {
   const address = app.server.address();
   if (!address || typeof address === "string") throw new Error("no port");
   return `http://127.0.0.1:${address.port}`;
+}
+
+// Capture a real server snapshot, then explicitly release it out of order.
+async function holdResponse(page: Page, url: string) {
+  let captured!: () => void;
+  let release!: () => void;
+  let finished!: () => void;
+  const ready = new Promise<void>((resolve) => { captured = resolve; });
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const done = new Promise<void>((resolve) => { finished = resolve; });
+  let first = true;
+  let heldRequest: ReturnType<Route["request"]>;
+  const handler = async (route: Route) => {
+    if (!first) return route.continue();
+    first = false;
+    heldRequest = route.request();
+    const response = await route.fetch();
+    const body = await response.body();
+    captured();
+    await gate;
+    await route.fulfill({ response, body });
+    finished();
+  };
+  await page.route(url, handler);
+  return { ready, release: async () => {
+    const delivered = page.waitForEvent("requestfinished", { predicate: (request) => request === heldRequest });
+    release();
+    await done;
+    await delivered;
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.unroute(url, handler);
+  } };
+}
+
+async function expectModel(page: Page, id: string) {
+  await page.waitForFunction((value) => {
+    const select = document.querySelector<HTMLSelectElement>('[aria-label="当前任务模型"]');
+    return select?.value === `deepseek:${value}` && !select.disabled;
+  }, id);
 }
 
 async function seed(base: string): Promise<{ projectId: string; taskId: string; dataDir: string }> {
@@ -48,10 +87,18 @@ async function seed(base: string): Promise<{ projectId: string; taskId: string; 
   return { projectId: project.project.id, taskId: task.task.id, dataDir: project.project.dataDir };
 }
 
-test("browser flow: projects, tasks, failure visibility, materials, plan, run, results, manuscript, settings", { timeout: 180000 }, async () => {
+test("browser flow: projects, tasks, failure visibility, materials, plan, run, results, manuscript, settings", { timeout: 180000 }, async (t) => {
   assert.ok(existsSync(path.join(webDist, "index.html")), "run `npm run build` before the browser test");
   const chrome = chromeCandidates.find((candidate) => existsSync(candidate));
   if (!chrome) throw new Error("Chrome or Edge is required for the browser verification");
+  // Pi reads process.env independently of loadConfig. Isolate this test's
+  // no-credentials case, including unrelated providers on the developer host.
+  // This affects only this test process; never print credential values.
+  const credentialEnv = Object.entries(process.env).filter(([name]) =>
+    /(?:API_KEY|AUTH_TOKEN|ACCESS_TOKEN|BEARER_TOKEN|OAUTH_TOKEN|CREDENTIALS)$|^AWS_/i.test(name),
+  );
+  for (const [name] of credentialEnv) delete process.env[name];
+  t.after(() => { for (const [name, value] of credentialEnv) process.env[name] = value; });
   const root = mkdtempSync(path.join(tmpdir(), "scholarflow-browser-"));
   const config = loadConfig({
     configFile: path.join(root, "config", "config.json"),
@@ -220,6 +267,8 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
   config.workerEnabled = false;
   let app!: CreatedApp;
   const running = new Set<string>();
+  const stopped: string[] = [];
+  let finishTour: (() => void) | undefined;
   const seen: Array<{ taskId: string; modelId: string | null }> = [];
   const models = [
     { provider: "deepseek", id: "deepseek-flash", name: "DeepSeek Flash", available: true, reason: null },
@@ -248,13 +297,19 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
       repositories.updateTask(task.id, { status: "running" });
       publish(project.id, task.id, "user_message", { text, clientId });
       publish(project.id, task.id, "agent_status", { status: "running" });
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      if (text === "panel tour") {
+        publish(project.id, task.id, "assistant_delta", { text: "tour streaming" });
+        await new Promise<void>((resolve) => { finishTour = resolve; });
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+      }
       publish(project.id, task.id, "assistant_message", { text: `echo: ${text}`, model: selectedModel, provider: "deepseek" });
       running.delete(task.id);
       repositories.updateTask(task.id, { status: "idle" });
       publish(project.id, task.id, "agent_status", { status: "idle" });
     },
     stop: async (taskId) => {
+      stopped.push(taskId);
       running.delete(taskId);
       return { stopped: true };
     },
@@ -277,8 +332,8 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     body: JSON.stringify({ name: "Shell Lab", description: "W01 shell verification" }),
   }).then((response) => response.json()) as any;
   const projectId = project.project.id as string;
-  const createTask = async (title: string) => {
-    const response = await fetch(`${base}/api/projects/${projectId}/tasks`, {
+  const createTask = async (title: string, targetProject = projectId) => {
+    const response = await fetch(`${base}/api/projects/${targetProject}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, objective: `${title} objective` }),
@@ -287,15 +342,23 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
   };
   const taskA = await createTask("Task A");
   const taskB = await createTask("Task B");
+  const otherProject = await fetch(`${base}/api/projects`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "Other Lab" }),
+  }).then((response) => response.json()) as any;
+  const otherId = otherProject.project.id as string;
+  const taskC = await createTask("Task C", otherId);
+  const taskD = await createTask("Task D", otherId);
   app.services.repositories.updateTask(taskA, { sessionFile: "tasks/task-a/session.jsonl" });
   const browser: Browser = await chromium.launch({
     executablePath: chrome,
     headless: true,
     args: ["--no-first-run", "--no-default-browser-check"],
   });
-  const page: Page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const page: Page = await browser.newPage({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.addInitScript((id) => localStorage.setItem("scholarflow.project", id), projectId);
   const waitForIdle = async () => {
     for (let attempt = 0; attempt < 100; attempt += 1) {
       const detail = await fetch(`${base}/api/projects/${projectId}/tasks/${taskA}`).then((response) => response.json()) as any;
@@ -357,6 +420,180 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     assert.equal(detail.sessionFile, "tasks/task-a/session.jsonl");
     assert.deepEqual(seen.filter((entry) => entry.taskId === taskA).map((entry) => entry.modelId), ["deepseek-v4-pro", "deepseek-v4-pro"]);
     assert.deepEqual(seen.filter((entry) => entry.taskId === taskB).map((entry) => entry.modelId), ["deepseek-flash"]);
+
+    // WT02: every central panel remains usable during one controlled answer.
+    const callsBeforeTour = seen.length;
+    await page.getByLabel("消息").fill("panel tour");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByText("tour streaming", { exact: true }).waitFor();
+    for (const name of ["材料", "实验", "结果", "稿件", "设置"]) {
+      await page.getByRole("tab", { name, exact: true }).click();
+      assert.equal(await page.getByRole("complementary", { name: "任务会话" }).isVisible(), true);
+      assert.equal(await page.getByText("tour streaming", { exact: true }).isVisible(), true);
+      assert.equal(await modelSelect.isDisabled(), true);
+    }
+    finishTour!();
+    await page.getByText("echo: panel tour", { exact: true }).waitFor();
+    await expectModel(page, "deepseek-v4-pro");
+    assert.equal(seen.length, callsBeforeTour + 1);
+    const tourDetail = await fetch(`${base}/api/projects/${projectId}/tasks/${taskA}`).then((response) => response.json()) as any;
+    assert.equal(tourDetail.sessionFile, detail.sessionFile);
+
+    // Reconnect with a replayed duplicate: render one message and never submit
+    // another model call. The second subscription resumes from the cursor.
+    const replay = tourDetail.events.find((event: any) => event.type === "assistant_message" && event.data.text === "echo: panel tour");
+    let subscriptions = 0;
+    let resumedAfter = 0;
+    const streamUrl = `${base}/api/projects/${projectId}/tasks/${taskA}/events/stream*`;
+    const reconnect = async (route: Route) => {
+      subscriptions += 1;
+      if (subscriptions > 1) {
+        resumedAfter = Number(new URL(route.request().url()).searchParams.get("after"));
+        return route.continue();
+      }
+      const block = `id: ${replay.seq}\nevent: ${replay.type}\ndata: ${JSON.stringify(replay.data)}\n\n`;
+      await route.fulfill({ contentType: "text/event-stream", body: block + block });
+    };
+    await page.route(streamUrl, reconnect);
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    const reconnected = page.waitForResponse((response) => response.url().includes(`${taskA}/events/stream`) && subscriptions >= 2);
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+    await reconnected;
+    assert.ok(resumedAfter >= replay.seq);
+    assert.equal(await page.getByText("echo: panel tour", { exact: true }).count(), 1);
+    assert.equal(seen.length, callsBeforeTour + 1);
+    await page.unroute(streamUrl, reconnect);
+
+    // R01: while B's detail is delayed, A's draft and controls are removed.
+    await page.getByLabel("消息").fill("A private draft");
+    const taskUrl = (project: string, task: string) => `${base}/api/projects/${project}/tasks/${task}`;
+    const heldB = await holdResponse(page, taskUrl(projectId, taskB));
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await heldB.ready;
+    assert.equal(await page.getByLabel("消息").count(), 0);
+    assert.equal(await modelSelect.count(), 0);
+    assert.equal(await page.getByRole("button", { name: "停止回答" }).count(), 0);
+    assert.equal(await page.getByRole("heading", { name: "Task A" }).count(), 0);
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByLabel("消息").waitFor();
+    await heldB.release();
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+    assert.equal(await page.getByRole("heading", { name: "Task B" }).count(), 0);
+
+    const failB = async (route: Route) => route.fulfill({ status: 503, json: { code: "DETAIL_UNAVAILABLE", error: "controlled detail failure" } });
+    await page.route(taskUrl(projectId, taskB), failB);
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByText("任务加载失败，请重试或选择其他任务。").waitFor();
+    assert.equal(await page.getByLabel("消息").count(), 0);
+    await page.unroute(taskUrl(projectId, taskB), failB);
+    await page.getByRole("button", { name: "重试加载任务" }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByLabel("消息").waitFor();
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+
+    // Two projects, two tasks each: slow C must not resurrect after selecting D
+    // or after returning to the first project.
+    await page.getByRole("button", { name: /Other Lab/ }).click();
+    await page.getByRole("button", { name: /Task C/ }).waitFor();
+    const heldC = await holdResponse(page, taskUrl(otherId, taskC));
+    await page.getByRole("button", { name: /Task C/ }).click();
+    await heldC.ready;
+    assert.equal(await page.getByLabel("消息").count(), 0);
+    await page.getByRole("button", { name: /Task D/ }).click();
+    await page.getByRole("heading", { name: "Task D" }).waitFor();
+    await modelSelect.selectOption("deepseek:deepseek-v4-pro");
+    await expectModel(page, "deepseek-v4-pro");
+    await page.getByLabel("消息").fill("D target check");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByRole("button", { name: "停止回答" }).click();
+    assert.equal(stopped.at(-1), taskD);
+    assert.deepEqual(seen.at(-1), { taskId: taskD, modelId: "deepseek-v4-pro" });
+    await page.getByRole("button", { name: /Shell Lab/ }).click();
+    await page.getByLabel("消息").waitFor();
+    await heldC.release();
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+    assert.equal(await page.getByRole("heading", { name: "Task C" }).count(), 0);
+
+    // R02: release the earlier Flash refresh after Pro has been confirmed.
+    const staleModel = await holdResponse(page, taskUrl(projectId, taskA));
+    await modelSelect.selectOption("deepseek:deepseek-flash");
+    await staleModel.ready;
+    await expectModel(page, "deepseek-flash");
+    await modelSelect.selectOption("deepseek:deepseek-v4-pro");
+    await expectModel(page, "deepseek-v4-pro");
+    await staleModel.release();
+    await expectModel(page, "deepseek-v4-pro");
+
+    // A -> B -> A also invalidates a detail refresh from the old A epoch.
+    const oldEpoch = await holdResponse(page, taskUrl(projectId, taskA));
+    await modelSelect.selectOption("deepseek:deepseek-flash");
+    await oldEpoch.ready;
+    await expectModel(page, "deepseek-flash");
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+    await modelSelect.selectOption("deepseek:deepseek-v4-pro");
+    await expectModel(page, "deepseek-v4-pro");
+    await oldEpoch.release();
+    await expectModel(page, "deepseek-v4-pro");
+
+    // A delayed PUT response must also be ignored after A -> B -> A.
+    const oldWrite = await holdResponse(page, `${taskUrl(projectId, taskA)}/model`);
+    await modelSelect.selectOption("deepseek:deepseek-flash");
+    await oldWrite.ready;
+    await page.getByRole("button", { name: /Task B/ }).click();
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    await fetch(`${taskUrl(projectId, taskA)}/model`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: "deepseek", modelId: "deepseek-v4-pro" }),
+    });
+    await page.getByRole("button", { name: /Task A/ }).click();
+    await page.getByRole("heading", { name: "Task A" }).waitFor();
+    await oldWrite.release();
+    await expectModel(page, "deepseek-v4-pro");
+
+    // Model failures retain both the selection and the unsent draft.
+    const rejectModel = async (route: Route) => route.fulfill({ status: 400, json: { code: "MODEL_UNAVAILABLE", error: "controlled unavailable model" } });
+    await page.route(`${taskUrl(projectId, taskA)}/model`, rejectModel);
+    await modelSelect.selectOption("deepseek:deepseek-flash");
+    await page.getByRole("alert").filter({ hasText: "MODEL_UNAVAILABLE" }).waitFor();
+    await expectModel(page, "deepseek-v4-pro");
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+    await page.unroute(`${taskUrl(projectId, taskA)}/model`, rejectModel);
+
+    // R03: keyboard and touch entry points at 390px; toggling keeps the
+    // same task, draft and model and does not recreate the session.
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileNav = page.getByRole("navigation", { name: "工作区与会话" });
+    await mobileNav.getByRole("button", { name: "会话", exact: true }).focus();
+    await page.keyboard.press("Enter");
+    await page.getByLabel("消息").waitFor({ state: "visible" });
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+    await modelSelect.focus();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Enter");
+    await expectModel(page, "deepseek-flash");
+    await mobileNav.getByRole("button", { name: "工作区", exact: true }).tap();
+    await page.getByRole("button", { name: /Task A/ }).waitFor({ state: "visible" });
+    await mobileNav.getByRole("button", { name: "会话", exact: true }).tap();
+    assert.equal(await page.getByLabel("消息").inputValue(), "A private draft");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.getByLabel("消息").fill("narrow model check");
+    await page.getByRole("button", { name: "发送" }).click();
+    await page.getByText("echo: narrow model check").waitFor();
+    assert.deepEqual(seen.at(-1), { taskId: taskA, modelId: "deepseek-flash" });
+    const finalDetail = await fetch(taskUrl(projectId, taskA)).then((response) => response.json()) as any;
+    assert.equal(finalDetail.task.modelId, "deepseek-flash");
+    assert.equal(finalDetail.sessionFile, detail.sessionFile);
+    assert.equal(finalDetail.events.at(-2).data.model, "deepseek-flash");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await mobileNav.getByRole("button", { name: "会话", exact: true }).tap();
+    await expectModel(page, "deepseek-flash");
+    await page.getByText("echo: narrow model check", { exact: true }).waitFor();
     assert.deepEqual(pageErrors, []);
   } finally {
     await browser.close();

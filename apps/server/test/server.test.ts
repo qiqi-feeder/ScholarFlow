@@ -333,6 +333,28 @@ test("plan confirmation, approval, worker execution, verification and result pro
     assert.equal(run.status, 202);
     const runId = run.body.run.id as string;
     assert.equal(run.body.run.status, "queued");
+
+    // WT02: stopping the answer cannot cancel an approved experiment.
+    harness.app.services.repositories.updateTask(taskId, { status: "running" });
+    const stoppedAnswer = await api(harness, "POST", `/api/projects/${projectId}/tasks/${taskId}/stop`);
+    assert.equal(stoppedAnswer.status, 200);
+    assert.equal(harness.app.services.store.get(runId)!.status, "queued");
+    assert.equal(harness.app.services.repositories.getTask(taskId)!.status, "idle");
+
+    // Conversely, cancelling a separate queued experiment leaves the answer
+    // status and the first experiment untouched.
+    const cancellable = harness.app.services.store.createRun({
+      projectId, taskId, projectDir: projectRoot,
+      runId: "run_00000000000000000001", requestId: "request-separate-cancel-0001",
+      spec: run.body.run.spec,
+    }).run;
+    harness.app.services.repositories.updateTask(taskId, { status: "running" });
+    const cancelled = await api(harness, "POST", `/api/projects/${projectId}/runs/${cancellable.id}/cancel`);
+    assert.equal(cancelled.status, 202);
+    assert.equal(harness.app.services.store.get(cancellable.id)!.status, "cancelled");
+    assert.equal(harness.app.services.store.get(runId)!.status, "queued");
+    assert.equal(harness.app.services.repositories.getTask(taskId)!.status, "running");
+    harness.app.services.repositories.updateTask(taskId, { status: "idle" });
     harness.worker!.start();
 
     const finished = await waitFor(async () => {
@@ -677,8 +699,12 @@ test("projects, tasks and events survive a host restart", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: "Restart task", objective: "Keep the session pointer" }),
     }).then((response) => response.json()) as any;
+    first.services.repositories.updateTask(task.task.id, {
+      modelProvider: "deepseek", modelId: "deepseek-v4-pro", sessionFile: "tasks/restart/pi/session.jsonl",
+    });
     await first.close();
 
+    config.modelId = "deepseek-flash";
     const second = await createApp({ config, agent: fakeAgent, resourcesDir, webDist: path.join(root, "webdist") });
     await new Promise<void>((resolve) => second.server.listen(0, "127.0.0.1", () => resolve()));
     const secondAddress = second.server.address() as import("node:net").AddressInfo;
@@ -687,6 +713,10 @@ test("projects, tasks and events survive a host restart", async () => {
     assert.ok(projects.projects.some((item: any) => item.id === project.project.id));
     const detail = await fetch(`${base}/api/projects/${project.project.id}/tasks/${task.task.id}`).then((response) => response.json()) as any;
     assert.equal(detail.task.title, "Restart task");
+    assert.equal(detail.task.modelId, "deepseek-v4-pro");
+    assert.equal(detail.model.id, "deepseek-v4-pro");
+    assert.equal(detail.model.inherited, false);
+    assert.equal(detail.sessionFile, "tasks/restart/pi/session.jsonl");
     assert.ok(detail.events.some((event: any) => event.type === "task_created"));
     await second.close();
   } finally {
@@ -771,10 +801,11 @@ test("task model switching is persisted, audited and rejected while busy", async
       { provider: "deepseek", id: "deepseek-flash", name: "DeepSeek Flash" },
       { provider: "deepseek", id: "deepseek-v4-pro", name: "DeepSeek V4 Pro" },
     ];
+    let credentialsAvailable = true;
     const runtime = {
       getModel: (provider: string, id: string) => models.find((model) => model.provider === provider && model.id === id),
       getModels: (provider: string) => models.filter((model) => model.provider === provider),
-      getAvailable: async (provider?: string) => models.filter((model) => !provider || model.provider === provider),
+      getAvailable: async (provider?: string) => credentialsAvailable ? models.filter((model) => !provider || model.provider === provider) : [],
     };
     const service = new PiAgentService({
       repositories: harness.app.services.repositories,
@@ -814,6 +845,25 @@ test("task model switching is persisted, audited and rejected while busy", async
       (error: unknown) => error instanceof ModelUnavailableError,
     );
     assert.equal(harness.app.services.repositories.getTask(taskId)!.modelId, "deepseek-v4-pro");
+    credentialsAvailable = false;
+    await assert.rejects(() => service.switchModel(project, taskId, "deepseek", "deepseek-flash"), ModelUnavailableError);
+    credentialsAvailable = true;
+
+    // An active tool/unfinished stop and SDK failures must preserve the task
+    // model, history and session. No model_changed event may claim success.
+    const loadedTasks = (service as unknown as { tasks: Map<string, any> }).tasks;
+    const session = { isIdle: false, setModel: async (_model: unknown) => undefined };
+    loadedTasks.set(taskId, { running: false, session });
+    const beforeFailures = harness.app.services.repositories.listEvents(taskId, 0, 100);
+    await assert.rejects(() => service.switchModel(project, taskId, "deepseek", "deepseek-flash"), AgentBusyError);
+    session.isIdle = true;
+    for (const reason of ["401 invalid credential", "429 rate limited", "incompatible model API"]) {
+      session.setModel = async () => { throw new Error(reason); };
+      await assert.rejects(() => service.switchModel(project, taskId, "deepseek", "deepseek-flash"), { message: reason });
+      assert.equal(harness.app.services.repositories.getTask(taskId)!.modelId, "deepseek-v4-pro");
+      assert.deepEqual(harness.app.services.repositories.listEvents(taskId, 0, 100), beforeFailures);
+    }
+    loadedTasks.delete(taskId);
     await service.dispose();
   } finally {
     await harness.close();

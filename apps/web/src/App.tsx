@@ -142,6 +142,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [detail, setDetail] = useState<TaskDetail | null>(null);
+  const [taskLoading, setTaskLoading] = useState(false);
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [liveText, setLiveText] = useState("");
   const [streamState, setStreamState] = useState<"idle" | "connected" | "reconnecting">("idle");
@@ -159,10 +160,18 @@ export default function App() {
   const [switchingModel, setSwitchingModel] = useState(false);
   const [taskDraft, setTaskDraft] = useState({ title: "", objective: "", reviewText: "" });
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [message, setMessage] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [mobileChat, setMobileChat] = useState(false);
+  const draftKey = `${projectId}/${taskId}`;
+  const message = drafts[draftKey] ?? "";
+  const setMessage = (value: string) => setDrafts((previous) => ({ ...previous, [draftKey]: value }));
   const streamAbort = useRef<AbortController | null>(null);
   const activeTask = useRef<{ projectId: string; taskId: string } | null>(null);
   const taskLoadSeq = useRef(0);
+  // Every detail read and model write shares one ordering clock. Task loads
+  // additionally have an epoch so A -> B -> A cannot revive an old callback.
+  const detailRevision = useRef(0);
+  const loadedTaskSeq = useRef<number | null>(null);
   const projectLoadSeq = useRef(0);
   const projectIdRef = useRef<string | null>(projectId);
   const selectedProject = projects.find((project) => project.id === projectId) ?? null;
@@ -231,14 +240,22 @@ export default function App() {
 
   const loadTask = useCallback(async (project: string, task: string) => {
     const seq = ++taskLoadSeq.current;
+    const revision = ++detailRevision.current;
+    loadedTaskSeq.current = null;
     activeTask.current = { projectId: project, taskId: task };
     setTaskId(task);
+    setTaskLoading(true);
+    setDetail(null);
+    setEvents([]);
+    setLiveText("");
     setStreamState("reconnecting");
     streamAbort.current?.abort();
-    const current = () => activeTask.current?.projectId === project && activeTask.current.taskId === task;
+    const current = () => seq === taskLoadSeq.current && activeTask.current?.projectId === project && activeTask.current.taskId === task;
     try {
       const response = await api<TaskDetail>(`/api/projects/${project}/tasks/${task}`);
-      if (seq !== taskLoadSeq.current || !current()) return;
+      if (!current() || revision !== detailRevision.current) return;
+      loadedTaskSeq.current = seq;
+      setTaskLoading(false);
       setDetail(response);
       setEvents(response.events);
       setLiveText("");
@@ -260,11 +277,13 @@ export default function App() {
             setEvents((previous) => (previous.some((item) => item.seq === event.seq) ? previous : [...previous, event]));
           }
           if (event.type === "agent_status" && event.data.status) {
+            detailRevision.current += 1;
             setDetail((previous) => previous && previous.task.id === task
               ? { ...previous, task: { ...previous.task, status: String(event.data.status) } }
               : previous);
           }
           if (event.type === "model_changed") {
+            detailRevision.current += 1;
             const provider = String(event.data.provider ?? "");
             const id = String(event.data.id ?? "");
             if (provider && id) {
@@ -279,8 +298,9 @@ export default function App() {
           }
           if (["plan_drafted", "run_proposed", "run_queued", "result_created", "manuscript_built", "material_imported", "admission_assessed", "task_created", "model_changed", "assistant_message"].includes(event.type)) {
             void loadProject(project);
+            const refreshRevision = ++detailRevision.current;
             void api<TaskDetail>(`/api/projects/${project}/tasks/${task}`).then((fresh) => {
-              if (current()) setDetail(fresh);
+              if (current() && refreshRevision === detailRevision.current) setDetail(fresh);
             }).catch(() => undefined);
           }
         },
@@ -290,7 +310,11 @@ export default function App() {
         },
       );
     } catch (err) {
-      if (seq === taskLoadSeq.current && current()) fail(err);
+      if (current()) {
+        setTaskLoading(false);
+        setStreamState("idle");
+        fail(err);
+      }
     }
   }, [fail, loadProject]);
 
@@ -302,11 +326,16 @@ export default function App() {
 
   useEffect(() => {
     projectIdRef.current = projectId;
+    setTasks([]);
+    setOverview(null);
+    loadedTaskSeq.current = null;
+    detailRevision.current += 1;
     if (!projectId) {
       activeTask.current = null;
       taskLoadSeq.current += 1;
       streamAbort.current?.abort();
       setTaskId(null);
+      setTaskLoading(false);
       setDetail(null);
       setEvents([]);
       setLiveText("");
@@ -318,6 +347,7 @@ export default function App() {
     taskLoadSeq.current += 1;
     streamAbort.current?.abort();
     setTaskId(null);
+    setTaskLoading(false);
     setDetail(null);
     setEvents([]);
     setLiveText("");
@@ -390,9 +420,12 @@ export default function App() {
         ? effectiveModel.inherited
         : modelCatalog.models.some((model) => `${model.provider}:${model.id}` === effectiveModelKey);
   const agentAnswering = detail?.task.status === "running";
+  const taskReady = () => loadedTaskSeq.current === taskLoadSeq.current
+    && activeTask.current?.projectId === projectId && activeTask.current?.taskId === taskId
+    && detail?.task.id === taskId;
 
   const sendMessage = async () => {
-    if (!projectId || !taskId || !message.trim() || busy || switchingModel || agentAnswering) return;
+    if (!taskReady() || !projectId || !taskId || !message.trim() || busy || switchingModel || agentAnswering) return;
     if (!modelAvailable) {
       setError("当前任务模型不可用。请在会话顶部选择宿主实际可用的模型后再发送；不会静默回退。");
       return;
@@ -408,39 +441,40 @@ export default function App() {
       });
     } catch (err) {
       fail(err);
-      if (activeTask.current?.projectId === target.projectId && activeTask.current.taskId === target.taskId) {
-        setMessage(text);
-      }
+      setDrafts((previous) => ({ ...previous, [`${target.projectId}/${target.taskId}`]: previous[`${target.projectId}/${target.taskId}`] || text }));
     } finally {
       setBusy(false);
     }
   };
 
   const switchTaskModel = async (provider: string, id: string) => {
-    if (!projectId || !taskId || switchingModel) return;
+    if (!taskReady() || !projectId || !taskId || busy || switchingModel) return;
     if (agentAnswering) {
       setError("回答仍在进行。请先等待完成或停止回答，再切换模型；已生成的历史不会被改写。");
       return;
     }
     const target = { projectId, taskId };
+    const epoch = taskLoadSeq.current;
+    const revision = ++detailRevision.current;
     setSwitchingModel(true);
     try {
       const response = await put<{ task: Task; model: TaskModel }>(
         `/api/projects/${projectId}/tasks/${taskId}/model`,
         { provider, modelId: id },
       );
-      if (activeTask.current?.taskId !== target.taskId) return;
+      if (epoch !== taskLoadSeq.current || activeTask.current?.projectId !== target.projectId
+        || activeTask.current?.taskId !== target.taskId || revision !== detailRevision.current) return;
       setDetail((previous) => previous ? { ...previous, task: response.task, model: response.model } : previous);
       setTasks((previous) => previous.map((task) => task.id === response.task.id ? response.task : task));
     } catch (err) {
-      fail(err);
+      if (epoch === taskLoadSeq.current) fail(err);
     } finally {
       setSwitchingModel(false);
     }
   };
 
   const stopAnswer = async () => {
-    if (!projectId || !taskId) return;
+    if (!taskReady() || !projectId || !taskId) return;
     try {
       await post(`/api/projects/${projectId}/tasks/${taskId}/stop`);
     } catch (err) {
@@ -449,7 +483,11 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${mobileChat ? "show-chat" : ""}`}>
+      <nav className="mobile-session-nav" aria-label="工作区与会话">
+        <button aria-pressed={!mobileChat} onClick={() => setMobileChat(false)}>工作区</button>
+        <button aria-pressed={mobileChat} onClick={() => setMobileChat(true)}>会话</button>
+      </nav>
       <aside className="rail" aria-label="工作视图">
         <div className="rail-logo" title="ScholarFlow">SF</div>
         {TABS.map((item) => (
@@ -686,6 +724,12 @@ export default function App() {
       </main>
 
       <aside className="chat-panel" aria-label="任务会话">
+        {!detail && taskId && (
+          <div role="status">
+            {taskLoading ? "正在加载所选任务…" : "任务加载失败，请重试或选择其他任务。"}
+            {!taskLoading && <button onClick={() => projectId && void loadTask(projectId, taskId)}>重试加载任务</button>}
+          </div>
+        )}
         <ChatPanel
           detail={detail}
           events={events}
