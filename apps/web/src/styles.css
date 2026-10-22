@@ -70,11 +70,38 @@ a { color: var(--accent); }
 
 .app-shell {
   display: grid;
-  grid-template-columns: 64px 256px minmax(0, 1fr) 380px;
+  grid-template-columns: 64px 256px minmax(0, 1fr) var(--chat-width, 380px);
   height: 100vh;
   overflow: hidden;
 }
 .mobile-session-nav { display: none; }
+.app-shell.nav-collapsed { grid-template-columns: 64px 150px minmax(0, 1fr) var(--chat-width, 380px); }
+.app-shell.chat-collapsed { grid-template-columns: 64px 256px minmax(0, 1fr); }
+.app-shell.chat-collapsed.nav-collapsed { grid-template-columns: 64px 150px minmax(0, 1fr); }
+.chat-collapsed .chat-panel { display: none; }
+.nav-collapsed .nav-brand, .nav-collapsed .project-list, .nav-collapsed .new-project, .nav-collapsed .nav-section-head, .nav-collapsed .task-list, .nav-collapsed .sidebar-foot { display: none; }
+.nav-panel label { display: block; font-size: 12px; }
+.nav-panel select { width: 100%; }
+.object-library { min-height: 110px; max-height: 44vh; overflow: auto; flex: 1 1 auto; display: flex; flex-direction: column; gap: 6px; }
+.object-library h3 { margin: 4px 0; font-size: 13px; }
+.object-library input { width: 100%; }
+.object-item { text-align: left; overflow-wrap: anywhere; flex: 0 0 auto; background: #172133; border-color: #33415a; color: #e6ebf3; }
+.object-item[aria-pressed="true"] { border-color: #7da4f1; }
+.workspace-toolbar { display: flex; gap: 10px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.workspace-toolbar label { display: flex; gap: 8px; align-items: center; }
+.object-tabs { display: flex; gap: 6px; overflow-x: auto; flex: 0 0 auto; margin-bottom: 8px; }
+.object-tabs > span { display: flex; gap: 2px; flex: 0 0 auto; }
+.object-tabs button { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.object-content.split, .source-preview.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.reader { min-width: 0; }
+.reader iframe { width: 100%; height: 62vh; border: 1px solid var(--border); background: white; }
+.reader input { width: 80px; }
+.source-preview { min-width: 0; }
+.source-preview iframe { width: 100%; height: 65vh; border: 1px solid var(--border); }
+.chat-resize { display: flex; gap: 8px; font-size: 11px; color: var(--muted); align-items: center; white-space: nowrap; }
+.chat-resize input { min-width: 0; width: 100%; }
+.draft-dialog { position: fixed; z-index: 10; top: 25%; left: 10%; right: 10%; background: white; border: 2px solid var(--accent); box-shadow: 0 0 0 100vmax #0005; padding: 20px; border-radius: 12px; display: flex; gap: 10px; flex-wrap: wrap; }
+[hidden] { display: none !important; }
 .rail {
   background: #0b1220; color: #93a3bc; padding: 12px 8px;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -268,7 +295,7 @@ main { padding: 18px 24px 40px; overflow-y: auto; }
 .status-unknown, .status-partial, .status-unverified, .status-cancelled, .status-draft, .status-pending { background: var(--surface-2); color: var(--muted); }
 
 .panel-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.manuscript-layout { grid-template-columns: 320px minmax(0, 1fr); }
+  .manuscript-layout { grid-template-columns: minmax(0, 1fr); }
 .search-results { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-height: 360px; overflow-y: auto; }
 .search-hit { display: flex; justify-content: space-between; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; align-items: flex-start; }
 .search-hit p { margin: 2px 0; }
@@ -314,7 +341,7 @@ figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 8p
 .markdown img { max-width: 100%; }
 
 @media (max-width: 1250px) {
-  .app-shell { grid-template-columns: 60px 220px minmax(0, 1fr) 340px; }
+  .app-shell { grid-template-columns: 60px 210px minmax(0, 1fr) minmax(300px, var(--chat-width, 340px)); }
   .workspace { padding: 16px; }
 }
 @media (max-width: 1050px) {
@@ -322,6 +349,7 @@ figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 8p
   .stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
+  .app-shell.nav-collapsed, .app-shell.chat-collapsed, .app-shell.nav-collapsed.chat-collapsed { grid-template-columns: 60px 150px minmax(0, 1fr); }
   .app-shell { grid-template-columns: 60px 190px minmax(0, 1fr); grid-template-rows: 52px minmax(0, 1fr); }
   .mobile-session-nav { grid-column: 1 / -1; display: flex; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
   .mobile-session-nav button { flex: 1; }
@@ -330,9 +358,11 @@ figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 8p
   .chat-panel { display: none; }
   .show-chat .rail, .show-chat .nav-panel, .show-chat .workspace { display: none; }
   .show-chat .chat-panel { display: flex; grid-column: 1 / -1; grid-row: 2; height: 100%; }
+  .chat-resize { display: none; }
+  .object-content.split, .source-preview.compare { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
-  .app-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px 56px 180px minmax(0, 1fr); height: 100dvh; }
+  .app-shell, .app-shell.nav-collapsed, .app-shell.chat-collapsed, .app-shell.nav-collapsed.chat-collapsed { grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px 56px 180px minmax(0, 1fr); height: 100dvh; }
   .rail { flex-direction: row; padding: 6px; gap: 4px; }
   .rail-logo, .rail-foot { display: none; }
   .rail-button { flex: 1; width: auto; min-width: 0; height: 40px; }
@@ -340,7 +370,7 @@ figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 8p
   .nav-brand, .sidebar-foot { display: none; }
   .nav-panel .project-list, .nav-panel .task-list { flex: 0 0 auto; max-height: 70px; overflow-y: auto; }
   .nav-section-head { padding-top: 4px; }
-  .show-chat { grid-template-rows: 52px minmax(0, 1fr); }
+  .show-chat, .app-shell.show-chat.nav-collapsed, .app-shell.show-chat.chat-collapsed { grid-template-rows: 52px minmax(0, 1fr); }
 }
 @media (max-width: 1100px) {
   .app { grid-template-columns: 210px 1fr; }

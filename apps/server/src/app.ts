@@ -372,6 +372,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
               task: taskSummary(task),
               model: modelSelection(task, config),
               sessionFile: task.sessionFile,
+              reviewText: repositories.taskReviewText(task.id),
               events: repositories.listEvents(task.id, 0, 5000),
               plans: repositories.listPlans(task.id),
               admissions: repositories.listAdmissions(task.id),
@@ -736,7 +737,8 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         if (method === "GET" && rest === "manuscript/file") {
           const file = url.searchParams.get("path");
           if (!file) throw new HttpError(400, "path is required");
-          return json(res, 200, { path: file, content: manuscript.readFile(project, file) });
+          const content = manuscript.readFile(project, file);
+          return json(res, 200, { path: file, content, hash: manuscript.listFiles(project).find((item) => item.path === file)?.sha256 });
         }
         const restoreMatch = rest.match(/^manuscript\/versions\/(\d+)\/restore$/);
         if (method === "POST" && restoreMatch) {
@@ -756,10 +758,17 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         }
         if (method === "PUT" && rest === "manuscript/file") {
           const body = await readJson(req);
+          const taskId = optionalString(body.taskId, "taskId") ?? null;
+          if (taskId) taskFor(project, taskId);
+          const file = requireString(body.path, "path", 1000);
+          if (body.baseHash !== undefined) {
+            const current = manuscript.listFiles(project).find((item) => item.path === file)?.sha256 ?? null;
+            if (body.baseHash !== current) throw new HttpError(409, "服务端文件已变化，请比较后重新加载；本地草稿已保留。", "SOURCE_CONFLICT");
+          }
           const version = manuscript.saveFile(
             project,
-            optionalString(body.taskId, "taskId") ?? null,
-            requireString(body.path, "path", 1000),
+            taskId,
+            file,
             requireString(body.content, "content", MAX_BODY_BYTES),
           );
           return json(res, 200, { manuscript: version });

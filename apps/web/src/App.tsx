@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
+import { isString, sameShape, useStoredState } from "./use-workspace";
 import {
   api,
   post,
@@ -22,7 +24,7 @@ import {
   type TaskModel,
 } from "./api";
 
-type Tab = "work" | "materials" | "plan" | "experiments" | "results" | "manuscript" | "settings";
+type Tab = WorkView;
 type TaskDetail = {
   task: Task;
   model: TaskModel;
@@ -31,6 +33,7 @@ type TaskDetail = {
   plans: Plan[];
   admissions: any[];
   approvals: Approval[];
+  reviewText?: string | null;
 };
 
 const TABS: Array<{ id: Tab; label: string }> = [
@@ -40,6 +43,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "experiments", label: "实验" },
   { id: "results", label: "结果" },
   { id: "manuscript", label: "稿件" },
+  { id: "review", label: "审稿" },
   { id: "settings", label: "设置" },
 ];
 
@@ -50,6 +54,7 @@ const VIEW_ICONS: Record<Tab, string> = {
   experiments: "实",
   results: "果",
   manuscript: "稿",
+  review: "审",
   settings: "设",
 };
 
@@ -137,7 +142,7 @@ function NewProject({ onCreate }: { onCreate: (name: string) => Promise<void> })
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectId, setProjectId] = useState<string | null>(() => localStorage.getItem("scholarflow.project"));
+  const [projectId, setProjectId] = useState<string | null>(() => readPreference("scholarflow.project"));
   const [overview, setOverview] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [taskId, setTaskId] = useState<string | null>(null);
@@ -146,7 +151,18 @@ export default function App() {
   const [events, setEvents] = useState<StreamEvent[]>([]);
   const [liveText, setLiveText] = useState("");
   const [streamState, setStreamState] = useState<"idle" | "connected" | "reconnecting">("idle");
-  const [tab, setTab] = useState<Tab>("work");
+  const owner = `${projectId ?? "none"}.${taskId ?? "none"}`;
+  const [workspace, setWorkspace] = useStoredState(`scholarflow.workspace.state.v1.${owner}`, emptyWorkspace(), validWorkspace);
+  const tab = workspace.view;
+  const setTab = (view: Tab) => setWorkspace((s) => ({ ...s, view, layout: view === s.view ? s.layout : view === "experiments" ? "list-detail" : view === "manuscript" ? "split" : "single" }));
+  const [navCollapsed, setNavCollapsed] = useStoredState("scholarflow.workspace.prefs.v1.nav", false, (v): v is boolean => typeof v === "boolean");
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [chatWidth, setChatWidth] = useStoredState("scholarflow.workspace.prefs.v1.width", 380, (v): v is number => typeof v === "number" && v >= 300 && v <= 600);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryScope, setLibraryScope] = useState("project");
+  const [libraryStatus, setLibraryStatus] = useState("all");
+  const [dirtyFiles, setDirtyFiles] = useState<string[]>([]);
+  const [closeRequest, setCloseRequest] = useState<WorkObject | null>(null);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [results, setResults] = useState<ResultVersion[]>([]);
@@ -160,7 +176,7 @@ export default function App() {
   const [switchingModel, setSwitchingModel] = useState(false);
   const [taskDraft, setTaskDraft] = useState({ title: "", objective: "", reviewText: "" });
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [drafts, setDrafts] = useStoredState<Record<string, string>>("scholarflow.workspace.drafts.v1", {}, (v): v is Record<string, string> => !!v && typeof v === "object" && Object.values(v).every((text) => typeof text === "string"));
   const [mobileChat, setMobileChat] = useState(false);
   const draftKey = `${projectId}/${taskId}`;
   const message = drafts[draftKey] ?? "";
@@ -185,7 +201,7 @@ export default function App() {
     try {
       const response = await api<{ projects: Project[] }>("/api/projects");
       setProjects(response.projects);
-      const stored = localStorage.getItem("scholarflow.project");
+      const stored = readPreference("scholarflow.project");
       if (stored && response.projects.some((project) => project.id === stored)) setProjectId(stored);
       else if (!stored && response.projects[0]) setProjectId(response.projects[0].id);
     } catch (err) {
@@ -259,7 +275,7 @@ export default function App() {
       setDetail(response);
       setEvents(response.events);
       setLiveText("");
-      localStorage.setItem(`scholarflow.task.${project}`, task);
+      writePreference(`scholarflow.task.${project}`, task);
       const after = response.events.reduce((max, event) => Math.max(max, event.seq), 0);
       const controller = new AbortController();
       streamAbort.current = controller;
@@ -319,6 +335,12 @@ export default function App() {
   }, [fail, loadProject]);
 
   useEffect(() => {
+    const warn = (event: Event) => setError((event as CustomEvent<string>).detail);
+    window.addEventListener("workspace-warning", warn);
+    return () => window.removeEventListener("workspace-warning", warn);
+  }, []);
+
+  useEffect(() => {
     void loadProjects();
     void loadSettings();
     void loadModels();
@@ -342,7 +364,7 @@ export default function App() {
       setStreamState("idle");
       return;
     }
-    localStorage.setItem("scholarflow.project", projectId);
+    writePreference("scholarflow.project", projectId);
     activeTask.current = null;
     taskLoadSeq.current += 1;
     streamAbort.current?.abort();
@@ -352,7 +374,7 @@ export default function App() {
     setEvents([]);
     setLiveText("");
     void loadProject(projectId);
-    const storedTask = localStorage.getItem(`scholarflow.task.${projectId}`);
+    const storedTask = readPreference(`scholarflow.task.${projectId}`);
     if (storedTask) void loadTask(projectId, storedTask);
   }, [projectId, loadProject, loadTask]);
 
@@ -482,8 +504,31 @@ export default function App() {
     }
   };
 
+  const objects: WorkObject[] = tab === "materials" ? materials.filter((m) =>
+    (!libraryQuery || m.title.toLowerCase().includes(libraryQuery.toLowerCase())) && (libraryScope !== "task" || m.taskId === taskId)
+    && (libraryStatus === "all" || (libraryStatus === "readable" ? !!m.note : !m.note)))
+    .map((m) => ({ kind: "material", id: m.id, title: m.title, version: m.sha256 }))
+    : tab === "experiments" ? runs.map((r) => ({ kind: "run", id: r.id, title: `${r.name} · ${statusText(r.status)}` }))
+    : tab === "results" ? results.map((r) => ({ kind: "result", id: r.id, title: r.title }))
+    : tab === "plan" ? (detail?.plans ?? []).map((p) => ({ kind: "plan", id: p.id, title: `v${p.version} · ${p.objective}` }))
+    : tab === "manuscript" ? (manuscript?.files ?? []).filter((f) => f.kind === "text").map((f) => ({ kind: "manuscript", id: f.path, title: f.path }))
+    : tab === "review" ? (detail?.reviewText ?? "").split(/\n\s*\n/).filter(Boolean).map((text, i) => ({ kind: "review", id: String(i), title: text })) : [];
+  const activeObject = workspace.tabs.find((o) => objectKey(o) === workspace.active);
+  const secondaryObject = workspace.tabs.find((o) => objectKey(o) === workspace.secondary);
+  const open = (object: WorkObject) => setWorkspace((s) => openObject(s, object));
+  const selectObject = (object: WorkObject) => { open(object); setMobileChat(false); };
+  const renderMaterial = (object: WorkObject) => {
+    const material = materials.find((m) => m.id === object.id);
+    if (!material) return <p role="status">材料已不可用，请关闭标签或重新选择。</p>;
+    return <section className="card reader"><h3>{material.title}</h3>
+      <label>阅读页码 <input aria-label={`阅读页码 ${material.title}`} type="number" min={1} value={workspace.reading[material.id] ?? 1} onChange={(e) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: Math.max(1, Number(e.target.value)) } }))} /></label>
+      <iframe title={`原文 ${material.title}`} sandbox="allow-same-origin" src={`/api/projects/${projectId}/materials/${material.id}/file#page=${workspace.reading[material.id] ?? 1}`} />
+      <details><summary>笔记与来源</summary><p>{material.note || "暂无可读文本；可查看原始文件或导入可读版本。"}</p><p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
+    </section>;
+  };
+
   return (
-    <div className={`app-shell ${mobileChat ? "show-chat" : ""}`}>
+    <div className={`app-shell ${mobileChat ? "show-chat" : ""} ${navCollapsed ? "nav-collapsed" : ""} ${chatCollapsed ? "chat-collapsed" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties}>
       <nav className="mobile-session-nav" aria-label="工作区与会话">
         <button aria-pressed={!mobileChat} onClick={() => setMobileChat(false)}>工作区</button>
         <button aria-pressed={mobileChat} onClick={() => setMobileChat(true)}>会话</button>
@@ -505,11 +550,13 @@ export default function App() {
           </button>
         ))}
         <div className="rail-foot">
+          <button className="rail-button" aria-label={navCollapsed ? "展开导航" : "收起导航"} onClick={() => setNavCollapsed((v) => !v)}>栏</button>
           <span className={`dot ${streamState === "connected" ? "ok" : streamState === "reconnecting" ? "warn" : ""}`} />
         </div>
       </aside>
 
       <aside className="nav-panel">
+        {navCollapsed && <><label>项目<select aria-label="紧凑项目" value={projectId ?? ""} onChange={(e) => setProjectId(e.target.value)}>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>任务<select aria-label="紧凑任务" value={taskId ?? ""} onChange={(e) => selectTask(e.target.value)}><option value="">选择任务</option>{tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label></>}
         <div className="nav-brand">
           <h1>ScholarFlow</h1>
           <p>项目与任务</p>
@@ -583,6 +630,12 @@ export default function App() {
           <br />
           <span className="muted">单用户 · 仅回环地址</span>
         </div>
+        <div className="object-library">
+          <h3>{TABS.find((t) => t.id === tab)?.label}内容</h3>
+          {tab === "materials" && <><input aria-label="筛选论文" placeholder="筛选标题" value={libraryQuery} onChange={(e) => setLibraryQuery(e.target.value)} /><select aria-label="论文范围" value={libraryScope} onChange={(e) => setLibraryScope(e.target.value)}><option value="project">本项目全部</option><option value="task">当前任务</option></select><select aria-label="材料状态" value={libraryStatus} onChange={(e) => setLibraryStatus(e.target.value)}><option value="all">全部状态</option><option value="readable">有提取文本/摘要</option><option value="unreadable">待补可读文本</option></select></>}
+          {objects.length === 0 && <p className="muted">没有匹配内容；可在工作区创建或导入。</p>}
+          {objects.map((object) => <button key={objectKey(object)} className="object-item" aria-pressed={workspace.active === objectKey(object)} onClick={() => selectObject(object)}>{object.title}</button>)}
+        </div>
       </aside>
 
       <main className="workspace">
@@ -592,6 +645,7 @@ export default function App() {
             <p className="muted">{selectedProject?.description || "同一项目共享有来源的材料和运行；聊天历史按任务隔离。"}</p>
           </div>
           <div className="topbar-actions">
+            <button className="chip" onClick={() => setChatCollapsed((v) => !v)}>{chatCollapsed ? "展开会话" : "收起会话"}</button>
             {health && (
               <button className="chip" onClick={() => setTab("settings")} title={health.latex?.pdflatex?.available ? "LaTeX 可用" : "LaTeX 不可用"}>
                 Agent {health.agent?.configured ? "已配置" : "未配置"} · TeX {health.latex?.pdflatex?.available ? "OK" : "缺"}
@@ -632,6 +686,10 @@ export default function App() {
               ))}
             </nav>
 
+            <div className="workspace-toolbar"><label>布局<select aria-label="工作区布局" value={workspace.layout} onChange={(e) => setWorkspace((s) => ({ ...s, layout: e.target.value as typeof s.layout }))}><option value="single">单内容</option><option value="split">双内容对照</option><option value="list-detail">列表与详情</option></select></label><button className="secondary" onClick={() => setWorkspace((s) => ({ ...s, active: null }))}>返回工作视图</button></div>
+            <nav className="object-tabs" aria-label="已打开内容">{workspace.tabs.map((object) => <span key={objectKey(object)}><button aria-pressed={workspace.active === objectKey(object)} onClick={() => open(object)}>{object.title}</button><button aria-label={`固定 ${object.title}`} onClick={() => setWorkspace((s) => ({ ...s, tabs: s.tabs.map((o) => objectKey(o) === objectKey(object) ? { ...o, pinned: !o.pinned } : o) }))}>{object.pinned ? "已固定" : "固定"}</button><button aria-label={`对照 ${object.title}`} onClick={() => setWorkspace((s) => ({ ...s, secondary: objectKey(object), layout: "split" }))}>对照</button><button aria-label={`关闭 ${object.title}`} onClick={() => { if (object.kind === "manuscript" && dirtyFiles.includes(object.id)) { open(object); setCloseRequest(object); } else setWorkspace((s) => closeObject(s, objectKey(object))); }}>×</button></span>)}</nav>
+            {tab === "materials" && activeObject?.kind === "material" && <div className={`object-content ${workspace.layout === "split" ? "split" : ""}`}>{renderMaterial(activeObject)}{workspace.layout === "split" && secondaryObject?.kind === "material" && secondaryObject.id !== activeObject.id && renderMaterial(secondaryObject)}</div>}
+            {tab === "review" && <section className="card"><h3>所选审稿意见</h3><p>{activeObject?.kind === "review" ? activeObject.title : "在左侧选择意见；创建任务时可填写原始审稿意见。"}</p><textarea aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} /></section>}
             <div className="workspace-content">
               {tab === "work" && (
                 <OverviewPanel
@@ -642,7 +700,7 @@ export default function App() {
                 />
               )}
 
-              {tab === "materials" && projectId && (
+              {projectId && (<div hidden={tab !== "materials" || activeObject?.kind === "material"}>
                 <MaterialsPanel
                   projectId={projectId}
                   taskId={taskId}
@@ -650,13 +708,13 @@ export default function App() {
                   onChanged={() => void loadProject(projectId)}
                   fail={fail}
                 />
-              )}
+              </div>)}
 
-              {tab === "plan" && projectId && (
+              {projectId && (<div hidden={tab !== "plan"}>
                 <PlanPanel
                   projectId={projectId}
                   taskId={taskId}
-                  detail={detail}
+                  detail={activeObject?.kind === "plan" && detail ? { ...detail, plans: detail.plans.filter((p) => p.id === activeObject.id) } : detail}
                   skills={skills}
                   onChanged={() => {
                     void loadProject(projectId);
@@ -664,14 +722,14 @@ export default function App() {
                   }}
                   fail={fail}
                 />
-              )}
+              </div>)}
 
-              {tab === "experiments" && projectId && (
+              {projectId && (<div hidden={tab !== "experiments"}>
                 <ExperimentsPanel
                   projectId={projectId}
                   taskId={taskId}
                   approvals={currentApprovals}
-                  runs={runs}
+                  runs={activeObject?.kind === "run" ? runs.filter((r) => r.id === activeObject.id) : runs}
                   settings={settings}
                   confirmedPlan={confirmedPlan}
                   onChanged={() => {
@@ -680,30 +738,33 @@ export default function App() {
                   }}
                   fail={fail}
                 />
-              )}
+              </div>)}
 
-              {tab === "results" && projectId && (
+              {projectId && (<div hidden={tab !== "results"}>
                 <ResultsPanel
                   projectId={projectId}
                   taskId={taskId}
                   runs={runs}
-                  results={results}
+                  results={activeObject?.kind === "result" ? results.filter((r) => r.id === activeObject.id) : results}
                   onChanged={() => projectId && void loadProject(projectId)}
                   fail={fail}
                 />
-              )}
+              </div>)}
 
-              {tab === "manuscript" && projectId && (
+              {projectId && (<div hidden={tab !== "manuscript"}>
                 <ManuscriptPanel
-                  key={projectId}
                   projectId={projectId}
+                  requestedFile={activeObject?.kind === "manuscript" ? activeObject.id : null}
+                  closingFile={closeRequest?.id ?? null}
+                  onDirtyFiles={setDirtyFiles}
+                  onCloseComplete={(close) => { if (close && closeRequest) setWorkspace((s) => closeObject(s, objectKey(closeRequest))); setCloseRequest(null); }}
                   taskId={taskId}
                   data={manuscript}
                   build={currentManuscriptBuild}
                   onChanged={() => void loadProject(projectId)}
                   fail={fail}
                 />
-              )}
+              </div>)}
 
               {tab === "settings" && (
                 <SettingsPanel
@@ -724,6 +785,7 @@ export default function App() {
       </main>
 
       <aside className="chat-panel" aria-label="任务会话">
+        <label className="chat-resize">会话宽度<input aria-label="会话宽度" type="range" min={300} max={600} value={chatWidth} onChange={(e) => setChatWidth(Number(e.target.value))} /></label>
         {!detail && taskId && (
           <div role="status">
             {taskLoading ? "正在加载所选任务…" : "任务加载失败，请重试或选择其他任务。"}
@@ -1030,13 +1092,17 @@ function MaterialsPanel(props: {
   const [path, setPath] = useState("");
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const searchRevision = useRef(0);
+  useEffect(() => { searchRevision.current += 1; setHits([]); setNote(null); }, [props.projectId, props.taskId]);
   const search = async () => {
     if (!query.trim()) return;
+    const revision = ++searchRevision.current;
     setBusy(true);
     try {
       const response = await post<any>(`/api/projects/${props.projectId}/search`, { query, taskId: props.taskId });
+      if (revision !== searchRevision.current) return;
       setHits(response.hits);
-      setNote(response.note ?? null);
+      setNote(response.note ?? (response.hits.length ? null : "未找到结果，请调整检索词。"));
     } catch (error) {
       props.fail(error);
     } finally {
@@ -1123,7 +1189,7 @@ function PlanPanel(props: {
   onChanged: () => void;
   fail: (error: unknown) => void;
 }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     objective: "",
     design: "",
     dataset: "",
@@ -1139,7 +1205,8 @@ function PlanPanel(props: {
     maxRuns: "2",
     resources: "local CPU",
     risks: "",
-  });
+  };
+  const [form, setForm] = useStoredState(`scholarflow.workspace.draft.v1.${props.projectId}.${props.taskId}.PlanPanel`, initialForm, sameShape(initialForm));
   const [admissionJson, setAdmissionJson] = useState("");
   const [busy, setBusy] = useState(false);
   const submitPlan = async () => {
@@ -1285,7 +1352,7 @@ function ExperimentsPanel(props: {
 }) {
   const [log, setLog] = useState<{ runId: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [form, setForm] = useState({
+  const initialForm = {
     name: "smoke-check",
     program: "",
     args: "workspace/smoke.mjs",
@@ -1294,7 +1361,8 @@ function ExperimentsPanel(props: {
     metricKey: "value",
     pointer: "/value",
     timeoutSeconds: "60",
-  });
+  };
+  const [form, setForm] = useStoredState(`scholarflow.workspace.draft.v1.${props.projectId}.${props.taskId}.ExperimentsPanel`, initialForm, sameShape(initialForm));
   const decide = async (approval: Approval, action: "approve" | "reject") => {
     setBusy(true);
     try {
@@ -1533,13 +1601,29 @@ function ResultsPanel(props: {
 function ManuscriptPanel(props: {
   projectId: string;
   taskId: string | null;
+  requestedFile?: string | null;
+  closingFile?: string | null;
+  onDirtyFiles?: (files: string[]) => void;
+  onCloseComplete?: (close: boolean) => void;
   data: { files: any[]; versions: ManuscriptVersion[]; latestBuild: ManuscriptVersion | null; sourceHash: string } | null;
   build: ManuscriptVersion | null;
   onChanged: () => void;
   fail: (error: unknown) => void;
 }) {
-  const [file, setFile] = useState("main.tex");
-  const [content, setContent] = useState("");
+  const draftOwner = `${props.projectId}.${props.taskId}`;
+  const [file, setFile] = useStoredState(`scholarflow.workspace.file.v1.${draftOwner}`, "main.tex", isString);
+  type FileDraft = { content: string; baseHash: string };
+  const [fileDrafts, setFileDrafts] = useStoredState<Record<string, FileDraft>>(`scholarflow.workspace.editor.v1.${draftOwner}`, {}, (v): v is Record<string, FileDraft> => !!v && typeof v === "object" && Object.values(v).every((d) => !!d && typeof d.content === "string" && typeof d.baseHash === "string"));
+  const [remote, setRemote] = useState<{ owner: string; file: string; content: string; hash: string } | null>(null);
+  const draft = fileDrafts[file];
+  const content = draft?.content ?? (remote?.owner === draftOwner && remote.file === file ? remote.content : "");
+  const setContent = (value: string) => setFileDrafts((s) => ({ ...s, [file]: { content: value, baseHash: draft?.baseHash ?? remote?.hash ?? "" } }));
+  const [editorMode, setEditorMode] = useStoredState(`scholarflow.workspace.editor.mode.v1.${draftOwner}`, "source", (v): v is string => ["source", "pdf", "compare"].includes(String(v)));
+  const [leaveFile, setLeaveFile] = useState<string | null>(null);
+  const fileRequest = useRef(0);
+  const dirty = !!draft && draft.content !== remote?.content;
+  const conflict = !!draft && !!remote && remote.owner === draftOwner && remote.file === file && draft.baseHash !== remote.hash;
+  useEffect(() => { props.onDirtyFiles?.(Object.keys(fileDrafts)); }, [fileDrafts, props.onDirtyFiles]);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [syncWarnings, setSyncWarnings] = useState<string[]>([]);
   const [exported, setExported] = useState<string | null>(null);
@@ -1548,19 +1632,28 @@ function ManuscriptPanel(props: {
   const textFiles = (props.data?.files ?? []).filter((entry) => entry.kind === "text");
 
   const loadFile = useCallback(async (target: string) => {
+    const seq = ++fileRequest.current;
     try {
-      const response = await api<{ content: string }>(`/api/projects/${props.projectId}/manuscript/file?path=${encodeURIComponent(target)}`);
+      const response = await api<{ content: string; hash: string }>(`/api/projects/${props.projectId}/manuscript/file?path=${encodeURIComponent(target)}`);
+      if (seq !== fileRequest.current) return;
       setFile(target);
-      setContent(response.content);
+      setRemote({ owner: draftOwner, file: target, content: response.content, hash: response.hash });
     } catch (error) {
       props.fail(error);
     }
-  }, [props.projectId, props.fail]);
+  }, [props.projectId, props.taskId, props.fail]);
 
   useEffect(() => {
-    const initial = textFiles.find((entry) => entry.path === "main.tex") ?? textFiles[0];
-    if (initial && !content) void loadFile(initial.path);
-  }, [props.data?.sourceHash]);
+    const target = props.requestedFile ?? file;
+    if (textFiles.some((entry) => entry.path === target)) void loadFile(target);
+    return () => { fileRequest.current += 1; };
+  }, [draftOwner, props.requestedFile, props.data?.sourceHash]);
+
+  useEffect(() => {
+    const protect = (event: BeforeUnloadEvent) => { if (Object.keys(fileDrafts).length) { event.preventDefault(); event.returnValue = ""; } };
+    window.addEventListener("beforeunload", protect);
+    return () => window.removeEventListener("beforeunload", protect);
+  }, [fileDrafts]);
 
   useEffect(() => {
     if (!restoreVersion && (props.data?.versions?.length ?? 0) > 0) {
@@ -1570,10 +1663,10 @@ function ManuscriptPanel(props: {
 
   const restore = async () => {
     if (!restoreVersion) return;
+    if (Object.keys(fileDrafts).length && !window.confirm("恢复服务端版本？本地未保存草稿将继续保留，需手动处理冲突。")) return;
     setBusy(true);
     try {
       await post(`/api/projects/${props.projectId}/manuscript/versions/${restoreVersion}/restore`, { taskId: props.taskId });
-      setContent("");
       await props.onChanged();
       await loadFile("main.tex");
     } catch (error) {
@@ -1584,12 +1677,17 @@ function ManuscriptPanel(props: {
   };
 
   const save = async () => {
+    if (!remote || remote.owner !== draftOwner || remote.file !== file || conflict) return false;
     setBusy(true);
     try {
-      await put(`/api/projects/${props.projectId}/manuscript/file`, { path: file, content, taskId: props.taskId });
+      await put(`/api/projects/${props.projectId}/manuscript/file`, { path: file, content, baseHash: draft?.baseHash ?? remote.hash, taskId: props.taskId });
+      setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; });
+      await loadFile(file);
       props.onChanged();
+      return true;
     } catch (error) {
       props.fail(error);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -1635,14 +1733,17 @@ function ManuscriptPanel(props: {
     }
   };
   const stale = props.data && props.build?.build.sourceHash && props.data.sourceHash !== props.build.build.sourceHash;
+  const chooseFile = (target: string) => { if (dirty) setLeaveFile(target); else void loadFile(target); };
   return (
     <div className="panel-grid manuscript-layout">
-      <section className="card">
+      {props.closingFile && <div role="dialog" aria-label="关闭未保存稿件" className="draft-dialog"><p>稿件存在未保存修改。</p><button disabled={busy || conflict || remote?.file !== props.closingFile} onClick={() => void save().then((saved) => { if (saved) props.onCloseComplete?.(true); })}>保存后关闭</button><button onClick={() => { setFileDrafts((s) => { const next = { ...s }; delete next[props.closingFile!]; return next; }); props.onCloseComplete?.(true); }}>放弃后关闭</button><button onClick={() => props.onCloseComplete?.(false)}>取消关闭</button></div>}
+      {leaveFile && <div role="dialog" aria-label="未保存的稿件" className="draft-dialog"><p>当前文件有未保存修改。选择下一步。</p><button onClick={() => void save().then((saved) => { if (saved) { void loadFile(leaveFile); setLeaveFile(null); } })}>保存后切换</button><button onClick={() => { setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; }); void loadFile(leaveFile); setLeaveFile(null); }}>放弃后切换</button><button onClick={() => setLeaveFile(null)}>取消切换</button></div>}
+      <details className="card"><summary>稿件文件与构建</summary>
         <h3>稿件文件</h3>
         <p className="muted">每次保存都会创建版本。构建使用受控本地 TeX 命令，禁用 shell escape；旧 PDF 不会冒充新构建。</p>
         <div className="file-list">
           {props.data?.files.map((entry) => (
-            <button key={entry.path} className={`file-item ${entry.path === file ? "active" : ""}`} onClick={() => entry.kind === "text" ? void loadFile(entry.path) : undefined} disabled={entry.kind !== "text"}>
+            <button key={entry.path} className={`file-item ${entry.path === file ? "active" : ""}`} onClick={() => entry.kind === "text" ? chooseFile(entry.path) : undefined} disabled={entry.kind !== "text"}>
               <span>{entry.path}</span>
               <span className="muted small">{entry.kind === "text" ? `${entry.bytes} B` : "figure"}</span>
             </button>
@@ -1671,13 +1772,19 @@ function ManuscriptPanel(props: {
         {exported && (
           <p className="notice">投稿包：<code>{exported}</code><br /><a className="link" href={`/api/projects/${props.projectId}/manuscript/download?path=${encodeURIComponent(exported)}`}>下载 zip</a></p>
         )}
-      </section>
+      </details>
       <section className="card editor-card">
+        <label>稿件视图<select aria-label="稿件视图" value={editorMode} onChange={(e) => setEditorMode(e.target.value)}><option value="source">源码</option><option value="pdf">PDF</option><option value="compare">源码与 PDF 对照</option></select></label>
         <div className="row space-between">
           <h3>{file}</h3>
-          <button onClick={() => void save()} disabled={busy}>保存新版本</button>
+          <button onClick={() => void save()} disabled={busy || conflict || !remote}>保存新版本</button>
         </div>
-        <textarea className="editor" value={content} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} />
+        {conflict && <div role="alert" className="notice warn-box">草稿与服务端版本冲突，禁止覆盖。<button onClick={() => { setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; }); }}>放弃本地草稿</button><details><summary>比较服务端正文</summary><pre>{remote?.content}</pre></details></div>}
+        {dirty && <p role="status">未保存修改 · 本地草稿保留</p>}
+        <div className={`source-preview ${editorMode}`}>
+          {editorMode !== "pdf" && <textarea className="editor" value={content} disabled={!remote || remote.owner !== draftOwner} onChange={(event) => setContent(event.target.value)} spellCheck={false} aria-label={`编辑 ${file}`} />}
+          {editorMode !== "source" && (props.build ? <iframe title="稿件 PDF" src={`/api/projects/${props.projectId}/manuscript/pdf?v=${props.build.version}`} /> : <p>尚无成功构建，请先构建 PDF。</p>)}
+        </div>
       </section>
     </div>
   );

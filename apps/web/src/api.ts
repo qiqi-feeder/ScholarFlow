@@ -51,6 +51,7 @@ export interface StreamEvent {
 
 export interface Material {
   id: string;
+  taskId?: string | null;
   title: string;
   kind: string;
   path: string;

@@ -212,7 +212,8 @@ test("browser flow: projects, tasks, failure visibility, materials, plan, run, r
 
     // Manuscript panel and real build action (server tests cover both success and failure).
     await page.getByRole("tab", { name: "稿件" }).click();
-    await page.getByRole("button", { name: /main\.tex/ }).waitFor();
+    await page.getByText("稿件文件与构建", { exact: true }).click();
+    await page.locator(".file-list").getByRole("button", { name: /main\.tex/ }).waitFor();
     const editor = page.getByLabel("编辑 main.tex");
     await editor.waitFor();
     assert.match(await editor.inputValue(), /documentclass/);
@@ -358,6 +359,7 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
   const page: Page = await browser.newPage({ viewport: { width: 1440, height: 900 }, hasTouch: true });
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("dialog", (dialog) => void dialog.accept());
   await page.addInitScript((id) => localStorage.setItem("scholarflow.project", id), projectId);
   const waitForIdle = async () => {
     for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -508,7 +510,9 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await expectModel(page, "deepseek-v4-pro");
     await page.getByLabel("消息").fill("D target check");
     await page.getByRole("button", { name: "发送" }).click();
+    const stoppedResponse = page.waitForResponse((response) => response.url().endsWith(`${taskD}/stop`));
     await page.getByRole("button", { name: "停止回答" }).click();
+    await stoppedResponse;
     assert.equal(stopped.at(-1), taskD);
     assert.deepEqual(seen.at(-1), { taskId: taskD, modelId: "deepseek-v4-pro" });
     await page.getByRole("button", { name: /Shell Lab/ }).click();
@@ -594,6 +598,99 @@ test("workspace shell: persistent session, task isolation, stale-stream guard an
     await mobileNav.getByRole("button", { name: "会话", exact: true }).tap();
     await expectModel(page, "deepseek-flash");
     await page.getByText("echo: narrow model check", { exact: true }).waitFor();
+
+    // W02: real material objects open without sending, with fixed tabs,
+    // comparison, per-task reading position and safe unavailable-object UI.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const projectRoot = app.services.repositories.getProject(projectId)!.dataDir;
+    mkdirSync(path.join(projectRoot, "workspace"), { recursive: true });
+    const imported: any[] = [];
+    for (const name of ["reading-a.txt", "reading-b.txt"]) {
+      writeFileSync(path.join(projectRoot, "workspace", name), `Readable original ${name}`, "utf8");
+      imported.push(await fetch(`${base}/api/projects/${projectId}/materials`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: taskA, path: `workspace/${name}` }),
+      }).then((r) => r.json()));
+    }
+    await page.getByRole("button", { name: "刷新", exact: true }).click();
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    const library = page.locator(".object-library");
+    const callsBeforeReading = seen.length;
+    await library.getByRole("button", { name: "reading-a.txt", exact: true }).click();
+    await page.getByTitle("原文 reading-a.txt").waitFor();
+    await page.getByLabel("阅读页码 reading-a.txt").fill("3");
+    await page.getByRole("button", { name: "固定 reading-a.txt", exact: true }).click();
+    await library.getByRole("button", { name: "reading-a.txt", exact: true }).click();
+    assert.equal(await page.getByRole("button", { name: "关闭 reading-a.txt", exact: true }).count(), 1);
+    await library.getByRole("button", { name: "reading-b.txt", exact: true }).click();
+    await page.getByRole("button", { name: "对照 reading-a.txt", exact: true }).click();
+    assert.equal(await page.locator(".object-content iframe").count(), 2);
+    assert.equal(seen.length, callsBeforeReading);
+    await page.getByLabel("筛选论文").fill("not-present");
+    await library.getByText("没有匹配内容；可在工作区创建或导入。").waitFor();
+    await page.getByLabel("筛选论文").fill("");
+    await page.getByRole("button", { name: "收起导航", exact: true }).click();
+    await page.getByLabel("紧凑任务").selectOption(taskB);
+    await page.getByRole("heading", { name: "Task B" }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "关闭 reading-a.txt", exact: true }).count(), 0);
+    await page.getByLabel("紧凑任务").selectOption(taskA);
+    await page.getByTitle("原文 reading-b.txt").waitFor();
+    assert.equal(await page.getByLabel("阅读页码 reading-a.txt").inputValue(), "3");
+    await page.getByRole("button", { name: "展开导航", exact: true }).click();
+
+    // Manuscript drafts survive switching/reloading; dirty file changes offer
+    // save/discard/cancel. A stale editor cannot overwrite a server revision.
+    await page.getByRole("tab", { name: "稿件", exact: true }).click();
+    const source = page.getByLabel("编辑 main.tex");
+    await source.waitFor();
+    const original = await source.inputValue();
+    await library.getByRole("button", { name: "main.tex", exact: true }).click();
+    await source.fill(original + "\n% local draft");
+    await page.getByRole("button", { name: "关闭 main.tex", exact: true }).click();
+    await page.getByRole("dialog", { name: "关闭未保存稿件" }).waitFor();
+    await page.getByRole("button", { name: "取消关闭", exact: true }).click();
+    assert.match(await source.inputValue(), /local draft/);
+    await page.getByText("稿件文件与构建", { exact: true }).click();
+    await page.locator(".file-list").getByRole("button", { name: /refs\.bib/ }).click();
+    await page.getByRole("dialog", { name: "未保存的稿件" }).waitFor();
+    await page.getByRole("button", { name: "取消切换", exact: true }).click();
+    assert.match(await source.inputValue(), /local draft/);
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    await page.getByRole("tab", { name: "稿件", exact: true }).click();
+    assert.match(await source.inputValue(), /local draft/);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await source.waitFor();
+    assert.match(await source.inputValue(), /local draft/);
+    await fetch(`${base}/api/projects/${projectId}/manuscript/file`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: taskA, path: "main.tex", content: original + "\n% server revision" }),
+    });
+    await page.getByRole("button", { name: "保存新版本", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "SOURCE_CONFLICT" }).waitFor();
+    assert.match(await source.inputValue(), /local draft/);
+    await page.getByRole("button", { name: "刷新", exact: true }).click();
+    await page.getByRole("button", { name: "放弃本地草稿", exact: true }).click();
+    assert.match(await source.inputValue(), /server revision/);
+    await source.fill(original + "\n% saved on close");
+    await page.getByRole("button", { name: "关闭 main.tex", exact: true }).click();
+    await page.getByRole("button", { name: "保存后关闭", exact: true }).click();
+    await page.getByRole("button", { name: "关闭 main.tex", exact: true }).waitFor({ state: "detached" });
+    const savedOnClose = await fetch(`${base}/api/projects/${projectId}/manuscript/file?path=main.tex`).then((r) => r.json()) as any;
+    assert.match(savedOnClose.content, /saved on close/);
+    await library.getByRole("button", { name: "main.tex", exact: true }).click();
+    await source.fill(savedOnClose.content + "\n% discard me");
+    await page.getByRole("button", { name: "关闭 main.tex", exact: true }).click();
+    await page.getByRole("button", { name: "放弃后关闭", exact: true }).click();
+    assert.doesNotMatch(await source.inputValue(), /discard me/);
+    await page.getByLabel("稿件视图").selectOption("compare");
+    for (const width of [1440, 1024, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      if (process.env.SCHOLARFLOW_EVIDENCE_DIR) {
+        mkdirSync(process.env.SCHOLARFLOW_EVIDENCE_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.SCHOLARFLOW_EVIDENCE_DIR, `W02-${width}.png`) });
+      }
+    }
     assert.deepEqual(pageErrors, []);
   } finally {
     await browser.close();

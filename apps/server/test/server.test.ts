@@ -724,6 +724,28 @@ test("projects, tasks and events survive a host restart", async () => {
   }
 });
 
+test("manuscript editors reject stale revisions and cross-project task attribution", async () => {
+  const harness = await start({ withAgent: false });
+  try {
+    const project = (await api(harness, "POST", "/api/projects", { name: "Editor A" })).body.project;
+    const other = (await api(harness, "POST", "/api/projects", { name: "Editor B" })).body.project;
+    const task = (await api(harness, "POST", `/api/projects/${other.id}/tasks`, { title: "Other", objective: "Other project" })).body.task;
+    const endpoint = `/api/projects/${project.id}/manuscript/file`;
+    const original = await api(harness, "GET", `${endpoint}?path=main.tex`);
+    assert.match(original.body.hash, /^[a-f0-9]{64}$/);
+    const foreign = await api(harness, "PUT", endpoint, { path: "main.tex", content: "foreign", taskId: task.id, baseHash: original.body.hash });
+    assert.equal(foreign.status, 404);
+    const saved = await api(harness, "PUT", endpoint, { path: "main.tex", content: original.body.content + "\n% saved", baseHash: original.body.hash });
+    assert.equal(saved.status, 200);
+    const stale = await api(harness, "PUT", endpoint, { path: "main.tex", content: "stale overwrite", baseHash: original.body.hash });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.body.code, "SOURCE_CONFLICT");
+    const final = await api(harness, "GET", `${endpoint}?path=main.tex`);
+    assert.match(final.body.content, /% saved/);
+    assert.notEqual(final.body.hash, original.body.hash);
+  } finally { await harness.close(); }
+});
+
 test("legacy task rows migrate in place and keep their session pointer", () => {
   const root = mkdtempSync(path.join(tmpdir(), "scholarflow-legacy-model-"));
   const file = path.join(root, "scholarflow.sqlite");
