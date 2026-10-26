@@ -955,6 +955,7 @@ test("task model switching is persisted, audited and rejected while busy", async
       experiments: harness.app.services.experiments,
       manuscript: harness.app.services.manuscript,
       memory: harness.app.services.memory,
+      methods: harness.app.services.methods,
     });
     (service as unknown as { modelRuntime: () => Promise<typeof runtime> }).modelRuntime = async () => runtime;
 

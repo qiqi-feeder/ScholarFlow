@@ -151,8 +151,8 @@ Publication:
 | RT08 | 修订/争议/不同条件并存及并发控制 | 最后写入覆盖、未知时间猜造 | 通过（[IG03](verification/agent-implementation/IG03.md)） |
 | RT09 | 当前、历史与当时已知查询正确 | 晚到旧值污染当前、隐藏争议 | 通过（[IG04](verification/agent-implementation/IG04.md)） |
 | RT10 | 跨任务召回与 UI 查看/更正/撤回 | 缓存越权、错来源、未落盘即成功 | 通过（[IG04](verification/agent-implementation/IG04.md)） |
-| RT11 | 经验有条件与证据、候选范围受限 | 经验变规则、修改审批或验证器 | 待实施 |
-| RT12 | 版本、候选状态和评测预算持久化 | 候选即正式、自动扩大训练预算 | 待实施 |
+| RT11 | 经验有条件与证据、候选范围受限 | 经验变规则、修改审批或验证器 | 通过（[IG05](verification/agent-implementation/IG05.md)） |
+| RT12 | 版本、候选状态和评测预算持久化 | 候选即正式、自动扩大训练预算 | 通过（[IG05](verification/agent-implementation/IG05.md)） |
 | RT13 | 基线参与、开发/留出隔离与全尝试记录 | 选择性报告、答案泄漏、只靠自评分 | 待实施 |
 | RT14 | 发布确认、并发切换、回退与旧任务绑定 | 无确认发布、覆盖指针、静默升级任务 | 待实施 |
 | RT15 | 固定卡配对评测及机制消融 | 模型/权限/预算不同仍归因某机制 | 待实施 |

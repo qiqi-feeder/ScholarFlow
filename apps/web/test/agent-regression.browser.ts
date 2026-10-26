@@ -99,6 +99,27 @@ test("RT01: delayed saves, canonical selection and lost-ack retries across reloa
     await panel.getByLabel(/^记忆历史 /).waitFor();
     assert.match(await panel.getByLabel(/^记忆历史 /).innerText(), /Retry after lost acknowledgement/);
     await panel.getByRole("button", { name: "查询记忆依据", exact: true }).click();
+    const methodsPanel = page.getByLabel("方法改进", { exact: true });
+    await methodsPanel.locator("summary").first().click();
+    await methodsPanel.getByText("提炼有证据的经验", { exact: true }).click();
+    const memoryId = await panel.locator("article[data-memory-id]").first().getAttribute("data-memory-id");
+    await methodsPanel.getByLabel("经验触发条件").fill("source review");
+    await methodsPanel.getByLabel("经验内容").fill("Preserve exact versions and user intent");
+    await methodsPanel.getByLabel("经验依据").selectOption(memoryId!);
+    await methodsPanel.getByRole("button", { name: "保存候选经验", exact: true }).click();
+    await methodsPanel.getByRole("button", { name: "核验经验", exact: true }).waitFor();
+    await methodsPanel.getByLabel("方法核验理由").fill("Verified source and applicability");
+    await methodsPanel.getByRole("button", { name: "核验经验", exact: true }).click();
+    await methodsPanel.getByText("source review · validated", { exact: true }).waitFor();
+    await methodsPanel.getByText("准备方法候选", { exact: true }).click();
+    await methodsPanel.getByRole("button", { name: "读取正式方法", exact: true }).click();
+    await page.waitForFunction(() => (document.querySelector<HTMLTextAreaElement>('[aria-label="候选方法正文"]')?.value.length ?? 0) > 30);
+    await methodsPanel.getByLabel("候选依据").selectOption({ label: "source review" });
+    await methodsPanel.getByLabel("候选方法正文").fill("# Result analysis\nPreserve exact runId, source versions and user constraints.");
+    await methodsPanel.getByRole("button", { name: "保存方法候选", exact: true }).click();
+    await methodsPanel.getByText("result-analysis · candidate", { exact: true }).waitFor();
+    await methodsPanel.getByText("查看方法差异", { exact: true }).click();
+    assert.match(await methodsPanel.locator("article[data-candidate-id] pre").innerText(), /Preserve exact runId/);
     await panel.getByRole("button", { name: "撤回记忆", exact: true }).click();
     await panel.getByText(/withdrawn · user/).waitFor();
   } finally { await browser.close(); await app.close(); rmSync(root, { recursive: true, force: true }); }

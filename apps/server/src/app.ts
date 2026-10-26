@@ -33,6 +33,7 @@ import { CrossrefSearch } from "./search.js";
 import { SkillService } from "./skills.js";
 import { ReferenceError, resolveReferences, materialReferenceText } from "./references.js";
 import { MemoryError, MemoryService, type IngestMemory } from "./memory.js";
+import { MethodService } from "./methods.js";
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -63,6 +64,7 @@ export interface CreatedApp {
     events: EventHub;
     store: RunStore;
     memory: MemoryService;
+    methods: MethodService;
   };
 }
 
@@ -166,7 +168,8 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
   const memory = new MemoryService(db, repositories, events);
   const search = options.search ?? new CrossrefSearch({ contactEmail: config.searchEmail });
   const materials = new MaterialService({ crossref: search });
-  const skills = new SkillService(repositories, resourcesDir);
+  const methods = new MethodService(db, repositories, memory, events);
+  const skills = new SkillService(repositories, resourcesDir, methods);
   const context = new ContextService(repositories, skills, memory);
   const manuscript = new ManuscriptService(
     repositories,
@@ -189,6 +192,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
       experiments,
       manuscript,
       memory,
+      methods,
     });
   const logger = options.logger ?? (() => undefined);
 
@@ -475,6 +479,18 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             return json(res, 202, { accepted: true, duplicate: false, latestSeq: repositories.latestEventSeq(task.id) });
           }
           if (action === "memories/recall" && method === "POST") return json(res, 200, memory.recall({ projectId: project.id, taskId: task.id, actor: "user" }, await readJson(req)));
+          const methodMatch = action.match(/^methods(?:\/(experiences|candidates)(?:\/([^/]+))?)?$/);
+          if (action === "method-version" && method === "GET") {
+            const name = requireString(url.searchParams.get("name"), "name", 100);
+            return json(res, 200, { official: methods.resolve(project.id, name), bound: methods.resolve(project.id, name, task.id) });
+          }
+          if (methodMatch) {
+            const principal = { projectId: project.id, taskId: task.id, actor: "user" as const };
+            if (method === "GET") return json(res, 200, { bindings: methods.bindings(principal), experiences: methods.experiences(principal), candidates: methods.candidates(principal), heads: skills.list(project.id).map(s => ({ name: s.name, ...methods.head(project.id, s.name) })) });
+            const body = await readJson(req);
+            if (method === "POST" && methodMatch[1] === "experiences") return json(res, 201, { experience: methodMatch[2] ? methods.reviewExperience(principal, methodMatch[2], body.accept === true, requireString(body.reason, "reason")) : methods.experience(principal, body as any) });
+            if (method === "POST" && methodMatch[1] === "candidates" && !methodMatch[2]) return json(res, 201, { candidate: methods.propose(principal, body as any) });
+          }
           if (action === "memory-recalls" && method === "GET") return json(res, 200, { snapshots: memory.snapshots({ projectId: project.id, taskId: task.id, actor: "user" }) });
           const memoryMatch = action.match(/^memories(?:\/([^/]+)(?:\/(history|changes))?)?$/);
           if (memoryMatch) {
@@ -986,7 +1002,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
     close,
     worker,
     agent,
-    services: { repositories, experiments, manuscript, skills, materials, context, events, store, memory },
+    services: { repositories, experiments, manuscript, skills, materials, context, events, store, memory, methods },
   };
 }
 

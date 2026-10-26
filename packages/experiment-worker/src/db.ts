@@ -24,7 +24,7 @@ export function openDatabase(file: string): DatabaseSync {
   return db;
 }
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Restore to a new path only, so recovery cannot overwrite a live database. */
 export function restoreDatabase(backup: string, destination: string): void {
@@ -227,6 +227,16 @@ export function ensureSchema(db: DatabaseSync): void {
     CREATE TABLE IF NOT EXISTS memory_changes (id TEXT PRIMARY KEY, memory_id TEXT NOT NULL, data_json TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS memory_ingestions (project_id TEXT NOT NULL, task_id TEXT NOT NULL, source_key TEXT NOT NULL, memory_id TEXT NOT NULL, PRIMARY KEY(project_id, task_id, source_key));
     CREATE TABLE IF NOT EXISTS recall_snapshots (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, task_id TEXT NOT NULL, data_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS method_versions (project_id TEXT NOT NULL, name TEXT NOT NULL, hash TEXT NOT NULL, data_json TEXT NOT NULL, PRIMARY KEY(project_id, name, hash));
+    CREATE TABLE IF NOT EXISTS method_heads (project_id TEXT NOT NULL, name TEXT NOT NULL, hash TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(project_id, name));
+    CREATE TABLE IF NOT EXISTS task_method_bindings (project_id TEXT NOT NULL, task_id TEXT NOT NULL, name TEXT NOT NULL, hash TEXT NOT NULL, PRIMARY KEY(task_id, name));
+    CREATE TABLE IF NOT EXISTS experiences (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, task_id TEXT NOT NULL, data_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS evolution_candidates (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, task_id TEXT NOT NULL, data_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS method_evaluations (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, candidate_id TEXT NOT NULL, data_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS method_publications (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, name TEXT NOT NULL, data_json TEXT NOT NULL);
+    INSERT OR IGNORE INTO method_versions SELECT project_id, name, sha256, json_object('name', name, 'hash', sha256, 'version', version, 'content', content, 'license', license, 'sourcePath', source_path, 'requires', json(requires_json), 'toolDescriptions', json('{}')) FROM skills;
+    INSERT OR IGNORE INTO method_heads SELECT project_id, name, sha256, 0 FROM skills;
+    INSERT OR IGNORE INTO task_method_bindings SELECT tasks.project_id, tasks.id, method_heads.name, method_heads.hash FROM tasks JOIN method_heads ON tasks.project_id=method_heads.project_id;
   `);
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   db.exec("COMMIT");

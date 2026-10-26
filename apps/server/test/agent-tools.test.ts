@@ -95,6 +95,7 @@ test("research tools are registered and execute against real project records", a
       manuscript: app.services.manuscript,
       events: app.services.events,
       memory: app.services.memory,
+      methods: app.services.methods,
     });
     assert.deepEqual([...tools.keys()].sort(), [...toolNames()].sort());
 
@@ -125,10 +126,12 @@ test("research tools are registered and execute against real project records", a
     assert.deepEqual(active, oldActive, "failed assembly rolls back");
     fakePi.setActiveTools = setTools;
     const savedSkill = { ...app.services.repositories.getSkill(project.id, "literature-review")!, projectId: project.id };
-    app.services.repositories.upsertSkill({ ...savedSkill, requires: ["missing-scholarflow-tool-rt03"] });
+    const originalList = app.services.skills.list.bind(app.services.skills);
+    app.services.skills.list = (...args) => originalList(...args).map(s => s.name === "literature-review" ? { ...s, missingDependencies: ["missing-scholarflow-tool-rt03"] } : s);
     await assert.rejects(() => call("activate_capability", { id: "literature" }), /missing dependency/);
     assert.deepEqual(active, oldActive);
     app.services.repositories.upsertSkill(savedSkill);
+    app.services.skills.list = originalList;
     assert.throws(() => app.services.skills.readForTask("wrong-project", task.id, "literature-review"), /scope mismatch/);
     const firstPage = await call("read_artifact", { path: "workspace/notes.txt", limit: 5 });
     const page = JSON.parse(firstPage.content[0].text);

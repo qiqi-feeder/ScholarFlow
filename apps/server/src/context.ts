@@ -41,7 +41,7 @@ export class ContextService {
       runs: runInputs.slice(-5),
       results: results.slice(0, 5),
       manuscript,
-      skills: this.skills.list(project.id).map((skill) => ({
+      skills: this.skills.list(project.id, task.id).map((skill) => ({
         name: skill.name,
         version: skill.version,
         sha256: skill.sha256,

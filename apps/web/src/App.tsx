@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
 import { sourceSelection } from "./text-selection";
 import { MemoryPanel } from "./MemoryPanel";
+import { MethodPanel } from "./MethodPanel";
 import { PdfPreview } from "./PdfPreview";
 import { activityChanges, transitionKey, type RunActivity } from "./activity";
 import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, selectView, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
@@ -801,6 +802,7 @@ export default function App() {
             </section>}
             <div className="workspace-content">
               {tab === "work" && projectId && taskId && <MemoryPanel key={`${projectId}.${taskId}`} projectId={projectId} taskId={taskId} events={events} />}
+              {tab === "work" && projectId && taskId && <MethodPanel key={`methods.${projectId}.${taskId}`} projectId={projectId} taskId={taskId} events={events} />}
               {tab === "work" && (
                 <OverviewPanel
                   overview={overview}

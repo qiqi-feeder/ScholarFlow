@@ -24,6 +24,7 @@ import type { EventHub } from "./events.js";
 import { CAPABILITIES, CapabilityController } from "./capabilities.js";
 import { recordPage } from "./context.js";
 import type { MemoryService } from "./memory.js";
+import type { MethodService } from "./methods.js";
 
 export interface ResearchToolContext {
   repositories: Repositories;
@@ -38,6 +39,7 @@ export interface ResearchToolContext {
   manuscript: ManuscriptService;
   events: EventHub;
   memory: MemoryService;
+  methods: MethodService;
 }
 
 function ok(text: string, details: Record<string, unknown> = {}) {
@@ -50,15 +52,21 @@ function summarize(value: unknown, max = 12000): string {
 }
 
 export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext): void {
+  const principal = { projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" as const };
+  const descriptions = ctx.skills.toolDescriptions(ctx.project.id, ctx.task.id);
+  const register: ExtensionAPI["registerTool"] = (tool) => pi.registerTool({ ...tool, description: descriptions[tool.name] ?? tool.description });
+  register(defineTool({ name: "suggest_experience", label: "Propose experience", description: "Save a candidate cue/lesson from active evidence memories and their exact conditions. Requires user review before method proposals; never promotes a rule by confidence.", parameters: Type.Object({ cue: Type.String(), lesson: Type.String(), memoryIds: Type.Array(Type.String()) }), execute: async (_id, p) => ok(JSON.stringify(ctx.methods.experience(principal, p))) }));
+  register(defineTool({ name: "propose_method_candidate", label: "Propose isolated method change", description: "Propose Skill body OR tool-description changes from user-validated experiences. Supply the official baseline hash. Candidate versions are isolated and never change host policy, scripts, dependencies, budgets or validators. Formal publication requires independent evaluation and explicit user confirmation.", parameters: Type.Object({ skillId: Type.String(), baselineVersion: Type.String(), sourceExperienceIds: Type.Array(Type.String()), body: Type.Optional(Type.String()), toolDescriptions: Type.Optional(Type.Record(Type.String(), Type.String())) }), execute: async (_id, p) => ok(JSON.stringify(ctx.methods.propose(principal, p))) }));
+  register(defineTool({ name: "list_method_candidates", label: "List method candidates", description: "List this task's experiences, candidate statuses, budgets and bound versions. Does not expose held-out evaluator answers or per-sample feedback.", parameters: Type.Object({}), execute: async () => ok(JSON.stringify({ bindings: ctx.methods.bindings(principal), experiences: ctx.methods.experiences(principal), candidates: ctx.methods.candidates(principal) })) }));
   const capabilities = new CapabilityController(pi, ctx);
   pi.on("model_select", async () => { capabilities.reset(); });
-  pi.registerTool(defineTool({
+  register(defineTool({
     name: "recall_memory", label: "Recall source memories",
     description: "Scope-authorized current/historical memory lookup. asOf is effective time; knownAt is when the system knew it. Disputes return both sides; snapshots pin exact versions. Candidate suggestions are excluded.",
     parameters: Type.Object({ query: Type.Optional(Type.String()), subject: Type.Optional(Type.String()), predicate: Type.Optional(Type.String()), asOf: Type.Optional(Type.String()), knownAt: Type.Optional(Type.String()), budget: Type.Optional(Type.Integer({ minimum: 200, maximum: 4000 })) }),
     execute: async (_id, p) => ok(JSON.stringify(ctx.memory.recall({ projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" }, p))),
   }));
-  pi.registerTool(defineTool({
+  register(defineTool({
     name: "read_memory", label: "Read memory version",
     description: "Read a scope-authorized exact memory version/history by ID, paged with source hash. revision omitted reads current head. Does not revise memory.",
     parameters: Type.Object({ id: Type.String(), revision: Type.Optional(Type.Integer({ minimum: 1 })), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000 })) }),
@@ -69,33 +77,33 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       return ok(JSON.stringify(recordPage(record, p.offset ?? 0, p.limit ?? 4000, { memoryId: p.id, revision: record.revision })));
     },
   }));
-  pi.registerTool(defineTool({
+  register(defineTool({
     name: "remember_source", label: "Remember persisted source",
     description: "Create source-labelled memory from an existing task event. Chat extraction remains candidate; cannot confirm decisions, edit observations or authorize experiments. Repeated source/subject/predicate/conditions is idempotent.",
     parameters: Type.Object({ sourceEventSeq: Type.Integer({ minimum: 1 }), scope: Type.Union([Type.Literal("task"), Type.Literal("project")]), subject: Type.String(), predicate: Type.String(), conditions: Type.Optional(Type.Record(Type.String(), Type.String())) }),
     execute: async (_id, p) => ok(JSON.stringify(ctx.memory.ingest({ projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" }, p))),
   }));
-  pi.registerTool(defineTool({
+  register(defineTool({
     name: "list_research_records", label: "Research directory",
     description: "Page through source IDs beyond the brief context directory. kind: material/run/result/plan. Read bodies with read_research_record.",
     parameters: Type.Object({ kind: Type.String(), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 30 })) }),
     execute: async (_id, p) => ok(JSON.stringify(ctx.context.directory(ctx.project, ctx.task, p.kind, p.offset, p.limit))),
   }));
-  pi.registerTool(defineTool({
+  register(defineTool({
     name: "read_research_record", label: "Read research record",
     description: "Read a project-owned source record by kind and ID, with immutable version and continuation offset. Use to recover conditions/runId after compaction. Pages are excerpts, not full records.",
     parameters: Type.Object({ kind: Type.String(), id: Type.String(), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000 })) }),
     execute: async (_id, p) => ok(JSON.stringify(ctx.context.read(ctx.project, ctx.task, p.kind, p.id, p.offset, p.limit))),
   }));
   for (const action of ["discover_capabilities", "activate_capability", "unload_capability"]) {
-    pi.registerTool(defineTool({
+    register(defineTool({
       name: action, label: action,
       description: action === "discover_capabilities" ? "List task capability groups, exact method versions, dependencies and failure reasons." : `${action}: read method text and update the next model request's tools; retains recovery tools. Does not authorize experiments.`,
       parameters: Type.Object({ id: Type.Optional(Type.String()) }),
       execute: async (_id, params) => ok(JSON.stringify(action === "discover_capabilities" ? capabilities.catalog() : action === "activate_capability" ? capabilities.activate(params.id ?? "") : capabilities.unload(params.id ?? ""))),
     }));
   }
-  pi.registerTool(
+  register(
     defineTool({
       name: "get_research_context",
       label: "Research context",
@@ -113,7 +121,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "list_skills",
       label: "List skills",
@@ -124,7 +132,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "load_skill",
       label: "Load skill",
@@ -144,7 +152,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "search_literature",
       label: "Search literature",
@@ -188,7 +196,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "import_material",
       label: "Import material",
@@ -243,7 +251,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "save_research_plan",
       label: "Save research plan",
@@ -315,7 +323,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "assess_admission",
       label: "Assess reproduction admission",
@@ -395,7 +403,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "propose_experiment",
       label: "Propose experiment",
@@ -459,7 +467,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "list_runs",
       label: "List runs",
@@ -473,7 +481,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "query_run",
       label: "Query run",
@@ -516,7 +524,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "read_artifact",
       label: "Read run artifact",
@@ -533,7 +541,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "cancel_run",
       label: "Cancel run",
@@ -548,7 +556,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "record_run_verification",
       label: "Record run verification",
@@ -570,7 +578,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "analyze_results",
       label: "Analyze results",
@@ -602,7 +610,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "sync_manuscript_results",
       label: "Sync results to manuscript",
@@ -625,7 +633,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "save_manuscript_file",
       label: "Save manuscript file",
@@ -646,7 +654,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "compile_manuscript",
       label: "Compile manuscript",
@@ -673,7 +681,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
     }),
   );
 
-  pi.registerTool(
+  register(
     defineTool({
       name: "export_submission",
       label: "Export submission",
@@ -699,6 +707,7 @@ export function toolNames(): string[] {
     "list_research_records",
     "remember_source",
     "recall_memory", "read_memory",
+    "suggest_experience", "propose_method_candidate", "list_method_candidates",
     "get_research_context",
     "list_skills",
     "load_skill",

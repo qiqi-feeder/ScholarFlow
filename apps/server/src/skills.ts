@@ -7,6 +7,7 @@ import {
   type SkillDocument,
 } from "@scholarflow/research";
 import type { Repositories } from "./repos.js";
+import type { MethodService } from "./methods.js";
 
 export interface SkillView {
   name: string;
@@ -44,6 +45,7 @@ export class SkillService {
   constructor(
     private readonly repos: Repositories,
     private readonly resourcesDir: string,
+    private readonly methods?: MethodService,
   ) {}
 
   installDefaults(projectId: string, projectRoot: string): SkillView[] {
@@ -77,6 +79,7 @@ export class SkillService {
       content: readFileSync(path.join(targetDir, "SKILL.md"), "utf8"),
       importedAt: manifest.importedAt,
     });
+    this.methods?.install(projectId, document.name);
     return { ...document, filePath: path.join(targetDir, "SKILL.md") };
   }
 
@@ -87,8 +90,11 @@ export class SkillService {
     return document;
   }
 
-  list(projectId: string): SkillView[] {
-    return this.repos.listSkills(projectId).map((skill) => ({
+  list(projectId: string, taskId?: string): SkillView[] {
+    return this.repos.listSkills(projectId).map((base) => {
+      const bound = this.methods?.resolve(projectId, base.name, taskId);
+      const skill = bound ? { ...base, ...bound, sha256: bound.hash } : base;
+      return ({
       name: skill.name,
       version: skill.version,
       license: skill.license,
@@ -97,12 +103,18 @@ export class SkillService {
       requires: skill.requires,
       missingDependencies: checkSkillDependencies(skill.requires, (name) => commandAvailable(name)),
       importedAt: skill.importedAt,
-    }));
+    }); });
+  }
+
+  toolDescriptions(projectId: string, taskId: string): Record<string, string> {
+    return Object.assign({}, ...this.repos.listSkills(projectId).map(s => this.methods?.resolve(projectId, s.name, taskId).toolDescriptions ?? {}));
   }
 
   readForTask(projectId: string, taskId: string, name: string): { name: string; path: string; body: string; sha256: string; version: string; license: string } {
     if (this.repos.getTask(taskId)?.projectId !== projectId) throw new Error("skill task scope mismatch");
-    const skill = this.repos.getSkill(projectId, name);
+    const base = this.repos.getSkill(projectId, name);
+    const bound = base && this.methods?.resolve(projectId, name, taskId);
+    const skill = base && bound ? { ...base, ...bound, sha256: bound.hash } : base;
     if (!skill) throw new Error(`skill not found in this project: ${name}`);
     const missing = checkSkillDependencies(skill.requires, commandAvailable);
     if (missing.length) throw new Error(`missing skill dependencies: ${missing.join(", ")}`);

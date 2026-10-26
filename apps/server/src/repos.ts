@@ -135,6 +135,7 @@ export class Repositories {
         timestamp,
         timestamp,
       );
+    this.db.prepare("INSERT OR IGNORE INTO task_method_bindings SELECT ?, ?, name, hash FROM method_heads WHERE project_id=?").run(task.projectId, task.id, task.projectId);
     return task;
   }
 
