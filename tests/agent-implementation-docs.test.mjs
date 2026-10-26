@@ -27,11 +27,14 @@ function validateGraph(specText, planText, frontendText) {
   const checks = rows(specText, "RT", 4);
   assert.deepEqual([...phases.keys()], Array.from({length: 8}, (_, i) => `IG0${i}`));
   assert.deepEqual([...checks.keys()], Array.from({length: 16}, (_, i) => `RT${String(i + 1).padStart(2, "0")}`));
-  for (const check of checks.values()) assert.equal(check[3], "待实施", "Acceptance falsely promoted");
+  const status = value => {
+    assert.ok(value === "待实施" || /^(通过|部分通过).*\[[^\]]+\]\([^)]+\)/.test(value), "Acceptance falsely promoted without evidence");
+  };
+  for (const check of checks.values()) status(check[3]);
   const covered = new Set();
   const deps = new Map();
   for (const [id, cells] of phases) {
-    assert.equal(cells[4], "待实施", "Phase falsely promoted");
+    status(cells[4]);
     const prerequisites = cells[1].match(/IG\d{2}/g) ?? [];
     assert.ok(cells[1] === "无" || prerequisites.length, "Missing dependency");
     if (cells[1] === "无") assert.equal(id, "IG00", "Only baseline can start without a dependency");

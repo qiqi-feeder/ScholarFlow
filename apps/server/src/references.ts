@@ -11,6 +11,15 @@ function readText(project: ProjectRecord, relative: string): string {
   return readFileSync(absolute, "utf8");
 }
 
+export function materialReferenceText(repos: Repositories, project: ProjectRecord, id: string): { text: string; version: string } {
+  const m = repos.findMaterial(project.id, id);
+  if (!m) return fail("材料不存在或不属于当前项目");
+  const absolute = resolveInsideRoot(project.dataDir, m.path);
+  if (statSync(absolute).size > 25 * 1024 * 1024) return fail("材料超过引用读取上限");
+  if (sha256(readFileSync(absolute)) !== m.sha256) return fail("材料文件已变化，请重新导入");
+  return { text: m.mediaType === "text/plain" ? readText(project, m.path) : m.note ?? "原始文件可通过材料读取工具查看；当前没有可靠的全文提取。", version: m.sha256 };
+}
+
 /** Never trust client paths, titles, excerpts or cross-project IDs. */
 export function resolveReferences(repos: Repositories, project: ProjectRecord, task: TaskRecord, value: unknown): ResolvedReference[] {
   if (value === undefined) return [];

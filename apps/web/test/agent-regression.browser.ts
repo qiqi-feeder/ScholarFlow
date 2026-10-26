@@ -1,0 +1,84 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { chromium } from "playwright-core";
+import { createApp } from "../../server/src/app.js";
+import { loadConfig } from "../../server/src/config.js";
+
+test("RT01: delayed saves, canonical selection and lost-ack retries across reload", { timeout: 90000 }, async () => {
+  const root = mkdtempSync(path.join(tmpdir(), "sf-rt01-"));
+  let calls = 0;
+  const config = loadConfig({ home: root, configFile: path.join(root, "config.json"), dataDir: path.join(root, "data"), env: {} });
+  config.workerEnabled = false;
+  const app = await createApp({ config, agent: {
+    listModels: async () => [{ provider: config.modelProvider, id: config.modelId, name: "Controlled model", available: true }],
+    sendMessage: async (p, t, text, clientId) => { calls++; app.services.repositories.appendEvent(p.id, t.id, "user_message", { text, clientId }); },
+    isRunning: () => false, stop: async () => ({ stopped: false }), dispose: async () => {},
+  } });
+  await new Promise<void>(resolve => app.server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(app.server.address() as { port: number }).port}`;
+  const post = async (url: string, body: unknown) => fetch(base + url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()) as Promise<any>;
+  const { project: p } = await post("/api/projects", { name: "RT01 lab" });
+  const { task: t } = await post(`/api/projects/${p.id}/tasks`, { title: "Regression task", objective: "Check concurrency" });
+  const originalText = "First line.\r\n\r\n中文\tSecond line with   spaces.\r\n";
+  writeFileSync(path.join(p.dataDir, "selection.txt"), originalText);
+  const { material } = await post(`/api/projects/${p.id}/materials`, { taskId: t.id, path: "selection.txt" });
+  const chrome = ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"].find(existsSync);
+  assert.ok(chrome);
+  const browser = await chromium.launch({ executablePath: chrome, headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page.on("dialog", d => void d.accept());
+  try {
+    await page.addInitScript(({ p, t }) => { localStorage.setItem("scholarflow.project", p); localStorage.setItem(`scholarflow.task.${p}`, t); }, { p: p.id, t: t.id });
+    await page.goto(base);
+    await page.getByRole("heading", { name: "Regression task", exact: true }).waitFor();
+    await page.getByRole("tab", { name: "稿件", exact: true }).click();
+    const editor = page.getByLabel("编辑 main.tex");
+    await editor.waitFor();
+    const original = await editor.inputValue();
+    await editor.fill(original + "\n% submitted");
+    let release!: () => void, captured!: () => void;
+    const ready = new Promise<void>(r => { captured = r; });
+    const gate = new Promise<void>(r => { release = r; });
+    await page.route("**/manuscript/file", async route => {
+      if (route.request().method() !== "PUT") return route.continue();
+      const response = await route.fetch(); captured(); await gate; await route.fulfill({ response });
+    });
+    await page.getByRole("button", { name: "保存新版本", exact: true }).click(); await ready;
+    await editor.fill(original + "\n% NEWER_UNSAVED_EDIT"); release();
+    await page.getByRole("button", { name: "保存新版本", exact: true }).waitFor();
+    await page.waitForFunction(() => !document.querySelector<HTMLButtonElement>('.editor-card button:last-child')?.disabled);
+    assert.match(await editor.inputValue(), /NEWER_UNSAVED_EDIT/);
+    await page.unroute("**/manuscript/file");
+    const saved = await fetch(`${base}/api/projects/${p.id}/manuscript/file?path=main.tex`).then(r => r.json()) as any;
+    assert.match(saved.content, /submitted/); assert.doesNotMatch(saved.content, /NEWER/);
+    await page.getByRole("button", { name: "保存新版本", exact: true }).click();
+    await page.getByText("未保存修改 · 本地草稿保留", { exact: true }).waitFor({ state: "detached" });
+    await page.getByRole("tab", { name: "材料", exact: true }).click();
+    await page.getByRole("button", { name: "selection.txt", exact: true }).click();
+    await page.getByText("笔记与来源", { exact: true }).click();
+    const source = page.getByLabel("可引用来源文本"); await source.waitFor();
+    assert.equal(await source.inputValue(), originalText.replaceAll("\r\n", "\n"));
+    await source.click(); await source.press("Control+A");
+    await page.getByRole("button", { name: "引用所选文本", exact: true }).click();
+    await page.getByLabel("本条消息引用", { exact: true }).waitFor();
+    let intercepted = false;
+    await page.route("**/messages", async route => {
+      if (intercepted) return route.continue(); intercepted = true;
+      await route.fetch(); await route.abort("failed");
+    });
+    await page.getByLabel("消息", { exact: true }).fill("Retry after lost acknowledgement");
+    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector<HTMLTextAreaElement>('[aria-label="消息"]')?.value === "Retry after lost acknowledgement");
+    await page.reload(); await page.getByLabel("消息", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector<HTMLTextAreaElement>('[aria-label="消息"]')?.value === "");
+    assert.equal(calls, 1);
+    const events = app.services.repositories.listEvents(t.id);
+    const context = events.filter(e => e.type === "message_context"); assert.equal(context.length, 1);
+    assert.equal((context[0]!.data as any).references[0].text, originalText);
+    assert.equal((context[0]!.data as any).references[0].id, material.id);
+  } finally { await browser.close(); await app.close(); rmSync(root, { recursive: true, force: true }); }
+});

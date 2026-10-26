@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
+import { sourceSelection } from "./text-selection";
 import { PdfPreview } from "./PdfPreview";
 import { activityChanges, transitionKey, type RunActivity } from "./activity";
 import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, selectView, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
@@ -192,6 +193,7 @@ export default function App() {
   const setMessage = (value: string) => setDrafts((previous) => ({ ...previous, [draftKey]: value }));
   const streamAbort = useRef<AbortController | null>(null);
   const activeTask = useRef<{ projectId: string; taskId: string } | null>(null);
+  const pendingMessages = useRef(new Map<string, { payload: string; clientId: string }>());
   const taskLoadSeq = useRef(0);
   // Every detail read and model write shares one ordering clock. Task loads
   // additionally have an epoch so A -> B -> A cannot revive an old callback.
@@ -511,14 +513,23 @@ export default function App() {
     setBusy(true);
     const text = message;
     const sentReferences = references;
+    const pendingKey = `scholarflow.pending-message.v1.${target.projectId}.${target.taskId}`;
+    const payload = JSON.stringify({ text, references: sentReferences });
+    let pending = pendingMessages.current.get(pendingKey) ?? null;
+    try { pending = JSON.parse(localStorage.getItem(pendingKey) ?? "null"); } catch { /* use a fresh logical submission */ }
+    const clientId = pending?.payload === payload ? pending.clientId : `msg_${crypto.randomUUID()}`;
+    pendingMessages.current.set(pendingKey, { payload, clientId });
+    try { localStorage.setItem(pendingKey, JSON.stringify({ payload, clientId })); } catch { /* keep retry identity in memory */ }
     setMessage("");
     setReferences([]);
     try {
       await post(`/api/projects/${projectId}/tasks/${taskId}/messages`, {
         text,
-        clientId: `msg_${crypto.randomUUID()}`,
+        clientId,
         references: sentReferences,
       });
+      pendingMessages.current.delete(pendingKey);
+      try { localStorage.removeItem(pendingKey); } catch { /* storage may be disabled */ }
     } catch (err) {
       fail(err);
       setDrafts((previous) => ({ ...previous, [`${target.projectId}/${target.taskId}`]: previous[`${target.projectId}/${target.taskId}`] || text }));
@@ -634,7 +645,7 @@ export default function App() {
       {material.mediaType === "application/pdf"
         ? <PdfPreview title={`原文 ${material.title}`} url={`/api/projects/${projectId}/materials/${material.id}/file`} page={workspace.reading[material.id] ?? 1} onPage={(page) => setWorkspace((s) => ({ ...s, reading: { ...s.reading, [material.id]: page } }))} />
         : <iframe title={`原文 ${material.title}`} sandbox="allow-same-origin" src={`/api/projects/${projectId}/materials/${material.id}/file`} />}
-      <details><summary>笔记与来源</summary>{material.note ? <ReferenceText text={material.note} onReference={(selection) => void attachReference({ kind: "material", id: material.id, version: material.sha256, ...selection })} /> : <p>暂无可读文本；可查看原始文件或导入可读版本。</p>}<p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
+      <details><summary>笔记与来源</summary><MaterialReferenceText key={material.id} projectId={projectId!} material={material} onReference={(selection) => void attachReference({ kind: "material", id: material.id, version: material.sha256, ...selection })} /><p>{material.source.url} · 许可：{material.source.license ?? "未知"}</p></details>
     </section>;
   };
 
@@ -995,7 +1006,20 @@ function OverviewPanel(props: {
 
 function ReferenceText({ text, onReference }: { text: string; onReference: (selection: { start: number; end: number; quote: string }) => void }) {
   const [selection, setSelection] = useState({ start: 0, end: 0, quote: "" });
-  return <div className="reference-text"><textarea aria-label="可引用来源文本" value={text} readOnly rows={6} onSelect={(e) => { const t = e.currentTarget; setSelection({ start: t.selectionStart, end: t.selectionEnd, quote: text.slice(t.selectionStart, t.selectionEnd) }); }} /><button disabled={!selection.quote || selection.quote.length > 4000} onClick={() => onReference(selection)}>引用所选文本</button></div>;
+  return <div className="reference-text"><textarea aria-label="可引用来源文本" value={text} readOnly rows={6} onSelect={(e) => { const t = e.currentTarget; setSelection(sourceSelection(text, t.selectionStart, t.selectionEnd)); }} /><button disabled={!selection.quote || selection.quote.length > 4000} onClick={() => onReference(selection)}>引用所选文本</button></div>;
+}
+
+function MaterialReferenceText({ projectId, material, onReference }: { projectId: string; material: Material; onReference: (selection: { start: number; end: number; quote: string }) => void }) {
+  const [text, setText] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    void api<{ text: string; version: string }>(`/api/projects/${projectId}/materials/${material.id}/text`).then((r) => {
+      if (alive && r.version === material.sha256) setText(r.text);
+    }).catch((e) => { if (alive) setError(e.message); });
+    return () => { alive = false; };
+  }, [projectId, material.id, material.sha256]);
+  return text !== null ? <ReferenceText text={text} onReference={onReference} /> : <p role="status">{error || "正在读取可引用原文…"}</p>;
 }
 
 function ChatPanel(props: {
@@ -1734,6 +1758,8 @@ function ManuscriptPanel(props: {
   fail: (error: unknown) => void;
 }) {
   const draftOwner = `${props.projectId}.${props.taskId}`;
+  const currentOwner = useRef(draftOwner);
+  currentOwner.current = draftOwner;
   const [file, setFile] = useStoredState(`scholarflow.workspace.file.v1.${draftOwner}`, "main.tex", isString);
   type FileDraft = { content: string; baseHash: string };
   const [fileDrafts, setFileDrafts] = useStoredState<Record<string, FileDraft>>(`scholarflow.workspace.editor.v1.${draftOwner}`, {}, (v): v is Record<string, FileDraft> => !!v && typeof v === "object" && Object.values(v).every((d) => !!d && typeof d.content === "string" && typeof d.baseHash === "string"));
@@ -1805,8 +1831,15 @@ function ManuscriptPanel(props: {
     if (!remote || remote.owner !== draftOwner || remote.file !== file || conflict) return false;
     setBusy(true);
     try {
-      await put(`/api/projects/${props.projectId}/manuscript/file`, { path: file, content, baseHash: draft?.baseHash ?? remote.hash, taskId: props.taskId });
-      setFileDrafts((s) => { const next = { ...s }; delete next[file]; return next; });
+      const response = await put<{ manuscript: ManuscriptVersion }>(`/api/projects/${props.projectId}/manuscript/file`, { path: file, content, baseHash: draft?.baseHash ?? remote.hash, taskId: props.taskId });
+      const saved = { hash: response.manuscript.files.find(f => f.path === file)!.sha256 };
+      setFileDrafts((s) => {
+        const next = { ...s };
+        if (next[file]?.content === content) delete next[file];
+        else if (next[file]) next[file] = { ...next[file]!, baseHash: saved.hash };
+        return next;
+      });
+      if (currentOwner.current !== draftOwner) return true;
       await loadFile(file);
       props.onChanged();
       return true;

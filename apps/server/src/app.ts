@@ -31,7 +31,7 @@ import { Repositories } from "./repos.js";
 import { ExperimentService, RunValidationError } from "./runs.js";
 import { CrossrefSearch } from "./search.js";
 import { SkillService } from "./skills.js";
-import { ReferenceError, resolveReferences } from "./references.js";
+import { ReferenceError, resolveReferences, materialReferenceText } from "./references.js";
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -492,6 +492,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
         }
 
         // Materials
+        const materialTextMatch = rest.match(/^materials\/(mat_[0-9a-z]{20})\/text$/);
+        if (method === "GET" && materialTextMatch) {
+          try { return json(res, 200, materialReferenceText(repositories, project, materialTextMatch[1]!)); }
+          catch (error) { throw new HttpError(400, (error as Error).message, "INVALID_REFERENCE"); }
+        }
         if (method === "GET" && rest === "materials") {
           return json(res, 200, { materials: repositories.listMaterials(project.id) });
         }

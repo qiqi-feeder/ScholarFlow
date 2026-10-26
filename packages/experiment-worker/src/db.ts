@@ -1,18 +1,44 @@
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, existsSync, copyFileSync, constants, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export function openDatabase(file: string): DatabaseSync {
+  const existing = file !== ":memory:" && existsSync(file);
   if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
   db.exec("PRAGMA busy_timeout = 5000");
-  ensureSchema(db);
+  try {
+    const version = Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
+    if (version > SCHEMA_VERSION) throw new Error("database schema is newer than this application");
+    if (version < SCHEMA_VERSION && existing) {
+      const integrity = db.prepare("PRAGMA integrity_check").get() as { integrity_check: string };
+      if (integrity.integrity_check !== "ok") throw new Error("database integrity check failed; migration cancelled");
+      const backup = `${path.resolve(file)}.before-v${SCHEMA_VERSION}.${Date.now()}.sqlite`;
+      db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
+      writeFileSync(`${backup}.json`, JSON.stringify({ source: path.resolve(file), backup, version, targetVersion: SCHEMA_VERSION, restore: "Close host and worker; restore this snapshot into a new data directory. Keep project files and Pi sessions unchanged. Rebuild derived indexes." }, null, 2));
+    }
+    ensureSchema(db);
+  } catch (error) { db.close(); throw error; }
   return db;
 }
 
+export const SCHEMA_VERSION = 1;
+
+/** Restore to a new path only, so recovery cannot overwrite a live database. */
+export function restoreDatabase(backup: string, destination: string): void {
+  const probe = new DatabaseSync(backup, { readOnly: true });
+  try {
+    if ((probe.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check !== "ok") throw new Error("invalid backup");
+  } finally { probe.close(); }
+  mkdirSync(path.dirname(destination), { recursive: true });
+  copyFileSync(backup, destination, constants.COPYFILE_EXCL);
+}
+
 export function ensureSchema(db: DatabaseSync): void {
+  db.exec("BEGIN IMMEDIATE");
+  try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -190,6 +216,9 @@ export function ensureSchema(db: DatabaseSync): void {
   // Old task rows keep NULL and inherit the host default until the user switches.
   ensureColumn(db, "tasks", "model_provider", "model_provider TEXT");
   ensureColumn(db, "tasks", "model_id", "model_id TEXT");
+  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 
 function ensureColumn(db: DatabaseSync, table: string, column: string, definition: string): void {

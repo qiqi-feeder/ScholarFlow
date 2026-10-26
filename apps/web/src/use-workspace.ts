@@ -14,7 +14,7 @@ export function useStoredState<T>(key: string, initial: T, valid: (value: unknow
   const value = entry.key === key ? entry.value : restored;
   const update: Dispatch<SetStateAction<T>> = (action) => {
     setEntry((previous) => {
-      const before = previous.key === key ? previous.value : restored;
+      const before = memory.current.get(key) ?? (previous.key === key ? previous.value : restored);
       const next = typeof action === "function" ? (action as (value: T) => T)(before) : action;
       memory.current.set(key, next);
       try { writeStored(localStorage, key, next, storageWarning); } catch { storageWarning("浏览器存储已禁用，草稿仍保留在内存中。"); }

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "fixedAt": "2026-10-26",
+  "model": { "provider": "deepseek", "id": "deepseek-flash" },
+  "budget": { "maxInputTokensEstimate": 24000, "maxOutputTokens": 1024, "maxAttempts": 2, "maxMinutes": 5 },
+  "permissions": "read-only fixtures; no target experiments or publication",
+  "groups": ["baseline", "capabilities", "bounded-context", "memory", "evolved-method"],
+  "development": [
+    { "id": "recover-run", "objective": "Recover an existing run and conditions without resubmission" },
+    { "id": "scoped-source", "objective": "Reject cross-project sources and retain exact version" }
+  ],
+  "holdout": [
+    { "id": "late-correction", "objective": "Historical and known-at queries retain the appropriate correction" },
+    { "id": "disputed-claim", "objective": "Current recall surfaces both contradictory sources" }
+  ],
+  "limitations": "These are fixed software mechanism cards, not scientific reproduction benchmarks. New method effects require real execution. Unknown price remains unknown."
+}
