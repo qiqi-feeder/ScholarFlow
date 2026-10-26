@@ -109,16 +109,16 @@ node --import tsx scripts/verify-pi-session.ts
 
 ## 8. 尚未完成
 
-- 真实 DeepSeek 流式工具循环已通过；压缩后检索、无效 Key/限流/断线/停止回答故障矩阵仍未完成。
+- 真实 DeepSeek 流式工具循环已通过；原生压缩后的持久记录检索已通过受控端点验证，见 [IG02](verification/agent-implementation/IG02.md)。真实供应商的无效 Key/限流/断线/停止回答完整故障矩阵仍未完成。
 - 真实论文基线、一次受控修改和科研验收（缺验收卡目标、目标数据/官方脚本/GPU 预算；Conda/Python 解释器已存在）。
-- Pi 对照评测、干净检出发布回归。
+- 独立方法实效与更广泛的发布环境验证。已有轻量配对评测的基线/候选均为 4/6，候选被拒绝，不能视为提升证据，见 [IG07](verification/agent-implementation/IG07.md)。
 - 旧静态 Demo 的缺失资源修复。
 
-工作台 W00–W05 已完成，WT01–WT19 证据见 [W05 交付验收](verification/workspace-redesign/W05-regression.md)；W02 视觉由用户查看后确认。真实科研目标请先确认 [科研验收执行卡](RESEARCH_ACCEPTANCE_CARD.md)，AF 能力批次仍是独立后续设计。
+工作台 W00–W05 及 IG00–IG07 软件升级已完成，WT01–WT19 证据见 [W05 交付验收](verification/workspace-redesign/W05-regression.md)，后续修复与能力证据见 [IG07](verification/agent-implementation/IG07.md)。真实科研目标请先确认 [科研验收执行卡](RESEARCH_ACCEPTANCE_CARD.md)；AF03/AF04 全文与领域工具契约仍是独立后续工作。
 
 ## 9. 工作台改版操作与恢复
 
-当前存在保存期间新增编辑丢失、文本选区坐标不符及确认响应丢失后重发二次调用问题；整体交付待修复复验，见 [剩余验收问题](verification/workspace-redesign/W02-W05-review-issues.md)。
+保存期间新增编辑丢失、文本选区坐标不符及确认响应丢失后重发二次调用等历史问题已在 IG00 修复并回归，见 [IG00](verification/agent-implementation/IG00.md)；原问题单保留在 [历史验收问题](verification/workspace-redesign/W02-W05-review-issues.md)。第一次体验可先按 [README 快速开始](../README.zh-CN.md#快速开始) 执行 `npm run demo:seed`，或查看 [真实界面演示](DEMO.md)。
 
 - 左侧图标只切工作视图；顶部项目/任务选择决定会话归属。导航可收起，手机用“工作区/会话”和导航抽屉切换。
 - 在左侧打开具体对象后点“引用当前内容”，或在材料“笔记与来源”的可读文本、已保存稿件源码中选区后引用。输入区显示本条引用，可移除；打开文件不会自动发送。PDF 支持整篇/页码，摘要不冒充该页精确文本，不支持 OCR。

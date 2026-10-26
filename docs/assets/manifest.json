@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "capturedAt": "2026-10-26T16:54:53.819Z",
+  "timezone": "Asia/Taipei",
+  "sourceCommit": "d5d908d5af19bd201060ea1a7e1839cb7352a1a9",
+  "sourceTree": "base commit plus README authoring changes",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "realApplication": true,
+  "realModel": true,
+  "syntheticData": true,
+  "scientificReproduction": false,
+  "model": "deepseek-flash",
+  "tools": [
+    "read_artifact",
+    "query_run",
+    "recall_memory"
+  ],
+  "usage": [
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 196,
+        "output": 142,
+        "cacheRead": 3200,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "totalTokens": 3538,
+        "cost": {
+          "input": 0.0000588,
+          "output": 0.0001704,
+          "cacheRead": 0.0000192,
+          "cacheWrite": 0,
+          "total": 0.00024839999999999997
+        }
+      }
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 1055,
+        "output": 105,
+        "cacheRead": 4096,
+        "cacheWrite": 0,
+        "reasoning": 0,
+        "totalTokens": 5256,
+        "cost": {
+          "input": 0.0003165,
+          "output": 0.000126,
+          "cacheRead": 0.000024576,
+          "cacheWrite": 0,
+          "total": 0.00046707599999999997
+        }
+      }
+    },
+    {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "usage": {
+        "input": 489,
+        "output": 648,
+        "cacheRead": 3712,
+        "cacheWrite": 0,
+        "reasoning": 158,
+        "totalTokens": 4849,
+        "cost": {
+          "input": 0.0001467,
+          "output": 0.0007775999999999999,
+          "cacheRead": 0.000022272,
+          "cacheWrite": 0,
+          "total": 0.0009465719999999999
+        }
+      }
+    }
+  ],
+  "seedSource": {
+    "path": "examples/first-source.txt",
+    "sha256": "42fb40e6343382091d0f295dffbed8914468b6cabb8710701dea111accd962de"
+  },
+  "run": {
+    "id": "run_01m5wj5eapggdrperm4v",
+    "kind": "smoke",
+    "status": "succeeded",
+    "requestId": "readme-smoke-once",
+    "approvalId": "apr_01m5wj5e1nhvbyv4e9z7",
+    "metrics": [
+      {
+        "key": "mae",
+        "value": 0.08014182407470491,
+        "source": {
+          "file": "metrics.json",
+          "pointer": "/mae",
+          "sha256": "8567f689497a2217b75d31e7dbf8adec0c62ec440a9a3c07bb646e9304afe71e",
+          "importedAt": "2026-10-26T16:54:42.279Z",
+          "runId": "run_01m5wj5eapggdrperm4v",
+          "conditionFingerprint": "0c27fb6111c7943b9cda0c2cbbc935a497224804b215dc2b2092b273749c6d69"
+        }
+      }
+    ],
+    "scriptSha256": "b3754337f56dcb98e8bd6026f02496206a3d7182314f3c2455d4f924c61c9221"
+  },
+  "manuscript": {
+    "built": true,
+    "version": 6,
+    "sourceHash": "94cc5b0a6f38c50e32d6a8c89899a0392b9006a1e90efe63f0dd530f0bc9914b"
+  },
+  "memory": {
+    "id": "mem_01m5wj5mwwsect1jwdec",
+    "revision": 1,
+    "sharedAcrossTasks": true
+  },
+  "animation": {
+    "frames": 12,
+    "durationMs": 60000,
+    "width": 1000,
+    "height": 625,
+    "sampledFrames": true,
+    "timingAdjusted": true
+  },
+  "stages": [
+    {
+      "frame": "frame-01.png",
+      "stage": "Open the included local source"
+    },
+    {
+      "frame": "frame-02.png",
+      "stage": "Attach a host-validated source version"
+    },
+    {
+      "frame": "frame-03.png",
+      "stage": "Read the source through a real Pi tool loop"
+    },
+    {
+      "frame": "frame-04.png",
+      "stage": "Review a bounded smoke plan"
+    },
+    {
+      "frame": "frame-05.png",
+      "stage": "Explicitly confirm the plan"
+    },
+    {
+      "frame": "frame-06.png",
+      "stage": "Review the exact command before approval"
+    },
+    {
+      "frame": "frame-07.png",
+      "stage": "A real CPU child process finishes and persists its logs"
+    },
+    {
+      "frame": "frame-08.png",
+      "stage": "Inspect a metric tied to its run and file"
+    },
+    {
+      "frame": "frame-09.png",
+      "stage": "Build an actual PDF from versioned manuscript sources"
+    },
+    {
+      "frame": "frame-10.png",
+      "stage": "Read the generated report alongside a grounded model answer"
+    },
+    {
+      "frame": "frame-11.png",
+      "stage": "A new task sees the source-labelled confirmed project memory"
+    },
+    {
+      "frame": "frame-12.png",
+      "stage": "Recall prior conditions without resubmitting the experiment"
+    }
+  ],
+  "assets": [
+    {
+      "path": "source.png",
+      "sha256": "6dc2a326caef2ce0115757d6f9b3085aada5fa65d294a928dbdc310cbf52612d",
+      "bytes": 71760
+    },
+    {
+      "path": "results.png",
+      "sha256": "e41825d7165536abcfbfc8aa41a6c2643bb4bc008ed9d80dbf8f97be1b5eca00",
+      "bytes": 138943
+    },
+    {
+      "path": "workspace.png",
+      "sha256": "e8c68562f15cc4b2976c91e4c96e60ddd87b1d9f73876dc78d36c769eab89f72",
+      "bytes": 133993
+    },
+    {
+      "path": "memory.png",
+      "sha256": "e40433b6f198b87fc32b59e1da0fbc64e793013f358e7eb866b0ab1a59dbf793",
+      "bytes": 158486
+    },
+    {
+      "path": "walkthrough.gif",
+      "sha256": "3b952526298444355933d0575898b7694a1e8e343944a6ece7e8105f90c80fc0",
+      "bytes": 1052243
+    },
+    {
+      "path": "brand-mark.svg",
+      "sha256": "d5037e8e0356262bb8021c6c708e406beb965f5656dca292ae91a05d2c929ce7",
+      "bytes": 446
+    }
+  ],
+  "pageErrors": [],
+  "credentialsExported": false,
+  "price": "unknown"
+}

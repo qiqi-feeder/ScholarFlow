@@ -92,11 +92,9 @@ function Assert-DiscussionLinks([string]$text) {
     }
 }
 
-function Assert-DiscussionNavigation([string]$readme, [string]$plan, [string]$discovery) {
-    foreach ($entry in @($readme, $plan)) {
-        if (-not $entry.Contains('(docs/WORKSPACE_PRODUCT_DISCUSSION.md)')) { throw 'Missing discussion entry point' }
-    }
-    if (-not $readme.Contains('./tests/workspace-product-docs.tests.ps1')) { throw 'Missing documented verification command' }
+function Assert-DiscussionNavigation([string]$readme, [string]$index, [string]$plan, [string]$discovery) {
+    if (-not $readme.Contains('(docs/README.md)') -or -not $index.Contains('(WORKSPACE_PRODUCT_DISCUSSION.md)') -or -not $plan.Contains('(docs/WORKSPACE_PRODUCT_DISCUSSION.md)')) { throw 'Missing discussion entry point' }
+    if (-not $index.Contains('./tests/workspace-product-docs.tests.ps1')) { throw 'Missing documented verification command' }
     if (-not $discovery.Contains('(WORKSPACE_PRODUCT_DISCUSSION.md)')) { throw 'Missing discovery handoff link' }
     foreach ($id in @('C19', 'C20')) {
         if ($discovery -notmatch ('(?m)^\| ' + $id + ' \|')) { throw "Missing confirmed discovery decision: $id" }
@@ -106,9 +104,10 @@ function Assert-DiscussionNavigation([string]$readme, [string]$plan, [string]$di
 Assert-Discussion $document
 Assert-DiscussionLinks $document
 $readme = Get-Content (Join-Path $repositoryRoot 'README.md') -Raw -Encoding UTF8
+$index = Get-Content (Join-Path $repositoryRoot 'docs/README.md') -Raw -Encoding UTF8
 $plan = Get-Content (Join-Path $repositoryRoot 'PLAN.md') -Raw -Encoding UTF8
 $discovery = Get-Content (Join-Path $repositoryRoot 'docs/DISCOVERY.md') -Raw -Encoding UTF8
-Assert-DiscussionNavigation $readme $plan $discovery
+Assert-DiscussionNavigation $readme $index $plan $discovery
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {
     $caught = $null
@@ -131,7 +130,8 @@ Assert-Rejected { Assert-Discussion ($document.Replace('| R01、R03、R05 |', '|
 Assert-Rejected { Assert-Discussion ($document.Replace('| R01、R03、R05 |', '| 未分类 |')) } 'Missing acceptance traceability'
 Assert-Rejected { Assert-Discussion ($document.Replace('R02、R03、R04、R05、R06', 'R02、R03、R04、R05').Replace('R02、R05、R06', 'R02、R05')) } 'Scenario has no acceptance coverage'
 Assert-Rejected { Assert-DiscussionLinks '[missing](missing-workspace-discussion-file.md)' } 'Broken discussion link'
-Assert-Rejected { Assert-DiscussionNavigation ($readme.Replace('(docs/WORKSPACE_PRODUCT_DISCUSSION.md)', '(missing.md)')) $plan $discovery } 'Missing discussion entry point'
-Assert-Rejected { Assert-DiscussionNavigation $readme $plan ($discovery.Replace('| C19 |', '| 历史决定 |')) } 'Missing confirmed discovery decision'
+Assert-Rejected { Assert-DiscussionNavigation ($readme.Replace('(docs/README.md)', '(missing.md)')) $index $plan $discovery } 'Missing discussion entry point'
+Assert-Rejected { Assert-DiscussionNavigation $readme ($index.Replace('(WORKSPACE_PRODUCT_DISCUSSION.md)', '(missing.md)')) $plan $discovery } 'Missing discussion entry point'
+Assert-Rejected { Assert-DiscussionNavigation $readme $index $plan ($discovery.Replace('| C19 |', '| 历史决定 |')) } 'Missing confirmed discovery decision'
 Assert-Rejected { Assert-Discussion ($document + [char]0xFFFD) } 'Invalid text encoding'
-Write-Output 'Workspace product discussion: decision provenance, scope ownership, scenario/acceptance coverage, links and 18 negative cases passed. Documentation contracts only; runtime results are recorded separately.'
+Write-Output 'Workspace product discussion: decision provenance, scope ownership, scenario/acceptance coverage, links and 19 negative cases passed. Documentation contracts only; runtime results are recorded separately.'

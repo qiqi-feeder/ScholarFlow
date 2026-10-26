@@ -3,6 +3,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $document = Get-Content (Join-Path $repositoryRoot 'docs/FRONTEND_PRODUCT_REQUIREMENTS.md') -Raw -Encoding UTF8
 $plan = Get-Content (Join-Path $repositoryRoot 'PLAN.md') -Raw -Encoding UTF8
 $readme = Get-Content (Join-Path $repositoryRoot 'README.md') -Raw -Encoding UTF8
+$index = Get-Content (Join-Path $repositoryRoot 'docs/README.md') -Raw -Encoding UTF8
 $negativeCaseCount = 0
 
 # Check product/prototype handoff coverage, not runtime UI behavior or appearance.
@@ -150,10 +151,8 @@ function Assert-RequirementLinks([string]$text) {
 
 Assert-FrontendRequirements $document $plan
 Assert-RequirementLinks $document
-foreach ($entry in @($readme, $plan)) {
-    if (-not $entry.Contains('(docs/FRONTEND_PRODUCT_REQUIREMENTS.md)')) { throw 'Missing frontend requirements entry point' }
-}
-if (-not $readme.Contains('./tests/frontend-product-docs.tests.ps1')) { throw 'Missing frontend document verification command' }
+if (-not $readme.Contains('(docs/README.md)') -or -not $index.Contains('(FRONTEND_PRODUCT_REQUIREMENTS.md)') -or -not $plan.Contains('(docs/FRONTEND_PRODUCT_REQUIREMENTS.md)')) { throw 'Missing frontend requirements entry point' }
+if (-not $index.Contains('./tests/frontend-product-docs.tests.ps1')) { throw 'Missing frontend document verification command' }
 if (-not $plan.Contains('以 Stitch 原稿与已登记修正项进入页面/组件设计与功能接入')) { throw 'Missing accepted-prototype implementation handoff' }
 
 function Assert-Rejected([scriptblock]$action, [string]$expected) {

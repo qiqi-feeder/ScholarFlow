@@ -68,7 +68,8 @@ test("document links resolve and primary upstream references use immutable revis
     "langchain-ai/langgraph", "OpenHands/software-agent-sdk", "harbor-framework/harbor", "Future-House/paper-qa",
     "google-research/harness2", "mem0ai/mem0", "getzep/graphiti",
   ].sort(), "Expected pinned references for the original and newly researched projects");
-  assert.ok(readFileSync(path.join(root, "README.md"), "utf8").includes("docs/AGENT_RESUME_HIGHLIGHTS.md"));
+  assert.ok(readFileSync(path.join(root, "README.md"), "utf8").includes("docs/README.md"));
+  assert.ok(readFileSync(path.join(root, "docs/README.md"), "utf8").includes("(AGENT_RESUME_HIGHLIGHTS.md)"));
 });
 
 function validateExtensions(text) {

@@ -101,7 +101,7 @@ for (const path of ['README.md', 'docs/PRODUCT_DESIGN.md', 'docs/TECHNICAL_DESIG
   for (const match of read(path).matchAll(/\[[^\]]+\]\(([^\s)]+)\)/g)) {
     const target = match[1];
     if (/^https?:\/\//.test(target)) continue;
-    const local = resolve(dirname(resolve(root, path)), target.split('#')[0]);
+    const local = target.startsWith('#') ? resolve(root, path) : resolve(dirname(resolve(root, path)), target.split('#')[0]);
     check(!relative(root, local).startsWith('..'), `${path}: link escapes repository`);
     check(existsSync(local) && statSync(local).isFile(), `${path}: broken local link ${target}`);
   }

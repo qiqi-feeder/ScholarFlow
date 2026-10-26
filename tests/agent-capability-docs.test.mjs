@@ -114,7 +114,8 @@ test("entry points agree on the architecture handoff without requiring new proto
   assert.match(plan, /不能自动并入 W01–W05 的完成声明/);
   assert.match(frontend, /所有工作区的变化均来自后台已保存的真实记录\/文件与版本/);
   assert.match(frontend, /当前 DOI 导入不能视为已获取全文/);
-  assert.ok(readme.includes("node --test tests/agent-capability-docs.test.mjs"));
+  assert.ok(readme.includes("npm run test:docs"));
+  assert.match(JSON.parse(read("package.json")).scripts["test:docs"], /tests\/\*\.test\.mjs/);
 });
 
 test("changed documentation uses valid encoding and resolvable local file links", () => {

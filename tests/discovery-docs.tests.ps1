@@ -143,7 +143,8 @@ foreach ($name in @('PRODUCT_DESIGN.md', 'TECHNICAL_DESIGN.md', 'IMPLEMENTATION_
     }
 }
 $readme = Get-Content (Join-Path $root 'README.md') -Raw -Encoding UTF8
-if (-not $readme.Contains('[DISCOVERY](docs/DISCOVERY.md)')) { throw 'README must link to discovery.' }
+$index = Get-Content (Join-Path $root 'docs/README.md') -Raw -Encoding UTF8
+if (-not $readme.Contains('(docs/README.md)') -or -not $index.Contains('(DISCOVERY.md)')) { throw 'Discovery must be reachable through the README documentation index.' }
 # Scope this guard to the explicitly recorded phase, so an authorized transition can update it.
 if ($discovery.Contains('阶段：需求探索。')) {
     foreach ($name in @('PLAN.md', 'docs/PLAN.md')) {
@@ -155,7 +156,7 @@ function Assert-PlanningAuthorization([string]$text) {
     if (-not $text.Contains('阶段：MVP 实施规划。') -or -not $text.Contains('[PLAN](../PLAN.md)')) { throw 'Missing current planning phase and entry point.' }
 }
 Assert-PlanningAuthorization $discovery
-if (-not (Test-Path (Join-Path $root 'PLAN.md')) -or -not $readme.Contains('[PLAN](PLAN.md)')) { throw 'Authorized plan must exist and be linked from README.' }
+if (-not (Test-Path (Join-Path $root 'PLAN.md')) -or -not $readme.Contains('(PLAN.md)')) { throw 'Authorized plan must exist and be linked from README.' }
 
 # Negative cases ensure the checks detect lost categories, duplicate IDs and broken references.
 function Assert-Rejected([scriptblock]$action, [string]$expected) {

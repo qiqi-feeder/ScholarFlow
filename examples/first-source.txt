@@ -1,0 +1,8 @@
+ScholarFlow first-run source
+
+Purpose: verify that the agent reads a saved local source and reports its evidence.
+Witness: SCHOLARFLOW_SOURCE_CHECK
+
+This is a software walkthrough fixture, not a paper or a scientific result.
+A successful answer should preserve the witness exactly and identify the source.
+Do not start an experiment, claim a reproduction, or change project files.

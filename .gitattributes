@@ -3,3 +3,6 @@ demo/assets/ide-light/*.svg -text
 demo/assets/ide-light/*.woff2 -text
 # Upstream license includes one intentional trailing space; do not rewrite it.
 demo/assets/ide-light/OFL.txt -text whitespace=-blank-at-eol
+# README evidence is hash-checked; preserve the captured bytes on checkout.
+docs/assets/* -text
+examples/first-source.txt text eol=lf
