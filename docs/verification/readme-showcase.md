@@ -34,3 +34,9 @@ Local GitHub-style previews of both homepages were checked at 1440px and 390px: 
 The homepage identifies a Windows-first, single-user early preview and a pending project-wide license. No CI-success or license badge is invented. The small six-card method evaluation remains baseline 4/6 and candidate 4/6, with the candidate rejected and the baseline retained; see the [IG07 report](agent-implementation/IG07.md).
 
 Software walkthrough success is not scientific reproduction, statistical significance, method improvement, or target-research acceptance. The [research acceptance card](../RESEARCH_ACCEPTANCE_CARD.md) and [plan](../../PLAN.md) remain the relevant gates. Historical design/prototype links stay in the [documentation index](../README.md), labelled as historical.
+
+## 中文优先入口调整
+
+按用户偏好将 [README.md](../../README.md) 设为默认中文首页，英文内容移至 [README.en.md](../../README.en.md)。语言切换互相指向正确版本，文档索引、演示、运行指南与贡献指南同步更新入口和快速开始锚点。
+
+本次仅调整文档与相关测试：28 项文档测试全部通过，新增中文默认入口及语言链接错误的反例检查；Discovery、workspace-product、frontend-product、architecture/XML、MVP-plan 五组文档验证及其反例通过。展示素材与运行代码沿用此前已验证版本。

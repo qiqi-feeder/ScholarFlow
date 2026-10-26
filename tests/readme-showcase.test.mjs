@@ -8,7 +8,7 @@ import test from "node:test";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = file => readFileSync(path.join(root, file), "utf8");
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
-const files = ["README.md", "README.zh-CN.md", "CONTRIBUTING.md", "docs/README.md", "docs/DEMO.md", "docs/verification/readme-showcase.md", "docs/RUN_GUIDE.md"];
+const files = ["README.md", "README.en.md", "CONTRIBUTING.md", "docs/README.md", "docs/DEMO.md", "docs/verification/readme-showcase.md", "docs/RUN_GUIDE.md"];
 const manifest = JSON.parse(read("docs/assets/manifest.json"));
 const withoutCode = text => text.replace(/^```[^\n]*\n[\s\S]*?^```\s*$/gm, "");
 
@@ -101,13 +101,13 @@ function validateEvidence(record, load = name => readFileSync(path.join(root, "d
 test("English and Chinese entry points, contributor guide and walkthrough resolve files and headings", () => {
   for (const file of files) validateLinks(file, read(file));
   assert.throws(() => validateLinks("README.md", "[bad](docs/absent.md)"), /Broken local link/);
-  assert.throws(() => validateLinks("README.md", "[bad](README.zh-CN.md#absent)"), /Broken heading anchor/);
+  assert.throws(() => validateLinks("README.md", "[bad](README.en.md#absent)"), /Broken heading anchor/);
   assert.throws(() => validateLinks("README.md", "[bad](../outside.md)"), /outside repository/);
   assert.deepEqual([...anchors("# Heading\n# Heading\n# 快速开始")], ["heading", "heading-1", "快速开始"]);
 });
 
 test("both homepages share the current runtime diagram and executable setup commands", () => {
-  const english = read("README.md"), chinese = read("README.zh-CN.md"), pkg = JSON.parse(read("package.json"));
+  const english = read("README.en.md"), chinese = read("README.md"), pkg = JSON.parse(read("package.json"));
   const diagram = text => text.match(/```mermaid\r?\n([\s\S]*?)\r?\n```/)?.[1].replace(/\r/g, "");
   assert.ok(diagram(english)); assert.equal(diagram(english), diagram(chinese));
   for (const text of [english, chinese]) {
@@ -119,6 +119,21 @@ test("both homepages share the current runtime diagram and executable setup comm
   }
   assert.match(english, /pending maintainer selection/); assert.match(chinese, /许可证.*待/);
   assert.ok(!existsSync(path.join(root, "LICENSE")), "A new license requires a corresponding documentation update");
+});
+
+function validateLanguageEntrypoints(chinese, english) {
+  assert.match(chinese, /^## 为什么使用 ScholarFlow？$/m, "Default README must be Chinese");
+  assert.match(chinese, /\*\*简体中文\*\* · \[English\]\(README\.en\.md\)/, "Chinese homepage must link to the English translation");
+  assert.match(english, /^## Why ScholarFlow\?$/m, "English README must retain its translation");
+  assert.match(english, /\[简体中文\]\(README\.md\) · \*\*English\*\*/, "English translation must link to the default Chinese homepage");
+}
+
+test("Chinese is the default homepage with a reciprocal English translation", () => {
+  const chinese = read("README.md"), english = read("README.en.md");
+  validateLanguageEntrypoints(chinese, english);
+  assert.throws(() => validateLanguageEntrypoints(english, chinese), /Default README must be Chinese/);
+  assert.throws(() => validateLanguageEntrypoints(chinese.replace("(README.en.md)", "(README.md)"), english), /link to the English translation/);
+  assert.throws(() => validateLanguageEntrypoints(chinese, english.replace("(README.md)", "(README.en.md)")), /link to the default Chinese homepage/);
 });
 
 test("showcase media matches the saved real-run evidence and actual GIF structure", () => validateEvidence(manifest));

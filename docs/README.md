@@ -1,6 +1,6 @@
-# Documentation / 文档
+# 文档 / Documentation
 
-[English overview](../README.md) · [中文首页](../README.zh-CN.md)
+[中文首页](../README.md) · [English overview](../README.en.md)
 
 Start with the run guide and the included example. Design history and acceptance identifiers are kept below for maintainers.
 

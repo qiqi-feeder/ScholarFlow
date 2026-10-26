@@ -1,6 +1,6 @@
 # A traceable research-workspace walkthrough
 
-[English overview](../README.md) · [中文首页](../README.zh-CN.md) · [Documentation](README.md)
+[中文首页](../README.md) · [English overview](../README.en.md) · [Documentation](README.md)
 
 This walkthrough uses the running ScholarFlow application, real DeepSeek conversations, and one local CPU smoke process. It follows saved evidence from a source through a result and manuscript, then recalls a confirmed constraint in another task.
 
@@ -39,7 +39,7 @@ The fixture uses 128 deterministic synthetic samples, a persistence forecast, an
 
 ## Try it locally
 
-Follow the [quickstart](../README.md#quickstart) or [中文快速开始](../README.zh-CN.md#快速开始), then run `npm run demo:seed` in a second terminal using the same local configuration. It creates only the included source, project, and task. You send the first message yourself; no experiment or method publication is started by the seed command.
+Follow the [中文快速开始](../README.md#快速开始) or [English quickstart](../README.en.md#quickstart), then run `npm run demo:seed` in a second terminal using the same local configuration. It creates only the included source, project, and task. You send the first message yourself; no experiment or method publication is started by the seed command.
 
 For your own experiment, confirm its real target, data, resource budget, and command in the workspace. The example fixture cannot satisfy the [research acceptance card](RESEARCH_ACCEPTANCE_CARD.md).
 

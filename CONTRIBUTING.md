@@ -1,6 +1,6 @@
 # Contributing to ScholarFlow
 
-Thanks for helping make long-running research work easier to inspect and resume. ScholarFlow is currently a Windows-first, single-user preview. Start with the [README](README.md), [run guide](docs/RUN_GUIDE.md), and [current plan](PLAN.md).
+Thanks for helping make long-running research work easier to inspect and resume. ScholarFlow is currently a Windows-first, single-user preview. Start with the [中文 README](README.md) or [English README](README.en.md), [run guide](docs/RUN_GUIDE.md), and [current plan](PLAN.md).
 
 ## Report a problem
 

@@ -2,47 +2,47 @@
 
 # ScholarFlow
 
-**Research that keeps its memory, evidence, and progress.**
+**有记忆、可追溯、可恢复的科研 Agent 工作台。**
 
-A local-first research workspace built on Pi. Organize sources, discuss plans, run approved experiments, inspect results, and work on LaTeX manuscripts in one project—with source-linked memory across tasks.
+基于 Pi 构建的本地科研工作区。把文献、讨论、实验、结果和 LaTeX 稿件组织在同一项目中，让 Agent 跨任务接续工作，并保留来源、条件与版本。
 
-![Early preview](https://img.shields.io/badge/status-early_preview-2563eb) ![Windows first](https://img.shields.io/badge/platform-Windows-64748b) ![Node.js 22.19+](https://img.shields.io/badge/Node.js-22.19%2B-15803d)
+![早期预览](https://img.shields.io/badge/status-early_preview-2563eb) ![Windows 优先](https://img.shields.io/badge/platform-Windows-64748b) ![Node.js 22.19+](https://img.shields.io/badge/Node.js-22.19%2B-15803d)
 
-**English** · [简体中文](README.zh-CN.md)
+**简体中文** · [English](README.en.md)
 
-[Demo](#see-it-in-action) · [Quickstart](#quickstart) · [Architecture](#how-it-works) · [Documentation](docs/README.md) · [Roadmap](#whats-next)
+[查看演示](#看看实际工作流程) · [快速开始](#快速开始) · [架构](#它如何工作) · [文档](docs/README.md) · [后续计划](#接下来做什么)
 
-![ScholarFlow showing a source document beside a persistent research conversation](docs/assets/workspace.png)
+![ScholarFlow 的来源阅读区与右侧常驻科研会话](docs/assets/workspace.png)
 
-*Captured from the running app with example material and a real model conversation. The current interface is in Chinese. Windows-first, single-user early preview.*
+*截图来自实际运行的应用，使用示例材料和真实模型对话。当前为 Windows 优先、单用户的早期预览版本，界面为中文。*
 
-## Why ScholarFlow?
+## 为什么使用 ScholarFlow？
 
-Research continues across conversations, processes, and files. ScholarFlow keeps the context and evidence needed to pick that work back up.
+科研工作会跨越会话、进程和文件。ScholarFlow 保存接续这些工作所需的上下文与证据。
 
-| What you need | What the workspace provides |
+| 你要完成的工作 | 工作台提供的支持 |
 | --- | --- |
-| Continue research in another task | Project-scoped memory with sources, versions, effective dates, corrections, and unresolved disputes. |
-| Keep long tasks manageable | Capabilities and Skills loaded on demand, bounded source reads, input budgets, and recovery from persisted records after Pi compaction. |
-| Know what an experiment actually did | Explicit approval, request deduplication, snapshots, logs, and metrics tied to the original run and file. |
-| Review changes to the agent's methods | Isolated Skill candidates, paired evaluation, user-confirmed publication, task version bindings, and rollback. **Improvement effectiveness remains experimental.** |
+| 在新任务继续研究 | 项目级记忆带来源、版本、有效时间、更正和争议状态。 |
+| 保持长任务的上下文可控 | 按需加载能力与 Skill，有界读取来源、控制输入预算，Pi 压缩后仍能查询持久记录。 |
+| 核对实验真正做了什么 | 明确批准、请求去重、快照、日志，以及绑定原运行和文件的指标。 |
+| 审阅 Agent 方法的变化 | 隔离的 Skill 候选、配对评测、用户确认发布、任务版本绑定与回退。**方法改进效果仍属实验性。** |
 
-## See it in action
+## 看看实际工作流程
 
-[Open the walkthrough](docs/DEMO.md): follow a source into a real conversation, approve a CPU smoke run, inspect its recorded metric, build a manuscript, and recall a confirmed memory in a new task.
+[打开演示说明](docs/DEMO.md)：从来源阅读和真实对话开始，批准一次 CPU smoke 运行、核对原始指标、构建稿件，再用新任务召回已确认记忆。
 
 <details>
-<summary>Play the sampled workflow walkthrough</summary>
+<summary>播放工作流程节选</summary>
 
-![Selected steps captured from the running ScholarFlow application](docs/assets/walkthrough.gif)
+![从实际 ScholarFlow 应用中采样的工作流程](docs/assets/walkthrough.gif)
 
-This walkthrough samples real UI states; pauses are adjusted for readability. Its experiment uses synthetic smoke data and demonstrates the software workflow. It is not a paper reproduction or evidence of scientific performance. [Capture details](docs/assets/manifest.json).
+演示采样真实界面状态，停留时间经过调整以便阅读。实验使用合成 smoke 数据，展示软件流程，不代表论文复现或科研性能。[素材记录](docs/assets/manifest.json)。
 
 </details>
 
-## Quickstart
+## 快速开始
 
-**Required:** Windows and Node.js **22.19 or newer** (tested with Node 24.21). A DeepSeek API key is needed for an actual agent conversation.
+**必需条件：** Windows、Node.js **22.19 或更新版本**（已验证 Node 24.21）。实际 Agent 对话需要 DeepSeek API Key。
 
 ```powershell
 git clone https://github.com/qiqi-feeder/ScholarFlow.git
@@ -52,32 +52,32 @@ npm run build
 npm start
 ```
 
-Open [localhost:8787](http://127.0.0.1:8787). In **Settings / 设置**, configure your DeepSeek key and model. The key is stored in local host configuration, separately from project data.
+打开 [localhost:8787](http://127.0.0.1:8787)，在“设置”中配置 DeepSeek Key 和模型。凭据保存在本地宿主配置中，与项目数据分开。
 
-Python/Conda, a dataset, and an approved resource budget are needed for your target experiments. `pdflatex` and `bibtex` are needed to build manuscript PDFs. These are optional for the first source-reading example; see the [run guide](docs/RUN_GUIDE.md) for setup and recovery.
+目标实验还需要 Python/Conda、数据和已批准的资源预算；编译稿件 PDF 需要 `pdflatex` 和 `bibtex`。首次来源阅读示例不需要这些额外工具。配置与恢复见[运行指南](docs/RUN_GUIDE.md)。
 
-### Read your first source
+### 读取第一份来源
 
-With the server still running, open a second terminal in this repository:
+保持服务运行，在仓库目录另开一个终端：
 
 ```powershell
 npm run demo:seed
 ```
 
-This creates an example project, task, and local source. Running it again reuses those records and refuses to overwrite locally edited source files. It does not call a model, approve an experiment, or publish a method.
+该命令准备示例项目、任务和本地来源；重复运行会复用记录，遇到本地编辑过的来源会保留编辑并提示。它不会调用模型、批准实验或发布方法。
 
-1. Refresh the workspace and select **ScholarFlow · First research workspace**.
-2. Select **Read a source, keep the evidence**. Open `first-source.txt` from **Materials / 材料** and use **Reference current content / 引用当前内容**.
-3. Send this prompt:
+1. 刷新工作台，选择 **ScholarFlow · First research workspace** 项目。
+2. 选择 **Read a source, keep the evidence** 任务，在“材料”中打开 `first-source.txt`，点击“引用当前内容”。
+3. 发送下面的消息：
 
 ```text
-Read workspace/first-source.txt with read_artifact. Reply with the exact witness
-and the source path. Do not run experiments or change files.
+请使用 read_artifact 读取 workspace/first-source.txt，回答其中完整的 witness
+以及来源路径。不要运行实验，也不要修改文件。
 ```
 
-Expect the witness **`SCHOLARFLOW_SOURCE_CHECK`** and a source path in the answer. A missing key or failed request produces a visible error. [Example source](examples/first-source.txt).
+预期回答包含 **`SCHOLARFLOW_SOURCE_CHECK`** 和来源路径。缺少 Key 或请求失败时会显示明确错误。[查看示例来源](examples/first-source.txt)。
 
-## How it works
+## 它如何工作
 
 ```mermaid
 flowchart LR
@@ -89,35 +89,35 @@ flowchart LR
     Worker -->|Approved command| Process["Local experiment process"]
 ```
 
-Pi supplies the model loop, sessions, Skill loading, and compaction. ScholarFlow adds the research workspace, scoped memory, capability assembly, experiment lifecycle, provenance, and controlled method versioning. The browser talks to the local host; experiments run independently of the conversation and browser connection.
+Pi 提供模型循环、会话、Skill 加载与压缩；ScholarFlow 补充科研工作区、范围隔离的记忆、动态能力装配、实验生命周期、来源追溯和受控方法版本。浏览器通过本地宿主访问数据，实验运行与会话、浏览器连接相互独立。
 
-Explore the [current Agent architecture](docs/AGENT_CAPABILITY_ARCHITECTURE.md), [implementation contracts](docs/AGENT_IMPLEMENTATION_PLAN.md), and [source layout](docs/README.md#source-map).
+进一步了解 [Agent 架构](docs/AGENT_CAPABILITY_ARCHITECTURE.md)、[实现契约](docs/AGENT_IMPLEMENTATION_PLAN.md)和[源码地图](docs/README.md#source-map)。
 
-## Verification and current limits
+## 验证与当前边界
 
 ```powershell
-npm run verify        # Type checks, automated tests, and production build
-npm run test:browser  # Requires Chrome or Edge
-npm run test:docs     # README, links, evidence, and documentation contracts
+npm run verify        # 类型检查、自动化测试和生产构建
+npm run test:browser  # 需要 Chrome 或 Edge
+npm run test:docs     # README、链接、证据和文档契约
 ```
 
-The [IG00–IG07 delivery report](docs/verification/agent-implementation/IG07.md) links software, real API, browser, and restart evidence. External API checks are opt-in and require credentials; [CONTRIBUTING.md](CONTRIBUTING.md) explains their cost and scope.
+[IG00–IG07 交付报告](docs/verification/agent-implementation/IG07.md)包含软件、真实 API、浏览器和重启证据。外部 API 检查需显式启用并提供凭据，调用范围和成本说明见[贡献指南](CONTRIBUTING.md)。
 
-- **Software workflow implemented; target research acceptance pending.** An approved real-paper baseline and controlled modification have not been completed.
-- **Method improvement is not established.** In the latest six-card lightweight evaluation, both baseline and candidate passed 4/6. The candidate was rejected and the baseline retained. These are behavior checks, not a research benchmark.
-- **Local execution has host-account permissions.** Project checks are not an operating-system sandbox. Keep the service on loopback and run reviewed code. [Runtime boundaries](docs/RUN_GUIDE.md#6-安全边界).
-- Full-text acquisition and some research-workspace tool contracts remain unfinished. Model support is limited to the configured capabilities exposed by Pi and the combinations actually verified.
+- **软件流程已实现，真实科研验收待完成。** 尚未完成一个已批准的真实论文基线及受控修改。
+- **尚未证明方法改进有效。** 最近一次六题轻量配对评测中，基线和候选均通过 4/6，候选被拒绝，基线保留。这组题验证行为规则，不构成科研基准。
+- **本地执行拥有宿主账户权限。** 项目检查不等于操作系统沙箱。服务保持回环监听，执行前审阅代码。[运行边界](docs/RUN_GUIDE.md#6-安全边界)。
+- 公开全文获取和部分科研工作区工具契约仍待完善；模型支持以 Pi 实际暴露的配置和已验证组合为准。
 
-## What's next
+## 接下来做什么
 
-- Complete one approved paper reproduction and a controlled modification with traceable outputs.
-- Improve public full-text acquisition and precise evidence locations.
-- Expand independent method evaluation and diagnose failure cases before claiming improvement.
+- 完成一个已批准的论文复现及受控修改，并保留完整产物依据。
+- 完善公开全文获取与精确证据定位。
+- 扩大独立方法评测、分析失败原因，再判断是否存在改进收益。
 
-See [PLAN.md](PLAN.md) for dependencies, acceptance gates, and the detailed roadmap.
+依赖、验收门槛和详细路线见 [PLAN.md](PLAN.md)。
 
-## Documentation and contribution
+## 文档与贡献
 
-[Run and recover](docs/RUN_GUIDE.md) · [Documentation index](docs/README.md) · [Verification](docs/verification/agent-implementation/IG07.md) · [Contribute](CONTRIBUTING.md) · [Report an issue](https://github.com/qiqi-feeder/ScholarFlow/issues)
+[运行与恢复](docs/RUN_GUIDE.md) · [文档索引](docs/README.md) · [验证报告](docs/verification/agent-implementation/IG07.md) · [参与贡献](CONTRIBUTING.md) · [反馈问题](https://github.com/qiqi-feeder/ScholarFlow/issues)
 
-The project-wide license is pending maintainer selection. Dependencies retain their own licenses; see [third-party notices](docs/m0/UPSTREAM_LICENSES.md). Built with [Pi](https://github.com/earendil-works/pi).
+项目整体许可证待维护者确定。依赖保留各自许可证，见[第三方声明](docs/m0/UPSTREAM_LICENSES.md)。基于 [Pi](https://github.com/earendil-works/pi) 构建。

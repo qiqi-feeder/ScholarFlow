@@ -118,7 +118,7 @@ node --import tsx scripts/verify-pi-session.ts
 
 ## 9. 工作台改版操作与恢复
 
-保存期间新增编辑丢失、文本选区坐标不符及确认响应丢失后重发二次调用等历史问题已在 IG00 修复并回归，见 [IG00](verification/agent-implementation/IG00.md)；原问题单保留在 [历史验收问题](verification/workspace-redesign/W02-W05-review-issues.md)。第一次体验可先按 [README 快速开始](../README.zh-CN.md#快速开始) 执行 `npm run demo:seed`，或查看 [真实界面演示](DEMO.md)。
+保存期间新增编辑丢失、文本选区坐标不符及确认响应丢失后重发二次调用等历史问题已在 IG00 修复并回归，见 [IG00](verification/agent-implementation/IG00.md)；原问题单保留在 [历史验收问题](verification/workspace-redesign/W02-W05-review-issues.md)。第一次体验可先按 [README 快速开始](../README.md#快速开始) 执行 `npm run demo:seed`，或查看 [真实界面演示](DEMO.md)。
 
 - 左侧图标只切工作视图；顶部项目/任务选择决定会话归属。导航可收起，手机用“工作区/会话”和导航抽屉切换。
 - 在左侧打开具体对象后点“引用当前内容”，或在材料“笔记与来源”的可读文本、已保存稿件源码中选区后引用。输入区显示本条引用，可移除；打开文件不会自动发送。PDF 支持整篇/页码，摘要不冒充该页精确文本，不支持 OCR。
