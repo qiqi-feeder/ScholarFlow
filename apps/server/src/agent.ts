@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference } from "@scholarflow/research";
+import { boundModelInput, resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference } from "@scholarflow/research";
 import { referencePrompt } from "./references.js";
 import type { AppConfig } from "./config.js";
 import type { ContextService } from "./context.js";
@@ -56,6 +56,7 @@ export interface AgentServiceLike {
   isRunning(taskId: string): boolean;
   listModels?(): Promise<ModelOption[]>;
   switchModel?(project: ProjectRecord, taskId: string, provider: string, modelId: string): Promise<TaskRecord>;
+  compactTask?(project: ProjectRecord, task: TaskRecord): Promise<void>;
   dispose(): Promise<void>;
 }
 
@@ -320,7 +321,7 @@ export class PiAgentService implements AgentServiceLike {
         ? SessionManager.open(fresh.sessionFile)
         : SessionManager.create(project.dataDir, path.join(project.dataDir, "tasks", fresh.id, "pi"));
     const settingsManager = SettingsManager.inMemory({
-      compaction: { enabled: true },
+      compaction: { enabled: true, reserveTokens: 8192, keepRecentTokens: 4096 },
       retry: { enabled: true, maxRetries: 2 },
     });
     // Read-only built-ins. Writes must go through the versioned research tools
@@ -336,6 +337,20 @@ export class PiAgentService implements AgentServiceLike {
       settingsManager,
       tools: [...builtinTools, ...toolNames()],
     });
+    // Use the public final stream boundary: extension handler errors are reported
+    // by Pi but swallowed, so a throwing extension alone cannot enforce a cap.
+    const stream = session.agent.streamFunction;
+    let requests = 0;
+    session.agent.streamFunction = (requestModel, transcript, options) => {
+      if (++requests > 12) throw new Error("task reached its 12-request turn budget; continue explicitly in a new message");
+      const budget = boundModelInput(transcript.messages, requestModel.contextWindow);
+      const event = this.deps.repositories.appendEvent(project.id, task.id, "input_budget", {
+        ...budget, messages: undefined, model: requestModel.id, provider: requestModel.provider, price: "unknown",
+      });
+      this.deps.events.publish(event);
+      return stream(requestModel, { ...transcript, messages: budget.messages }, { ...options, maxTokens: Math.min(options?.maxTokens ?? 4096, 4096) });
+    };
+    session.subscribe(event => { if (event.type === "agent_start") requests = 0; });
     session.setActiveToolsByName(CORE_TOOLS);
     if (CORE_TOOLS.some(name => !session.getActiveToolNames().includes(name))) {
       session.dispose(); throw new Error("Pi core tool activation failed");
@@ -517,6 +532,16 @@ export class PiAgentService implements AgentServiceLike {
     await loaded.session.abort();
     loaded.running = false;
     return { stopped: true };
+  }
+
+  async compactTask(project: ProjectRecord, task: TaskRecord): Promise<void> {
+    if (this.isRunning(task.id)) throw new AgentBusyError("wait for the task to settle before compaction");
+    this.busyTasks.add(task.id);
+    try {
+      const loaded = await this.load(project, task);
+      await loaded.session.compact("Preserve user constraints and source IDs. Persisted research records are authoritative; recover run conditions using read_research_record, never resubmit a run because history was compacted.");
+      this.deps.context.build(project, task);
+    } finally { this.busyTasks.delete(task.id); }
   }
 
   async dispose(): Promise<void> {

@@ -40,6 +40,17 @@ test("RT03/RT04: real Pi loop changes tools on the next request and reopens with
     await app.agent.sendMessage(project, app.services.repositories.getTask(task.id)!, "Reopen", "dynamic-2");
     assert.ok(!requests[2].tools.some((t: any) => t.function.name === "analyze_results"));
     assert.ok(requests[2].tools.some((t: any) => t.function.name === "cancel_run"));
+    const original = app.services.store.createRun({ projectId: project.id, taskId: task.id, projectDir: project.dataDir, runId: "run_recover", requestId: "recover-once", spec: {
+      name: "original smoke intent", kind: "smoke", planId: "pln_fixture", admissionId: null, description: "fixture, never executed", program: process.execPath, args: ["-e", "process.exit(0)"], cwd: ".", env: {}, config: { condition: "preserve-me" }, data: { version: "data-v1", split: "test", preprocessing: "none", license: "CC0" }, seed: [42], metrics: [{ key: "value", label: "value", direction: "lower", file: "metrics.json", pointer: "/value" }], resourceLimits: { timeoutSeconds: 1 }, expectedArtifacts: ["metrics.json"], snapshotFiles: [], skillVersions: [],
+    } }).run;
+    for (let i = 0; i < 5; i++) await app.agent.sendMessage(project, app.services.repositories.getTask(task.id)!, `Old discussion ${i}: ${"context ".repeat(600)}`, `history-${i}`);
+    await app.agent.compactTask!(project, app.services.repositories.getTask(task.id)!);
+    const recovered = app.services.context.read(project, task, "run", original.id, 0, 6000);
+    assert.match(recovered.text, /preserve-me/); assert.match(recovered.text, /data-v1/);
+    assert.equal(app.services.repositories.listRunRecords().length, 1, "compaction never resubmits");
+    const budgets = app.services.repositories.listEvents(task.id).filter(e => e.type === "input_budget");
+    assert.ok(budgets.length >= 3);
+    assert.ok(budgets.every(e => (e.data as any).after <= (e.data as any).limit));
   } finally { await app.close(); await new Promise<void>(resolve => provider.close(() => resolve())); rmSync(root, { recursive: true, force: true }); }
 });
 

@@ -485,6 +485,11 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
             repositories.updateTask(task.id, { status: "idle" });
             return json(res, 200, result);
           }
+          if (method === "POST" && action === "compact") {
+            if (!agent.compactTask) throw new HttpError(501, "compaction is unavailable");
+            await agent.compactTask(project, task);
+            return json(res, 200, { compacted: true });
+          }
           if (method === "GET" && action === "context") {
             const manifest = context.build(project, task);
             return json(res, 200, manifest);

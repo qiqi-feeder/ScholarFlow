@@ -145,8 +145,8 @@ Publication:
 | RT02 | 迁移备份、幂等及失败恢复 | 修改旧会话、自动提交消息/实验 | 通过（[IG00](verification/agent-implementation/IG00.md)） |
 | RT03 | 同消息加载、核心工具和任务隔离 | 未知工具静默忽略、缺依赖却成功 | 通过（[IG01](verification/agent-implementation/IG01.md)） |
 | RT04 | 激活与发送/切模型互斥、重开校验 | 历史激活当当前授权 | 通过（[IG01](verification/agent-implementation/IG01.md)） |
-| RT05 | 大资料集每轮有界输入、估算标记 | 全量记忆注入、截断冒充全文 | 待实施 |
-| RT06 | 压缩后查回条件、版本与 runId | 忘记就重跑、约束静默丢失 | 待实施 |
+| RT05 | 大资料集每轮有界输入、估算标记 | 全量记忆注入、截断冒充全文 | 通过（[IG02](verification/agent-implementation/IG02.md)） |
+| RT06 | 压缩后查回条件、版本与 runId | 忘记就重跑、约束静默丢失 | 通过（[IG02](verification/agent-implementation/IG02.md)） |
 | RT07 | 事件去重、来源身份与范围一致 | 助理建议升级为确认、跨项目按 ID 读写 | 待实施 |
 | RT08 | 修订/争议/不同条件并存及并发控制 | 最后写入覆盖、未知时间猜造 | 待实施 |
 | RT09 | 当前、历史与当时已知查询正确 | 晚到旧值污染当前、隐藏争议 | 待实施 |

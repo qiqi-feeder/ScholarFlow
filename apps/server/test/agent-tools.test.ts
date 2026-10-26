@@ -129,6 +129,13 @@ test("research tools are registered and execute against real project records", a
     assert.deepEqual(active, oldActive);
     app.services.repositories.upsertSkill(savedSkill);
     assert.throws(() => app.services.skills.readForTask("wrong-project", task.id, "literature-review"), /scope mismatch/);
+    const firstPage = await call("read_artifact", { path: "workspace/notes.txt", limit: 5 });
+    const page = JSON.parse(firstPage.content[0].text);
+    assert.equal(page.complete, false); assert.equal(page.nextOffset, 5);
+    const secondPage = JSON.parse((await call("read_artifact", { path: "workspace/notes.txt", offset: 5 })).content[0].text);
+    assert.equal(page.version, secondPage.version);
+    assert.equal(page.text + secondPage.text, "Readable notes");
+    await assert.rejects(() => call("read_research_record", { kind: "run", id: "foreign" }), /not found in this project/);
 
     const search = await call("search_literature", { query: "tool paper" });
     assert.match(search.content[0].text, /Tool Paper/);

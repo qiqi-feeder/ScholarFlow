@@ -22,6 +22,7 @@ import type { SkillService } from "./skills.js";
 import type { ManuscriptService } from "./latex.js";
 import type { EventHub } from "./events.js";
 import { CAPABILITIES, CapabilityController } from "./capabilities.js";
+import { recordPage } from "./context.js";
 
 export interface ResearchToolContext {
   repositories: Repositories;
@@ -49,6 +50,18 @@ function summarize(value: unknown, max = 12000): string {
 export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext): void {
   const capabilities = new CapabilityController(pi, ctx);
   pi.on("model_select", async () => { capabilities.reset(); });
+  pi.registerTool(defineTool({
+    name: "list_research_records", label: "Research directory",
+    description: "Page through source IDs beyond the brief context directory. kind: material/run/result/plan. Read bodies with read_research_record.",
+    parameters: Type.Object({ kind: Type.String(), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 30 })) }),
+    execute: async (_id, p) => ok(JSON.stringify(ctx.context.directory(ctx.project, ctx.task, p.kind, p.offset, p.limit))),
+  }));
+  pi.registerTool(defineTool({
+    name: "read_research_record", label: "Read research record",
+    description: "Read a project-owned source record by kind and ID, with immutable version and continuation offset. Use to recover conditions/runId after compaction. Pages are excerpts, not full records.",
+    parameters: Type.Object({ kind: Type.String(), id: Type.String(), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000 })) }),
+    execute: async (_id, p) => ok(JSON.stringify(ctx.context.read(ctx.project, ctx.task, p.kind, p.id, p.offset, p.limit))),
+  }));
   for (const action of ["discover_capabilities", "activate_capability", "unload_capability"]) {
     pi.registerTool(defineTool({
       name: action, label: action,
@@ -484,12 +497,13 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       label: "Read run artifact",
       description: "Read a text artifact (log, metrics JSON, config) inside this project. Paths outside the project are rejected.",
       promptSnippet: "Read a project artifact by relative path.",
-      parameters: Type.Object({ path: Type.String(), maxBytes: Type.Optional(Type.Integer({ minimum: 100, maximum: 400000 })) }),
+      parameters: Type.Object({ path: Type.String(), maxBytes: Type.Optional(Type.Integer({ minimum: 100, maximum: 400000 })), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000 })) }),
       execute: async (_id, params) => {
         const target = resolveInsideRoot(ctx.project.dataDir, params.path);
         if (!existsSync(target) || !statSync(target).isFile()) throw new Error("artifact not found");
-        if (statSync(target).size > (params.maxBytes ?? 200000)) throw new Error("artifact exceeds the read limit");
-        return ok(readFileSync(target, "utf8"), { path: params.path, bytes: statSync(target).size });
+        if (statSync(target).size > (params.maxBytes ?? 400000)) throw new Error("artifact exceeds the read limit");
+        const page = recordPage(readFileSync(target, "utf8"), params.offset ?? 0, params.limit ?? 4000, { path: params.path });
+        return ok(JSON.stringify(page), { ...page, text: undefined, path: params.path, bytes: statSync(target).size });
       },
     }),
   );
@@ -656,6 +670,8 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
 export function toolNames(): string[] {
   return [
     "discover_capabilities", "activate_capability", "unload_capability",
+    "read_research_record",
+    "list_research_records",
     "get_research_context",
     "list_skills",
     "load_skill",
