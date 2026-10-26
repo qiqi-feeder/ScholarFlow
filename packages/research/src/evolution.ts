@@ -11,6 +11,7 @@ export interface ExperienceRecord {
 }
 export interface EvolutionCandidate {
   id: string; projectId: string; taskId: string; skillId: string; baselineVersion: string; candidateVersion: string;
+  baselineHeadRevision: number;
   diff: string; sourceExperienceIds: string[]; editableSurface: "skill-body" | "tool-description";
   status: "candidate" | "evaluated" | "validated" | "published" | "rejected";
   budget: { maxAttempts: number; maxRequests: number; maxOutputTokens: number; maxMinutes: number };
@@ -22,4 +23,8 @@ export function validateEditableMethod(body: unknown, toolDescriptions: unknown,
   if (toolDescriptions !== undefined && (!toolDescriptions || typeof toolDescriptions !== "object" || Array.isArray(toolDescriptions) || Object.entries(toolDescriptions).some(([name, text]) => !allowedTools.includes(name) || typeof text !== "string" || !text.trim() || text.length > 1500))) throw new Error("only descriptions of this method's approved tools may change");
   const text = `${body ?? ""}\n${JSON.stringify(toolDescriptions ?? {})}`;
   if (/bypass|ignore (?:host|approval|budget)|skip (?:approval|validation)|disable (?:approval|validator)|绕过|忽略审批|关闭验证/i.test(text)) throw new Error("host approval, budget and validators cannot evolve");
+}
+export interface MethodPublication {
+  id: string; skillId: string; expectedBaselineVersion: string; publishedVersion: string; headRevision: number;
+  evaluationRefs: string[]; actor: "user"; reason: string; publishedAt: string; rollbackOf?: string;
 }

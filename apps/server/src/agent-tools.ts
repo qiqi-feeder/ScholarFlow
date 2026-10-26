@@ -55,6 +55,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
   const principal = { projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" as const };
   const descriptions = ctx.skills.toolDescriptions(ctx.project.id, ctx.task.id);
   const register: ExtensionAPI["registerTool"] = (tool) => pi.registerTool({ ...tool, description: descriptions[tool.name] ?? tool.description });
+  register(defineTool({ name: "evaluate_method_candidate", label: "Evaluate method candidate", description: "Run fixed lightweight paired baseline/candidate tests within the candidate's persisted evaluation budget. Fresh isolated model sessions, no tools or target experiments. Returns development feedback and aggregate holdout results only. Never publishes automatically.", parameters: Type.Object({ id: Type.String() }), execute: async (_id, p) => { const task = ctx.repositories.getTask(ctx.task.id)!; return ok(JSON.stringify(await ctx.methods.evaluate(principal, p.id, { provider: task.modelProvider ?? ctx.config.modelProvider, id: task.modelId ?? ctx.config.modelId }))); } }));
   register(defineTool({ name: "suggest_experience", label: "Propose experience", description: "Save a candidate cue/lesson from active evidence memories and their exact conditions. Requires user review before method proposals; never promotes a rule by confidence.", parameters: Type.Object({ cue: Type.String(), lesson: Type.String(), memoryIds: Type.Array(Type.String()) }), execute: async (_id, p) => ok(JSON.stringify(ctx.methods.experience(principal, p))) }));
   register(defineTool({ name: "propose_method_candidate", label: "Propose isolated method change", description: "Propose Skill body OR tool-description changes from user-validated experiences. Supply the official baseline hash. Candidate versions are isolated and never change host policy, scripts, dependencies, budgets or validators. Formal publication requires independent evaluation and explicit user confirmation.", parameters: Type.Object({ skillId: Type.String(), baselineVersion: Type.String(), sourceExperienceIds: Type.Array(Type.String()), body: Type.Optional(Type.String()), toolDescriptions: Type.Optional(Type.Record(Type.String(), Type.String())) }), execute: async (_id, p) => ok(JSON.stringify(ctx.methods.propose(principal, p))) }));
   register(defineTool({ name: "list_method_candidates", label: "List method candidates", description: "List this task's experiences, candidate statuses, budgets and bound versions. Does not expose held-out evaluator answers or per-sample feedback.", parameters: Type.Object({}), execute: async () => ok(JSON.stringify({ bindings: ctx.methods.bindings(principal), experiences: ctx.methods.experiences(principal), candidates: ctx.methods.candidates(principal) })) }));
@@ -708,6 +709,7 @@ export function toolNames(): string[] {
     "remember_source",
     "recall_memory", "read_memory",
     "suggest_experience", "propose_method_candidate", "list_method_candidates",
+    "evaluate_method_candidate",
     "get_research_context",
     "list_skills",
     "load_skill",

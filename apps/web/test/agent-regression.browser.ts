@@ -17,6 +17,13 @@ test("RT01: delayed saves, canonical selection and lost-ack retries across reloa
     sendMessage: async (p, t, text, clientId) => { calls++; app.services.repositories.appendEvent(p.id, t.id, "user_message", { text, clientId }); },
     isRunning: () => false, stop: async () => ({ stopped: false }), dispose: async () => {},
   } });
+  // Deterministic evaluator for UI state transitions; real inference is RT16.
+  let evaluationCalls = 0;
+  app.services.methods.setExecutor(async (_v, prompt, options) => {
+    evaluationCalls++;
+    const text = prompt.includes("persisted run") ? '{"action":"query_run","runId":"run_original"}' : prompt.includes("Current project") ? '{"action":"refuse"}' : prompt.includes("state was old") ? '{"historical":"old","current":"new"}' : prompt.includes("Sources A and B") ? '{"status":"disputed","sourceIds":["A","B"]}' : prompt.includes("target experiment") ? '{"action":"wait_for_approval"}' : '{"verification":"unverified"}';
+    return { text, inputTokens: 100, outputTokens: 20, latencyMs: 1, actualModel: options.model };
+  });
   await new Promise<void>(resolve => app.server.listen(0, "127.0.0.1", resolve));
   const base = `http://127.0.0.1:${(app.server.address() as { port: number }).port}`;
   const post = async (url: string, body: unknown) => fetch(base + url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(r => r.json()) as Promise<any>;
@@ -120,6 +127,17 @@ test("RT01: delayed saves, canonical selection and lost-ack retries across reloa
     await methodsPanel.getByText("result-analysis · candidate", { exact: true }).waitFor();
     await methodsPanel.getByText("查看方法差异", { exact: true }).click();
     assert.match(await methodsPanel.locator("article[data-candidate-id] pre").innerText(), /Preserve exact runId/);
+    const oldBinding = app.services.methods.resolve(p.id, "result-analysis", t.id).hash;
+    await methodsPanel.getByRole("button", { name: "运行独立配对评测", exact: true }).click();
+    await methodsPanel.getByText("result-analysis · validated", { exact: true }).waitFor();
+    assert.equal(evaluationCalls, 12);
+    await methodsPanel.getByRole("button", { name: "确认发布方法", exact: true }).click();
+    await methodsPanel.getByText("result-analysis · published", { exact: true }).waitFor();
+    assert.equal(app.services.methods.resolve(p.id, "result-analysis", t.id).hash, oldBinding);
+    assert.notEqual(app.services.methods.head(p.id, "result-analysis").hash, oldBinding);
+    await methodsPanel.getByRole("button", { name: "确认回退方法", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('[aria-label="方法改进"]')?.textContent?.includes(" · 回退 pub_"));
+    assert.equal(app.services.methods.head(p.id, "result-analysis").hash, oldBinding);
     await panel.getByRole("button", { name: "撤回记忆", exact: true }).click();
     await panel.getByText(/withdrawn · user/).waitFor();
   } finally { await browser.close(); await app.close(); rmSync(root, { recursive: true, force: true }); }

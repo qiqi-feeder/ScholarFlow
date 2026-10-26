@@ -51,6 +51,11 @@ test("RT03/RT04: real Pi loop changes tools on the next request and reopens with
     const budgets = app.services.repositories.listEvents(task.id).filter(e => e.type === "input_budget");
     assert.ok(budgets.length >= 3);
     assert.ok(budgets.every(e => (e.data as any).after <= (e.data as any).limit));
+    const method = app.services.methods.resolve(project.id, "result-analysis");
+    const isolated = await (app.agent as PiAgentService).evaluateMethod(method, "Return JSON only.", { model: { provider: config.modelProvider, id: config.modelId }, maxOutputTokens: 512, signal: new AbortController().signal });
+    assert.equal(isolated.text, "Methods loaded.");
+    assert.ok(!requests.at(-1).tools?.length, "method evaluator has no executable tools");
+    assert.match(JSON.stringify(requests.at(-1).messages), new RegExp(method.hash));
   } finally { await app.close(); await new Promise<void>(resolve => provider.close(() => resolve())); rmSync(root, { recursive: true, force: true }); }
 });
 

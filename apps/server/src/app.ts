@@ -195,6 +195,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
       methods,
     });
   const logger = options.logger ?? (() => undefined);
+  if (agent instanceof PiAgentService) methods.setExecutor((version, prompt, evaluationOptions) => agent.evaluateMethod(version, prompt, evaluationOptions));
 
   const ensureProject = (project: ProjectRecord) => {
     for (const directory of ["workspace", "materials", "runs", "results", "manuscript", "tasks", ".pi/skills"]) {
@@ -480,13 +481,30 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
           }
           if (action === "memories/recall" && method === "POST") return json(res, 200, memory.recall({ projectId: project.id, taskId: task.id, actor: "user" }, await readJson(req)));
           const methodMatch = action.match(/^methods(?:\/(experiences|candidates)(?:\/([^/]+))?)?$/);
+          const evaluationMatch = action.match(/^methods\/candidates\/([^/]+)\/(evaluate|evaluations|publish|cancel)$/);
+          if (evaluationMatch) {
+            const principal = { projectId: project.id, taskId: task.id, actor: "user" as const }, id = evaluationMatch[1]!;
+            if (method === "GET" && evaluationMatch[2] === "evaluations") return json(res, 200, { evaluations: methods.evaluations(principal, id) });
+            if (method === "POST") {
+              if (evaluationMatch[2] === "evaluate") return json(res, 200, { evaluation: await methods.evaluate(principal, id, { provider: task.modelProvider ?? config.modelProvider, id: task.modelId ?? config.modelId }) });
+              if (evaluationMatch[2] === "cancel") return json(res, 200, methods.cancelEvaluation(principal, id));
+              if (evaluationMatch[2] === "publish") return json(res, 200, { publication: methods.publishCandidate(principal, id, await readJson(req) as any) });
+            }
+          }
+          const rollbackMatch = action.match(/^methods\/publications\/([^/]+)\/rollback$/);
+          if (method === "POST" && rollbackMatch) return json(res, 200, { publication: methods.rollback({ projectId: project.id, taskId: task.id, actor: "user" }, rollbackMatch[1]!, await readJson(req) as any) });
+          if (method === "POST" && action === "method-migration") {
+            const body = await readJson(req);
+            if (!agent.migrateMethods) throw new HttpError(501, "method migration unavailable");
+            return json(res, 200, { bindings: await agent.migrateMethods(project, task, { name: requireString(body.name, "name"), expected: requireString(body.expected, "expected"), target: requireString(body.target, "target"), confirmed: body.confirmed === true }) });
+          }
           if (action === "method-version" && method === "GET") {
             const name = requireString(url.searchParams.get("name"), "name", 100);
             return json(res, 200, { official: methods.resolve(project.id, name), bound: methods.resolve(project.id, name, task.id) });
           }
           if (methodMatch) {
             const principal = { projectId: project.id, taskId: task.id, actor: "user" as const };
-            if (method === "GET") return json(res, 200, { bindings: methods.bindings(principal), experiences: methods.experiences(principal), candidates: methods.candidates(principal), heads: skills.list(project.id).map(s => ({ name: s.name, ...methods.head(project.id, s.name) })) });
+            if (method === "GET") return json(res, 200, { bindings: methods.bindings(principal), experiences: methods.experiences(principal), candidates: methods.candidates(principal), publications: methods.publications(principal), heads: skills.list(project.id).map(s => ({ name: s.name, ...methods.head(project.id, s.name) })) });
             const body = await readJson(req);
             if (method === "POST" && methodMatch[1] === "experiences") return json(res, 201, { experience: methodMatch[2] ? methods.reviewExperience(principal, methodMatch[2], body.accept === true, requireString(body.reason, "reason")) : methods.experience(principal, body as any) });
             if (method === "POST" && methodMatch[1] === "candidates" && !methodMatch[2]) return json(res, 201, { candidate: methods.propose(principal, body as any) });

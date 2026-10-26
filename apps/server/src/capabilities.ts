@@ -7,7 +7,7 @@ export const CAPABILITIES = [
   { id: "planning", purpose: "Assess reproduction evidence and draft bounded plans", skills: ["experiment-design", "reproduction-admission"], tools: ["save_research_plan", "assess_admission", "propose_experiment"] },
   { id: "analysis", purpose: "Import actual measurements and check comparability", skills: ["result-analysis"], tools: ["record_run_verification", "analyze_results"] },
   { id: "writing", purpose: "Edit, compile and export versioned manuscript files", skills: ["latex-writing"], tools: ["sync_manuscript_results", "save_manuscript_file", "compile_manuscript", "export_submission"] },
-  { id: "methods", purpose: "Propose evidence-backed experiences and isolated method candidates", skills: ["result-analysis"], tools: ["suggest_experience", "propose_method_candidate", "list_method_candidates"] },
+  { id: "methods", purpose: "Propose evidence-backed experiences and isolated method candidates", skills: ["result-analysis"], tools: ["suggest_experience", "propose_method_candidate", "list_method_candidates", "evaluate_method_candidate"] },
 ] as const;
 
 /** One instance per Pi task. Activation is synchronous inside that task's turn. */

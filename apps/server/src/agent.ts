@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { boundModelInput, resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference } from "@scholarflow/research";
+import { boundModelInput, resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference, type MethodVersion } from "@scholarflow/research";
 import { referencePrompt } from "./references.js";
 import type { AppConfig } from "./config.js";
 import type { ContextService } from "./context.js";
@@ -26,6 +26,7 @@ import type { ManuscriptService } from "./latex.js";
 import { CORE_TOOLS } from "./capabilities.js";
 import type { MemoryService } from "./memory.js";
 import type { MethodService } from "./methods.js";
+import type { MethodExecutor, EvaluationExecution } from "./method-evaluation.js";
 
 export class AgentConfigurationError extends Error {
   readonly code = "AGENT_NOT_CONFIGURED";
@@ -59,6 +60,7 @@ export interface AgentServiceLike {
   listModels?(): Promise<ModelOption[]>;
   switchModel?(project: ProjectRecord, taskId: string, provider: string, modelId: string): Promise<TaskRecord>;
   compactTask?(project: ProjectRecord, task: TaskRecord): Promise<void>;
+  migrateMethods?(project: ProjectRecord, task: TaskRecord, input: { name: string; expected: string; target: string; confirmed: boolean }): Promise<unknown>;
   dispose(): Promise<void>;
 }
 
@@ -548,6 +550,39 @@ export class PiAgentService implements AgentServiceLike {
       await loaded.session.compact("Preserve user constraints and source IDs. Persisted research records are authoritative; recover run conditions using read_research_record, never resubmit a run because history was compacted.");
       this.deps.context.build(project, task);
     } finally { this.busyTasks.delete(task.id); }
+  }
+
+  async migrateMethods(project: ProjectRecord, task: TaskRecord, input: { name: string; expected: string; target: string; confirmed: boolean }): Promise<unknown> {
+    if (this.isRunning(task.id)) throw new AgentBusyError("wait for the task before changing method bindings");
+    this.busyTasks.add(task.id);
+    try {
+      const bindings = this.deps.methods.migrateTask({ projectId: project.id, taskId: task.id, actor: "user" }, input.name, input.expected, input.target, input.confirmed);
+      const loaded = this.tasks.get(task.id); loaded?.unsubscribe(); loaded?.session.dispose(); this.tasks.delete(task.id);
+      return bindings;
+    } finally { this.busyTasks.delete(task.id); }
+  }
+
+  async evaluateMethod(version: MethodVersion, prompt: string, options: Parameters<MethodExecutor>[2]): Promise<EvaluationExecution> {
+    options.signal.throwIfAborted();
+    const { runtime, model } = await this.ensureConfigured({ modelProvider: options.model.provider, modelId: options.model.id } as TaskRecord);
+    const loader = new DefaultResourceLoader({ cwd: this.deps.config.dataDir, agentDir: path.join(path.dirname(this.deps.config.configFile), "pi-agent"), noExtensions: true, noContextFiles: true, noSkills: true, systemPrompt: `${SYSTEM_RULES}\nThis is a bounded, isolated method evaluation. You have no tools or permission to execute experiments or modify files. Return only the requested JSON.\nMethod under test (${version.hash}):\n${version.content}\nTool descriptions (documentation only):\n${JSON.stringify(version.toolDescriptions)}` });
+    await loader.reload();
+    const { session } = await createAgentSession({ cwd: this.deps.config.dataDir, modelRuntime: runtime, model, resourceLoader: loader, sessionManager: SessionManager.inMemory(this.deps.config.dataDir), settingsManager: SettingsManager.inMemory({ retry: { enabled: false }, compaction: { enabled: false } }), tools: [] });
+    const stream = session.agent.streamFunction;
+    session.agent.streamFunction = (m, transcript, streamOptions) => {
+      const budget = boundModelInput(transcript.messages, m.contextWindow, options.maxOutputTokens);
+      return stream(m, { ...transcript, messages: budget.messages }, { ...streamOptions, maxTokens: options.maxOutputTokens, temperature: 0 });
+    };
+    const signal = AbortSignal.any([options.signal, AbortSignal.timeout(45000)]);
+    const abort = () => { void session.abort(); };
+    signal.addEventListener("abort", abort, { once: true });
+    const start = Date.now();
+    try {
+      signal.throwIfAborted(); await session.prompt(prompt); signal.throwIfAborted();
+      const message = [...session.messages].reverse().find(m => m.role === "assistant");
+      if (!message || message.role !== "assistant" || message.stopReason === "error" || message.stopReason === "aborted") throw new Error(redact(message?.role === "assistant" ? message.errorMessage ?? "method evaluation produced no answer" : "method evaluation produced no answer"));
+      return { text: redact(messageText(message)), inputTokens: message.usage?.input ?? null, outputTokens: message.usage?.output ?? null, latencyMs: Date.now() - start, actualModel: { provider: message.provider, id: message.model } };
+    } finally { signal.removeEventListener("abort", abort); session.dispose(); }
   }
 
   async dispose(): Promise<void> {

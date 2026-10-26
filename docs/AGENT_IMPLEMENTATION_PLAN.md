@@ -153,8 +153,8 @@ Publication:
 | RT10 | 跨任务召回与 UI 查看/更正/撤回 | 缓存越权、错来源、未落盘即成功 | 通过（[IG04](verification/agent-implementation/IG04.md)） |
 | RT11 | 经验有条件与证据、候选范围受限 | 经验变规则、修改审批或验证器 | 通过（[IG05](verification/agent-implementation/IG05.md)） |
 | RT12 | 版本、候选状态和评测预算持久化 | 候选即正式、自动扩大训练预算 | 通过（[IG05](verification/agent-implementation/IG05.md)） |
-| RT13 | 基线参与、开发/留出隔离与全尝试记录 | 选择性报告、答案泄漏、只靠自评分 | 待实施 |
-| RT14 | 发布确认、并发切换、回退与旧任务绑定 | 无确认发布、覆盖指针、静默升级任务 | 待实施 |
+| RT13 | 基线参与、开发/留出隔离与全尝试记录 | 选择性报告、答案泄漏、只靠自评分 | 通过（[IG06](verification/agent-implementation/IG06.md)） |
+| RT14 | 发布确认、并发切换、回退与旧任务绑定 | 无确认发布、覆盖指针、静默升级任务 | 通过（[IG06](verification/agent-implementation/IG06.md)） |
 | RT15 | 固定卡配对评测及机制消融 | 模型/权限/预算不同仍归因某机制 | 待实施 |
 | RT16 | 有界真实模型、重启和原流程回归 | 文档/smoke 代替科研实效、缺条件记通过 | 待实施 |
 
