@@ -32,7 +32,7 @@ export function MemoryPanel({ projectId, taskId, events }: { projectId: string; 
   };
   const revise = (m: MemoryRecord, action: "confirm" | "correct" | "withdraw") => act(() => put(`${base}/memories/${m.id}`, { expectedRevision: m.revision, action, value: action === "correct" ? form.correction : undefined, reason: form.reason }));
   const sources = events.filter(e => ["user_message", "assistant_message", "plan_confirmed", "material_imported", "tool_end"].includes(e.type));
-  return <details className="card" aria-label="研究记忆"><summary>研究记忆 · {memories.length} 条 · 候选与争议</summary>
+  return <details className="card research-controls" aria-label="研究记忆"><summary>研究记忆 · {memories.length} 条 · 候选与争议</summary>
     <p className="muted">项目记忆可供同项目其他任务读取；任务记忆仅本任务可读。更正会保留原来源及历史版本。</p>
     {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
     <div className="form-grid"><label>记忆查询<input aria-label="记忆查询" value={form.query} onChange={e => set("query", e.target.value)} /></label><label>事实有效时间<input aria-label="事实有效时间" placeholder="ISO 时间；留空为当前" value={form.asOf} onChange={e => set("asOf", e.target.value)} /></label><label>当时已知时间<input aria-label="当时已知时间" placeholder="ISO 时间；留空为现在" value={form.knownAt} onChange={e => set("knownAt", e.target.value)} /></label></div>

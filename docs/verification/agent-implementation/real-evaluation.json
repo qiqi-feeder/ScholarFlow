@@ -1,0 +1,217 @@
+{
+  "date": "2026-10-27",
+  "commitUnderTest": "544abedc409dc71652854015b5b89b5092e52080",
+  "runtime": "v24.21.0",
+  "protocol": "7e5aa7fac0209e7785bfbc8f16c2fa0465718857928f60a4eadd7039fd812537",
+  "model": {
+    "provider": "deepseek",
+    "id": "deepseek-flash"
+  },
+  "permissionProfile": "isolated-read-only-no-tools",
+  "evaluation": {
+    "id": "eva_01m5wf1ghew43hgm5g9t",
+    "candidateId": "evc_01m5wf1gh746nx21nzcx",
+    "projectId": "prj_01m5wf1gdpj0n2549y8g",
+    "protocol": "7e5aa7fac0209e7785bfbc8f16c2fa0465718857928f60a4eadd7039fd812537",
+    "model": {
+      "provider": "deepseek",
+      "id": "deepseek-flash"
+    },
+    "execution": "fresh-model",
+    "permissionProfile": "isolated-read-only-no-tools",
+    "baselineVersion": "c44cffcbb7c190102a95213a7c5c52cad907d5b34fbe59b8eb6ccbe0305d542b",
+    "candidateVersion": "e21aa873d8a99be829c86b456368ca1c2a3a2891b4f49823e7168b3e23fd76bf",
+    "baselineHeadRevision": 0,
+    "status": "completed",
+    "development": {
+      "total": 2,
+      "baseline": 2,
+      "candidate": 2,
+      "feedback": [
+        {
+          "id": "recover-run",
+          "baselinePassed": true,
+          "candidatePassed": true
+        },
+        {
+          "id": "scoped-source",
+          "baselinePassed": true,
+          "candidatePassed": true
+        }
+      ]
+    },
+    "holdout": {
+      "total": 2,
+      "baseline": 0,
+      "candidate": 0
+    },
+    "final": {
+      "total": 2,
+      "baseline": 2,
+      "candidate": 2
+    },
+    "passed": false,
+    "reasons": [
+      "candidate did not meet all predeclared checks or regressed; baseline retained"
+    ],
+    "startedAt": "2026-10-26T16:00:06.703Z",
+    "finishedAt": "2026-10-26T16:00:24.603Z"
+  },
+  "calls": [
+    {
+      "split": "development",
+      "variant": "baseline",
+      "inputTokens": 832,
+      "outputTokens": 72,
+      "latencyMs": 1338,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "development",
+      "variant": "candidate",
+      "inputTokens": 616,
+      "outputTokens": 107,
+      "latencyMs": 1195,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "development",
+      "variant": "baseline",
+      "inputTokens": 181,
+      "outputTokens": 107,
+      "latencyMs": 1352,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "development",
+      "variant": "candidate",
+      "inputTokens": 221,
+      "outputTokens": 98,
+      "latencyMs": 1287,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "holdout",
+      "variant": "baseline",
+      "inputTokens": 238,
+      "outputTokens": 331,
+      "latencyMs": 2111,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "holdout",
+      "variant": "candidate",
+      "inputTokens": 150,
+      "outputTokens": 358,
+      "latencyMs": 2178,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "holdout",
+      "variant": "baseline",
+      "inputTokens": 183,
+      "outputTokens": 198,
+      "latencyMs": 1952,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "holdout",
+      "variant": "candidate",
+      "inputTokens": 223,
+      "outputTokens": 143,
+      "latencyMs": 1467,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "final",
+      "variant": "baseline",
+      "inputTokens": 180,
+      "outputTokens": 189,
+      "latencyMs": 1652,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "final",
+      "variant": "candidate",
+      "inputTokens": 220,
+      "outputTokens": 56,
+      "latencyMs": 1200,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "final",
+      "variant": "baseline",
+      "inputTokens": 178,
+      "outputTokens": 32,
+      "latencyMs": 906,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    },
+    {
+      "split": "final",
+      "variant": "candidate",
+      "inputTokens": 218,
+      "outputTokens": 35,
+      "latencyMs": 996,
+      "actualModel": {
+        "provider": "deepseek",
+        "id": "deepseek-flash"
+      }
+    }
+  ],
+  "candidate": {
+    "id": "evc_01m5wf1gh746nx21nzcx",
+    "baselineVersion": "c44cffcbb7c190102a95213a7c5c52cad907d5b34fbe59b8eb6ccbe0305d542b",
+    "candidateVersion": "e21aa873d8a99be829c86b456368ca1c2a3a2891b4f49823e7168b3e23fd76bf",
+    "status": "rejected",
+    "budgetUsed": {
+      "attempts": 1,
+      "requests": 12,
+      "outputTokens": 1726,
+      "elapsedMs": 17894,
+      "price": "unknown"
+    }
+  },
+  "price": "unknown",
+  "humanInterventions": "fixture setup only; no answers or per-sample holdout feedback supplied to proposer",
+  "scientificAcceptance": "not evaluated",
+  "restart": {
+    "persisted": true,
+    "sharedRecall": true,
+    "automaticMessages": 0,
+    "runs": 0
+  },
+  "sourceTree": "544abed plus IG07 working tree evaluation fixtures; evaluator protocol unchanged"
+}

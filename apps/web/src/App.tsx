@@ -1765,10 +1765,14 @@ function ManuscriptPanel(props: {
   const currentOwner = useRef(draftOwner);
   currentOwner.current = draftOwner;
   const [file, setFile] = useStoredState(`scholarflow.workspace.file.v1.${draftOwner}`, "main.tex", isString);
+  const currentFile = useRef(file);
+  currentFile.current = file;
   type FileDraft = { content: string; baseHash: string };
   const [fileDrafts, setFileDrafts] = useStoredState<Record<string, FileDraft>>(`scholarflow.workspace.editor.v1.${draftOwner}`, {}, (v): v is Record<string, FileDraft> => !!v && typeof v === "object" && Object.values(v).every((d) => !!d && typeof d.content === "string" && typeof d.baseHash === "string"));
   const [remote, setRemote] = useState<{ owner: string; file: string; content: string; hash: string } | null>(null);
   const draft = fileDrafts[file];
+  const latestDrafts = useRef(fileDrafts);
+  latestDrafts.current = fileDrafts;
   const content = draft?.content ?? (remote?.owner === draftOwner && remote.file === file ? remote.content : "");
   const setContent = (value: string) => setFileDrafts((s) => ({ ...s, [file]: { content: value, baseHash: draft?.baseHash ?? remote?.hash ?? "" } }));
   const [editorMode, setEditorMode] = useStoredState(`scholarflow.workspace.editor.mode.v1.${draftOwner}`, "source", (v): v is string => ["source", "pdf", "compare"].includes(String(v)));
@@ -1843,10 +1847,11 @@ function ManuscriptPanel(props: {
         else if (next[file]) next[file] = { ...next[file]!, baseHash: saved.hash };
         return next;
       });
-      if (currentOwner.current !== draftOwner) return true;
+      if (currentOwner.current !== draftOwner || currentFile.current !== file) return false;
+      setRemote({ owner: draftOwner, file, content, hash: saved.hash });
       await loadFile(file);
       props.onChanged();
-      return true;
+      return !latestDrafts.current[file] || latestDrafts.current[file]!.content === content;
     } catch (error) {
       props.fail(error);
       return false;

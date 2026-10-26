@@ -1,6 +1,10 @@
 export class InputBudgetError extends Error { readonly code = "INPUT_BUDGET_EXCEEDED"; }
 export const estimateTokens = (value: unknown) => Math.ceil(new TextEncoder().encode(JSON.stringify(value)).length / 2);
 export interface BudgetMessage { role: string; content?: unknown; toolName?: string }
+export function calibratedInputScale(previous: number, estimate: number, usage: { input?: number; cacheRead?: number; cacheWrite?: number }) {
+  const actual = (usage.input ?? 0) + (usage.cacheRead ?? 0) + (usage.cacheWrite ?? 0);
+  return estimate > 0 && actual > 0 ? Math.max(1, previous, actual / estimate * 1.1) : previous;
+}
 
 /** Includes system messages, tool declarations, methods, history and evidence. */
 export function boundModelInput<T extends BudgetMessage>(messages: T[], contextWindow: number, outputReserve = 4096, cap = 24000) {

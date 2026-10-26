@@ -140,5 +140,14 @@ test("RT01: delayed saves, canonical selection and lost-ack retries across reloa
     assert.equal(app.services.methods.head(p.id, "result-analysis").hash, oldBinding);
     await panel.getByRole("button", { name: "撤回记忆", exact: true }).click();
     await panel.getByText(/withdrawn · user/).waitFor();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, "memory/method controls fit the viewport");
+      if (process.env.SCHOLARFLOW_EVIDENCE_DIR) {
+        await page.locator(".workspace").evaluate(node => { node.scrollTop = 0; });
+        const { mkdirSync } = await import("node:fs"); mkdirSync(process.env.SCHOLARFLOW_EVIDENCE_DIR, { recursive: true });
+        await page.screenshot({ path: path.join(process.env.SCHOLARFLOW_EVIDENCE_DIR, `memory-methods-${width}.png`) });
+      }
+    }
   } finally { await browser.close(); await app.close(); rmSync(root, { recursive: true, force: true }); }
 });

@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-27",
+  "model": "deepseek-flash",
+  "taskId": "tsk_01m5wf8rkydvv6k5b983",
+  "sourceMemory": {
+    "id": "mem_01m5wf8rm5wwdkf0p3j6",
+    "revision": 2
+  },
+  "tools": [
+    "activate_capability",
+    "list_method_candidates",
+    "recall_memory"
+  ],
+  "requestBudgets": [
+    {
+      "before": 5534,
+      "after": 5534,
+      "limit": 24000,
+      "removed": 0,
+      "outputReserve": 4096,
+      "estimated": true,
+      "calibratedEstimate": 5534,
+      "scale": 1,
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "price": "unknown"
+    },
+    {
+      "before": 8284,
+      "after": 8284,
+      "limit": 24000,
+      "removed": 0,
+      "outputReserve": 4096,
+      "estimated": true,
+      "calibratedEstimate": 8284,
+      "scale": 1,
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "price": "unknown"
+    },
+    {
+      "before": 9054,
+      "after": 9054,
+      "limit": 24000,
+      "removed": 0,
+      "outputReserve": 4096,
+      "estimated": true,
+      "calibratedEstimate": 9054,
+      "scale": 1,
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "price": "unknown"
+    },
+    {
+      "before": 10115,
+      "after": 10115,
+      "limit": 24000,
+      "removed": 0,
+      "outputReserve": 4096,
+      "estimated": true,
+      "calibratedEstimate": 10115,
+      "scale": 1,
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "price": "unknown"
+    }
+  ],
+  "witnessMatched": true,
+  "runs": 0
+}

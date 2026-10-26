@@ -83,6 +83,7 @@ test("RT09/RT10: effective time, known-at correction, late facts, bounded disput
     assert.match(h.memory.recall(h.p, { asOf: "2025-02-01T00:00:00Z", knownAt: beforeCorrection }).memories[0]!.value, /old state/);
     assert.match(h.memory.recall(h.p, { asOf: "2025-02-01T00:00:00Z" }).memories[0]!.value, /corrected state/);
     m = h.memory.revise(h.p, m.id, m.revision, { action: "state_change", value: "new state", reason: "reality changed", validFrom: "2025-06-01T00:00:00Z" });
+    assert.ok(h.memory.history(h.p, m.id).some(v => v.validTo === "2025-06-01T00:00:00.000Z"), "state changes append an explicit closed interval");
     assert.match(h.memory.recall(h.p, { asOf: "2025-03-01T00:00:00Z" }).memories[0]!.value, /corrected state/);
     assert.match(h.memory.recall(h.p, { asOf: "2025-07-01T00:00:00Z" }).memories[0]!.value, /new state/);
     const late = h.ingest("old late fact", { predicate: "historical fact", validFrom: "2020-01-01T00:00:00Z", validTo: "2021-01-01T00:00:00Z" }, "tool_end");

@@ -28,13 +28,13 @@ function rows(text, prefix, width) {
 function validateTraceability(architectureText, planText) {
   const checks = rows(architectureText, "AT", 4);
   assert.deepEqual([...checks.keys()], Array.from({ length: 10 }, (_, i) => `AT${String(i + 1).padStart(2, "0")}`));
-  for (const row of checks.values()) assert.equal(row[3], "待实施", "Acceptance falsely promoted");
+  for (const row of checks.values()) assert.ok(row[3] === "待实施" || /^通过.*\[[^\]]+\]\([^)]+\)/.test(row[3]), "Acceptance falsely promoted without evidence");
   const phases = rows(planText, "AF", 5);
   assert.deepEqual([...phases.keys()], ["AF01", "AF02", "AF03", "AF04"]);
   const covered = new Set();
   const dependencies = new Map();
   for (const [id, row] of phases) {
-    assert.equal(row[4], "待实施设计", "Phase falsely promoted");
+    assert.ok(row[4] === "待实施设计" || /^通过.*\[[^\]]+\]\([^)]+\)/.test(row[4]), "Phase falsely promoted without evidence");
     const deps = row[1].match(/AF\d{2}/g) ?? [];
     assert.ok(row[1] === "无" || deps.length, "Missing dependency declaration");
     for (const dep of deps) assert.ok(phases.has(dep), "Unknown phase dependency");
@@ -80,7 +80,7 @@ test("traceability rejects missing, duplicate, unassigned, unknown and promoted 
     [architecture, plan.replace("| AF01 | 无 |", "| AF01 | AF99 |"), /Unknown phase/],
     [architecture, plan.replace("| AF01 | 无 |", "| AF01 | AF02 |"), /Cyclic phase/],
     [architecture, plan.replace("| 待实施设计 |", "| 已完成 |"), /Phase falsely promoted/],
-    [architecture, plan.replace("| AT05 | 待实施设计 |", "| 无 | 待实施设计 |"), /Missing phase acceptance/],
+    [architecture, plan.replace("| AT05 |", "| 无 |"), /Missing phase acceptance/],
   ];
   for (const [a, p, error] of cases) assert.throws(() => validateTraceability(a, p), error);
 });

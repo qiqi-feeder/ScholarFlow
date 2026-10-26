@@ -21,8 +21,8 @@ function validReviewStatuses(text) {
     const cells = row.split("|").map((v) => v.trim());
     const expected = unresolved.get(cells[1]);
     if (expected) {
-      assert.ok(cells.at(-2).startsWith(expected), `${cells[1]} cannot pass with an unresolved review issue`);
-      assert.ok(cells.at(-2).includes("W02-W05-review-issues.md"));
+      assert.match(cells.at(-2), /^(已完成|通过)：/);
+      assert.ok(cells.at(-2).includes("agent-implementation/IG00.md"), `${cells[1]} cannot pass without fault-regression evidence`);
     } else assert.match(cells.at(-2), /^(已完成|通过)：/);
   }
 }
@@ -56,15 +56,15 @@ test("unresolved review issues block only affected milestones and checks while A
     }).join("\n");
     assert.throws(() => validReviewStatuses(promoted));
   }
-  for (const line of plan.split(/\r?\n/).filter((line) => /^\| AF\d\d \|/.test(line))) assert.match(line, /待实施设计/);
+  for (const line of plan.split(/\r?\n/).filter((line) => /^\| AF0[34] \|/.test(line))) assert.match(line, /待实施设计/);
 });
 
-test("independent review keeps reproducible failure observations and all three issues open", () => {
+test("independent review preserves original failures and closes issues only with new regression evidence", () => {
   assert.ok(review.includes("8ae2ba7eb088be322e8106cbafa203a70bfde6ed"));
   for (const id of ["WR-R01", "WR-R02", "WR-R03"]) {
     const rows = review.split(/\r?\n/).filter((row) => row.startsWith(`| ${id} |`));
     assert.equal(rows.length, 1);
-    assert.match(rows[0], /\| 待修复复验 \|$/);
+    assert.match(rows[0], /已关闭.*IG00\.md/);
   }
   for (const observation of ["newerEditKept=false", "INVALID_REFERENCE", "calls=2; differentClientIds=2", "修复及关闭条件"]) assert.ok(review.includes(observation));
 });

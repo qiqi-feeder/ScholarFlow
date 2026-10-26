@@ -284,3 +284,9 @@ button.object-item[aria-pressed="true"] { color: #1d4ed8; background: #eff6ff; b
 .source-snapshot pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:240px; overflow:auto; font-size:12px; }
 .source-snapshot pre, .message-references pre { background:#f8fafc; color:#334155; border:1px solid #e2e8f0; }
 .system-note button { font-size:11px; padding:2px 6px; margin-left:6px; }
+.research-controls { min-width: 0; overflow-wrap: anywhere; margin-bottom: 16px; }
+.research-controls > summary { font-weight: 600; cursor: pointer; }
+.research-controls label { display: grid; gap: 6px; margin: 12px 0; font-size: 12px; }
+.research-controls input, .research-controls select, .research-controls textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.research-controls .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.research-controls pre { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; font-weight: 400; }

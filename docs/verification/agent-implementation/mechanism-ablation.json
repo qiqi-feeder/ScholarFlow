@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-27",
+  "fixedCards": [
+    "recover-run",
+    "scoped-source",
+    "late-correction",
+    "disputed-claim"
+  ],
+  "rows": [
+    {
+      "group": "baseline",
+      "pairedConditions": {
+        "model": {
+          "provider": "deepseek",
+          "id": "deepseek-flash"
+        },
+        "permissionProfile": "same-project read-only; no target execution",
+        "inputBudget": 24000,
+        "outputBudget": 1024,
+        "fixtureVersion": "IG00-fixed-software-cards-v1",
+        "repetitions": 1
+      },
+      "toolDefinitions": 30,
+      "inputEstimate": 312825,
+      "withinInputEnvelope": false,
+      "memoryMechanism": false,
+      "independentMethodProtocol": null
+    },
+    {
+      "group": "capabilities",
+      "pairedConditions": {
+        "model": {
+          "provider": "deepseek",
+          "id": "deepseek-flash"
+        },
+        "permissionProfile": "same-project read-only; no target execution",
+        "inputBudget": 24000,
+        "outputBudget": 1024,
+        "fixtureVersion": "IG00-fixed-software-cards-v1",
+        "repetitions": 1
+      },
+      "toolDefinitions": 15,
+      "inputEstimate": 312825,
+      "withinInputEnvelope": false,
+      "memoryMechanism": false,
+      "independentMethodProtocol": null
+    },
+    {
+      "group": "bounded-context",
+      "pairedConditions": {
+        "model": {
+          "provider": "deepseek",
+          "id": "deepseek-flash"
+        },
+        "permissionProfile": "same-project read-only; no target execution",
+        "inputBudget": 24000,
+        "outputBudget": 1024,
+        "fixtureVersion": "IG00-fixed-software-cards-v1",
+        "repetitions": 1
+      },
+      "toolDefinitions": 15,
+      "inputEstimate": 16390,
+      "withinInputEnvelope": true,
+      "memoryMechanism": false,
+      "independentMethodProtocol": null
+    },
+    {
+      "group": "memory",
+      "pairedConditions": {
+        "model": {
+          "provider": "deepseek",
+          "id": "deepseek-flash"
+        },
+        "permissionProfile": "same-project read-only; no target execution",
+        "inputBudget": 24000,
+        "outputBudget": 1024,
+        "fixtureVersion": "IG00-fixed-software-cards-v1",
+        "repetitions": 1
+      },
+      "toolDefinitions": 15,
+      "inputEstimate": 16390,
+      "withinInputEnvelope": true,
+      "memoryMechanism": true,
+      "independentMethodProtocol": null
+    },
+    {
+      "group": "evolved-method",
+      "pairedConditions": {
+        "model": {
+          "provider": "deepseek",
+          "id": "deepseek-flash"
+        },
+        "permissionProfile": "same-project read-only; no target execution",
+        "inputBudget": 24000,
+        "outputBudget": 1024,
+        "fixtureVersion": "IG00-fixed-software-cards-v1",
+        "repetitions": 1
+      },
+      "toolDefinitions": 15,
+      "inputEstimate": 16390,
+      "withinInputEnvelope": true,
+      "memoryMechanism": true,
+      "independentMethodProtocol": "real-evaluation.json (separate fresh inference report)"
+    }
+  ],
+  "interpretation": "Deterministic software cost/invariant comparisons only. Temporal recall and provenance correctness are tested in memory.test.ts. Real paired method outputs are separate. These rows are not model quality scores or scientific efficacy measurements."
+}

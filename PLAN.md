@@ -1,5 +1,7 @@
 # ScholarFlow 第一版 MVP 实施计划
 
+> 2026-10-27 实施更新：IG00–IG07 已依次实现并通过软件验收，阶段提交、真实 API 与负评测结果见 [最终报告](docs/verification/agent-implementation/IG07.md)。AF01/AF02 对应完成，AF03/AF04 与真实科研 V09/V13 不升级。下文早期讨论与原验收状态保留为历史，当前以状态表和阶段证据为准。
+
 > 2026-10-26 实施入口更新：用户要求进入实现阶段并同步前述 Agent 讨论。新增第 10 节 IG00–IG07 与 [Agent 实施规格](docs/AGENT_IMPLEMENTATION_PLAN.md)，本次先交付文档与测试，后续按阶段实现。旧 M/V、W/WT、AF/AT 状态保留；面试含金量排序不替代实施依赖。
 
 更新：2026-10-22（Asia/Shanghai）。状态：既有 MVP 软件与科研验收状态见第 1–7 节历史记录及 [验证记录](docs/VERIFICATION.md)，启动与恢复见 [运行指南](docs/RUN_GUIDE.md)。第 8 节 W00 基线已完成（WT01 通过）；W01 已修复并通过 WT02、WT03、WT16 复验，修复提交与证据见 [W01 验收问题](docs/verification/workspace-redesign/W01-review-issues.md)。W02 视觉修正已由用户确认；W02–W05 独立验收发现三项问题，W02、W03、W05 待修复复验，W04 本次通过，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md)。科研目标待 [执行卡确认](docs/RESEARCH_ACCEPTANCE_CARD.md)。
@@ -201,10 +203,10 @@ W 节点独立于 M0–M6。各节点须有对应测试、实际验证结果和 
 | --- | --- | --- | --- | --- | --- |
 | W00 | 无 | 直接读取第 8.7 节 SB01–SB07，保存原稿截图/HTML 摘要及读取时间，排除 EX01–EX04；将 UI01–UI09 带入实施；核对当前分支、旧功能/数据与权限基线，记录已有失败；固定首版布局/引用/存储及旧任务模型继承的实施默认值、模型兼容能力和测试夹具 | 前端/宿主只读盘点、测试与文档；不再等待新原型 | WT01 | 已完成：WT01 通过，证据见 [W00 基线](docs/verification/workspace-redesign/W00-baseline.md) |
 | W01 | W00 | 拆分外壳、项目/任务导航、右侧会话；中央切换不影响流式回答，所有原功能仍可进入；对话框模型选择、宿主任务级持久化与实际调用一致 | `apps/web/src`、宿主模型/任务配置与必要迁移、浏览器/集成回归 | WT02、WT03、WT16 | 已完成：WT02、WT03、WT16 修复复验通过；提交 d2d974e，见 [W01 验收问题](docs/verification/workspace-redesign/W01-review-issues.md) |
-| W02 | W01 | 内容标签、四种默认工作方式和六类场景；视图对应的内容列表、论文库及收纳项目文件；单/双区、辅助面板、按任务恢复与脏稿保护、窄屏；修正阅读宽度、审稿重复列表、表格截断和写作拥挤 | Web 组件/状态/本地持久化、状态单测及 E2E | WT04、WT05、WT06、WT07、WT08、WT17、WT18 | 验收未通过：WR-R01 保存期间丢失新稿件编辑；视觉确认保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
-| W03 | W02 | 显式选对象/选区到消息、宿主校验和来源持久化、Agent 本次上下文、兼容旧客户端 | Web API、宿主消息/上下文/仓储、必要共享类型 | WT09、WT10 | 验收未通过：WR-R02 选区坐标不符、WR-R03 重发二次调用；见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| W02 | W01 | 内容标签、四种默认工作方式和六类场景；视图对应的内容列表、论文库及收纳项目文件；单/双区、辅助面板、按任务恢复与脏稿保护、窄屏；修正阅读宽度、审稿重复列表、表格截断和写作拥挤 | Web 组件/状态/本地持久化、状态单测及 E2E | WT04、WT05、WT06、WT07、WT08、WT17、WT18 | 已完成：WR-R01–R03 修复及故障复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
+| W03 | W02 | 显式选对象/选区到消息、宿主校验和来源持久化、Agent 本次上下文、兼容旧客户端 | Web API、宿主消息/上下文/仓储、必要共享类型 | WT09、WT10 | 已完成：WR-R01–R03 修复及故障复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
 | W04 | W01、W02、W03 | 产物打开入口与不抢焦点联动；全页面后台状态提示、去重与跨任务定位 | Web 状态/事件/概览，宿主仅按需补充定位协议 | WT11、WT12 | 已完成：产物入口、后台提示及归属定位；见 [W04 证据](docs/verification/workspace-redesign/W04-feedback.md) |
-| W05 | W02、W03、W04 | 旧库/旧流程回归、真实 API 联动、重启恢复与操作证据；逐项关闭 UI01–UI09，核对界面能力/数据不冒用原型示例，更新指南和限制 | 全部受影响模块、测试与验收文档 | WT13、WT14、WT15、WT19 | 验收未通过：WT06、WT09、WT10、WT13 不通过；正常流程与真实 API 证据保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| W05 | W02、W03、W04 | 旧库/旧流程回归、真实 API 联动、重启恢复与操作证据；逐项关闭 UI01–UI09，核对界面能力/数据不冒用原型示例，更新指南和限制 | 全部受影响模块、测试与验收文档 | WT13、WT14、WT15、WT19 | 已完成：WR-R01–R03 修复及故障复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
 
 ### 8.5 本轮测试矩阵
 
@@ -217,14 +219,14 @@ U 编号对应 [产品讨论记录](docs/WORKSPACE_PRODUCT_DISCUSSION.md) 第 9 
 | WT03 | 浏览器＋状态 | U01、U02、U03 | 无任务提示、新建/切换任务正常；快速从 A 切 B 再返回 | A 的慢响应/增量写入 B、已切项目却将消息发给旧任务 | 两项目各两任务的延迟/流事件夹具；请求归属与屏幕内容一致，无串话/旧响应覆盖，原入口可达 | 通过：W01 两项目各两任务、延迟/失败加载与 A→B→A、跨项目发送/停止/模型归属，见 [修复复验](docs/verification/workspace-redesign/W01-review-issues.md) |
 | WT04 | 状态单测＋浏览器 | U02 | 六类场景均能打开指定对象；重复打开定位已有标签，切换工作方式保留固定内容 | 只改标签名称、强制新任务、重复对象标签、模式切换丢视图 | R01–R06 操作记录；单内容、对照、列表详情和辅助区可用，对象/来源任务/版本标识不变 | 通过：W02 工作现场与草稿保护，见 [W02 证据](docs/verification/workspace-redesign/W02-workspace.md) |
 | WT05 | 状态单测＋持久化 | U03、U06 | 按任务保存标签/布局/阅读位置/选中运行/输入与编辑草稿，刷新并重开浏览器恢复 | 项目或任务同名串数据、关闭重开恢复到另一对象、自动重放旧消息 | 以项目/任务 ID 隔离的恢复夹具；恢复状态与原值一致，不自动发送草稿、不更改服务器内容 | 通过：W02 工作现场与草稿保护，见 [W02 证据](docs/verification/workspace-redesign/W02-workspace.md) |
-| WT06 | 浏览器＋编辑集成 | U06 | 编辑方案/稿件后切任务、关标签、刷新；保存/放弃/取消及草稿恢复可用 | 未保存修改丢失、取消关闭仍关闭、服务器新版本被旧草稿覆盖 | 每条保护路径有 E2E；正文保持或用户明确放弃，版本冲突可见，不绕过正式稿件审批 | 不通过：W02 WR-R01，保存成功回包清除后续新编辑，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| WT06 | 浏览器＋编辑集成 | U06 | 编辑方案/稿件后切任务、关标签、刷新；保存/放弃/取消及草稿恢复可用 | 未保存修改丢失、取消关闭仍关闭、服务器新版本被旧草稿覆盖 | 每条保护路径有 E2E；正文保持或用户明确放弃，版本冲突可见，不绕过正式稿件审批 | 通过：W02 新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md) |
 | WT07 | 状态单测＋故障注入 | U03、U06 | 正常 UI 状态升级或安全降级，缺失对象可关闭/重新选择 | 存储配额不足/禁用、损坏 JSON、旧格式、已删文件、失效版本 | 不崩溃/不写错项目；错误可恢复、内存草稿仍在；不把过期缓存当已确认数据 | 通过：W02 工作现场与草稿保护，见 [W02 证据](docs/verification/workspace-redesign/W02-workspace.md) |
 | WT08 | 浏览器/可访问性 | U07 | 桌面右侧常驻、导航折叠、拖动宽度、键盘操作与窄屏显式切换 | 内容遮挡确认/取消按钮、会话无法展开、对照区水平溢出 | 1440、1024、390px 视口截图；输入/主要操作键盘可达，活动任务/运行状态清楚，无不可恢复隐藏 | 通过：W02 自动回归与视觉确认通过，见 [视觉复核](docs/verification/workspace-redesign/W02-visual-correction.md) |
-| WT09 | 宿主集成＋安全反例 | U04 | 旧纯文本及带论文/运行/结果/稿件/可用文本选区的消息成功，引用可回查 | 跨项目、伪造 ID/路径、超长文本、已删除对象、版本不符、材料含伪造指令 | 无效引用在模型调用前明确拒绝；有效引用保存来源/版本/定位；原消息接口兼容，来源不能升级为规则 | 不通过：W03 WR-R02，多行文本选区与原文坐标不一致，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
-| WT10 | 集成＋流重连 | U01、U04 | 相同 clientId 带引用重试只接受一次；刷新/重连/宿主重启后读取原引用 | 只显示前端附件但模型未收到；消息恢复后读到后来覆盖的文本；重试多次调用模型 | 捕获受控 Agent 输入核对精确引用，持久事件/会话关联可回查，模型调用计数为一次；改变 clientId 才是新提交 | 不通过：W03 WR-R03，确认响应丢失后重发产生二次调用，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| WT09 | 宿主集成＋安全反例 | U04 | 旧纯文本及带论文/运行/结果/稿件/可用文本选区的消息成功，引用可回查 | 跨项目、伪造 ID/路径、超长文本、已删除对象、版本不符、材料含伪造指令 | 无效引用在模型调用前明确拒绝；有效引用保存来源/版本/定位；原消息接口兼容，来源不能升级为规则 | 通过：W03 新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md) |
+| WT10 | 集成＋流重连 | U01、U04 | 相同 clientId 带引用重试只接受一次；刷新/重连/宿主重启后读取原引用 | 只显示前端附件但模型未收到；消息恢复后读到后来覆盖的文本；重试多次调用模型 | 捕获受控 Agent 输入核对精确引用，持久事件/会话关联可回查，模型调用计数为一次；改变 clientId 才是新提交 | 通过：W03 新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md) |
 | WT11 | 浏览器＋进程集成 | U05、U08 | 在阅读/写作/设置时，另一任务的真实 CPU smoke 完成/失败有提示，点击可定位 | 只在实验页刷新、重复弹出、unknown 当成功、页面切换中断运行 | 所有中央视图均提示同一运行状态转移且去重，不抢焦点；进程独立完成，失败/unknown 如实显示 | 通过：W04 真实 CPU 转移提示、去重、来源打开与失效拒绝，见 [W04 证据](docs/verification/workspace-redesign/W04-feedback.md) |
 | WT12 | 浏览器＋事件反例 | U02、U04、U05 | Agent 产物事件/按钮能打开正确对象，当前固定标签与输入保持 | 乱序/重复事件抢焦点、打开错误任务、任意宿主路径、对象已删除 | 仅打开已验证可访问对象；默认用户点击查看，重复事件不重复开标签；非法/失效目标可恢复报错 | 通过：W04 真实 CPU 转移提示、去重、来源打开与失效拒绝，见 [W04 证据](docs/verification/workspace-redesign/W04-feedback.md) |
-| WT13 | 全部适用回归 | U08 | 原项目/材料/方案确认/准入/审批 smoke/结果/稿件历史/编译/导出链路可继续使用 | 仅新壳可用、旧入口消失、越权写稿、预算/验证/来源校验被弱化 | 类型/全部 Node 测试/构建/浏览器及相关文档测试通过；保留既有安全和失败用例，不以 Mock 假执行替代 | 不通过：W05 既有回归通过但 WR-R01–R03 新反例未通过，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| WT13 | 全部适用回归 | U08 | 原项目/材料/方案确认/准入/审批 smoke/结果/稿件历史/编译/导出链路可继续使用 | 仅新壳可用、旧入口消失、越权写稿、预算/验证/来源校验被弱化 | 类型/全部 Node 测试/构建/浏览器及相关文档测试通过；保留既有安全和失败用例，不以 Mock 假执行替代 | 通过：W05 新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md) |
 | WT14 | 真实 API＋浏览器 | U01、U04 | 已配置 Key 通过右侧会话，显式引用同项目真实文件，由 Pi 实际查询来源并继续回答 | 故障桩被记为真实 API、选中内容仅展示未送达、Key 落入本地 UI 状态/截图/日志 | 一个有轮数/时长上限的真实 DeepSeek 流式工具循环；保存脱敏操作/工具/来源证据；缺条件时记阻塞而非通过 | 通过：W05 全链路、真实 API、恢复与能力真实性回归，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
 | WT15 | 恢复/交付 | U03、U06、U08 | 用旧项目启动，保留草稿后刷新/重启宿主，再完成一个小任务与产物查看 | 旧数据不兼容、重启自动提交/启动实验、无测试证据却宣布完成 | 受影响数据兼容、工作现场恢复，阅读/实验/分析/写作截图和至少一条连续操作记录；指南可复现，迁移若有则有说明 | 通过：W05 全链路、真实 API、恢复与能力真实性回归，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
 | WT16 | 状态/宿主集成＋浏览器＋有界真实 API | U01、U03、U06、U07、U08 | 对照 FT11/MS01–MS07；同任务切模型从下条生效，历史/草稿/引用/权限不变；按任务隔离并在刷新/重启后恢复；窄屏与键盘可选择 | 回答/工具执行或停止未完成时切换、切换与发送竞态、陈旧响应、重复提交、未配置/失效/限流/不兼容、全局默认值覆盖任务选择、前端名称与实际模型不同 | 故障注入核对拒绝/顺序/零重复调用/不静默降级；历史实际模型可查；用两个已配置可用模型各作一次有轮数/时长上限的真实调用，保存脱敏提供方/模型与会话证据，已保存完整 Key 不回传浏览器，Key 不进 UI 缓存/截图/日志；不足两个真实模型时如实记阻塞，不以桩冒充通过 | 通过：W01 模型读写乱序、故障保留、宿主重启恢复、390px 键盘/触控与两个真实模型有界调用，见 [修复复验](docs/verification/workspace-redesign/W01-review-issues.md) |
@@ -284,12 +286,12 @@ SB06/SB07 只参考论文库和展开/收起的意图，保留 UI02–UI04 的�
 | --- | --- | --- | --- | --- | --- | --- |
 | UI01 | 高 | 审稿 Task-3 与右侧 Task-2 会话不一致 | 当前任务、中央任务内容、会话与发送目标一致；其他任务后台运行单独标注；快速切换忽略旧响应 | W01 | WT03 | 已完成：逐项回归与真实能力核对，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
 | UI02 | 高 | 静态阶段/文件列表不服务当前工作 | 紧凑项目/任务切换，下方按视图显示论文、方案证据、运行、分析对象、稿件目录或审稿意见；论文当前任务/本项目全部和处理状态可筛选，项目文件按需展开 | W02 | WT17 | 已完成：逐项回归与真实能力核对，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
-| UI03 | 高 | 阅读展开态正文过窄、选区工具条竖排溢出 | 默认收起笔记/元数据，正文不足改单内容/合适缩放，不强行多栏；引用浮层横向、边缘避让/更多菜单；保持真实 PDF/文本能力边界 | W02、W03 | WT08、WT09、WT18 | 待复验：关联草稿/引用/整体回归尚未全部通过；已验证视觉和局部行为保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
-| UI04 | 中 | 专注模式隐藏项目/任务切换 | 收起论文库仍保留紧凑项目/任务入口、展开论文库及笔记操作；不丢失任务和草稿 | W01、W02 | WT03、WT06、WT18 | 待复验：关联草稿/引用/整体回归尚未全部通过；已验证视觉和局部行为保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| UI03 | 高 | 阅读展开态正文过窄、选区工具条竖排溢出 | 默认收起笔记/元数据，正文不足改单内容/合适缩放，不强行多栏；引用浮层横向、边缘避让/更多菜单；保持真实 PDF/文本能力边界 | W02、W03 | WT08、WT09、WT18 | 已完成：新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
+| UI04 | 中 | 专注模式隐藏项目/任务切换 | 收起论文库仍保留紧凑项目/任务入口、展开论文库及笔记操作；不丢失任务和草稿 | W01、W02 | WT03、WT06、WT18 | 已完成：新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
 | UI05 | 高 | 审稿意见左栏与中央重复常驻 | 左栏选意见，中央展示所选原文/回应/证据/修改；按空间单内容或对照，不再永久展示第二份完整清单 | W02 | WT18 | 已完成：逐项回归与真实能力核对，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
 | UI06 | 中 | 实验表末列截断、源码/PDF 多栏拥挤 | 表格可横向查看且关键标识保留；源码/PDF/对照可切，目录/诊断按需展开，不靠缩小字体或自动隐藏会话硬塞 | W02 | WT08、WT18 | 已完成：逐项回归与真实能力核对，见 [W05 证据](docs/verification/workspace-redesign/W05-regression.md) |
-| UI07 | 中 | 任务/模型选择与空/失败/草稿状态未覆盖完整 | 实现任务选择/新建、模型忙碌禁用/切换中/失败、论文空/搜索无结果/下载中/失败、未发送和未保存恢复；每项有明确下一步 | W01、W02、W03 | WT06、WT07、WT16、WT17 | 待复验：关联草稿/引用/整体回归尚未全部通过；已验证视觉和局部行为保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
-| UI08 | 高 | 原稿包含范围外能力与无依据成功/结论 | 不冒用 Zotero 同步、SLURM、固定时延/上下文能力或顶刊接受结论；无真实数据不展示演示值，假编译/伪调用不进入产品；模型选项来自真实宿主能力 | W01、W04、W05 | WT13、WT16、WT19 | 待复验：关联草稿/引用/整体回归尚未全部通过；已验证视觉和局部行为保留，见 [剩余验收问题](docs/verification/workspace-redesign/W02-W05-review-issues.md) |
+| UI07 | 中 | 任务/模型选择与空/失败/草稿状态未覆盖完整 | 实现任务选择/新建、模型忙碌禁用/切换中/失败、论文空/搜索无结果/下载中/失败、未发送和未保存恢复；每项有明确下一步 | W01、W02、W03 | WT06、WT07、WT16、WT17 | 已完成：新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
+| UI08 | 高 | 原稿包含范围外能力与无依据成功/结论 | 不冒用 Zotero 同步、SLURM、固定时延/上下文能力或顶刊接受结论；无真实数据不展示演示值，假编译/伪调用不进入产品；模型选项来自真实宿主能力 | W01、W04、W05 | WT13、WT16、WT19 | 已完成：新故障回归、原流程及真实 API 复验，见 [IG00](docs/verification/agent-implementation/IG00.md) 与 [IG07](docs/verification/agent-implementation/IG07.md)；[工作台复验](docs/verification/workspace-redesign/README.md) |
 | UI09 | 中 | 同名/历史/最新变体混杂，易误取版本 | W00 按 SB/EX 精确定位原稿并记录本地证据；实现遵循本文修正清单，不等待继续生成原型 | W00 | WT01 | 已完成：W00 保存 SB01–SB07/EX01–EX04 资源、截图、哈希与读取时间 |
 
 处理顺序：W00 定位原稿与核对代码基线 → W01 常驻会话/任务一致/模型选择 → W02 动态内容列表与布局/恢复 → W03 显式引用 → W04 产物/后台联动 → W05 全链路与 UI 清单验收。视觉细节可在实现中按实际内容调整，权限、任务隔离和科研真实性不得因复刻外观退化。
@@ -304,8 +306,8 @@ SB06/SB07 只参考论文库和展开/收起的意图，保留 UI02–UI04 的�
 
 | 批次 | 前置 | 后续交付边界 | 验收 | 状态 |
 | --- | --- | --- | --- | --- |
-| AF01 | 无 | 核对锁定 Pi 的注册/激活/恢复行为；确定最小基础入口和能力映射，验证加载失败、依赖及任务隔离 | AT01、AT02、AT03、AT04 | 待实施设计 |
-| AF02 | AF01 | 按模型预算控制工具/Skill/历史/证据总输入，按需读取并验证压缩恢复，记录输入量与开销 | AT05 | 待实施设计 |
+| AF01 | 无 | 核对锁定 Pi 的注册/激活/恢复行为；确定最小基础入口和能力映射，验证加载失败、依赖及任务隔离 | AT01、AT02、AT03、AT04 | 通过（[IG01](docs/verification/agent-implementation/IG01.md)） |
+| AF02 | AF01 | 按模型预算控制工具/Skill/历史/证据总输入，按需读取并验证压缩恢复，记录输入量与开销 | AT05 | 通过（[IG02](docs/verification/agent-implementation/IG02.md)） |
 | AF03 | AF01、AF02 | 先讨论文献工作区工具契约、来源与状态，再实现稳定公开全文获取、证据存储、调研集合与自动入库 | AT06、AT07、AT08 | 待实施设计 |
 | AF04 | AF01、AF02 | 逐工作区讨论工具与产物契约；复用统一反馈，补实验表图导入及实际稿件/编译版本联动 | AT08、AT09、AT10 | 待实施设计 |
 
@@ -328,7 +330,7 @@ AF 批次是后续能力工作，不能自动并入 W01–W05 的完成声明。
 | IG04 | IG03 | 当前/历史/当时已知查询、跨任务召回、记忆依据/争议/更正/撤回 UI | RT09、RT10 | 通过（[IG04](docs/verification/agent-implementation/IG04.md)） |
 | IG05 | IG04 | 经验提炼、Skill 候选/正式版本隔离、可编辑范围和评测预算记录 | RT11、RT12 | 通过（[IG05](docs/verification/agent-implementation/IG05.md)） |
 | IG06 | IG05 | 基线参与、开发/留出隔离、确认发布、并发版本检查及回退 | RT13、RT14 | 通过（[IG06](docs/verification/agent-implementation/IG06.md)） |
-| IG07 | IG06 | 固定任务配对与消融、有界真实 API、重启及原流程回归，交付证据 | RT15、RT16 | 待实施 |
+| IG07 | IG06 | 固定任务配对与消融、有界真实 API、重启及原流程回归，交付证据 | RT15、RT16 | 通过（[IG07](docs/verification/agent-implementation/IG07.md)） |
 
 IG 是总执行顺序，AF 是已有领域工作包；IG01/IG02 复用 AF01/AF02，不重复计为两项成果，必须同时核对对应 AT。AF03/AF04 的文献全文与工作区契约保留，按原依赖独立交付，不因记忆/进化完成而自动验收。IG03–IG06 不要求提前宣称全文或真实科研实验通过。
 

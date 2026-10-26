@@ -11,7 +11,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import { boundModelInput, resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference, type MethodVersion } from "@scholarflow/research";
+import { boundModelInput, calibratedInputScale, resolveInsideRoot, type ProjectRecord, type TaskRecord, type ResolvedReference, type MethodVersion } from "@scholarflow/research";
 import { referencePrompt } from "./references.js";
 import type { AppConfig } from "./config.js";
 import type { ContextService } from "./context.js";
@@ -143,6 +143,7 @@ function resultText(result: unknown): string {
 export class PiAgentService implements AgentServiceLike {
   private readonly tasks = new Map<string, LoadedTask>();
   private readonly busyTasks = new Set<string>();
+  private readonly inputCalibration = new Map<string, { scale: number; estimate: number }>();
   private modelRuntimePromise: Promise<ModelRuntime> | null = null;
 
   constructor(private readonly deps: AgentServiceDependencies) {}
@@ -351,9 +352,11 @@ export class PiAgentService implements AgentServiceLike {
     let requests = 0;
     session.agent.streamFunction = (requestModel, transcript, options) => {
       if (++requests > 12) throw new Error("task reached its 12-request turn budget; continue explicitly in a new message");
-      const budget = boundModelInput(transcript.messages, requestModel.contextWindow);
+      const calibration = this.inputCalibration.get(task.id) ?? { scale: 1, estimate: 0 };
+      const budget = boundModelInput(transcript.messages, Math.floor(requestModel.contextWindow / calibration.scale), 4096, Math.floor(24000 / calibration.scale));
+      this.inputCalibration.set(task.id, { scale: calibration.scale, estimate: budget.after });
       const event = this.deps.repositories.appendEvent(project.id, task.id, "input_budget", {
-        ...budget, messages: undefined, model: requestModel.id, provider: requestModel.provider, price: "unknown",
+        ...budget, messages: undefined, calibratedEstimate: Math.ceil(budget.after * calibration.scale), scale: calibration.scale, model: requestModel.id, provider: requestModel.provider, price: "unknown",
       });
       this.deps.events.publish(event);
       return stream(requestModel, { ...transcript, messages: budget.messages }, { ...options, maxTokens: Math.min(options?.maxTokens ?? 4096, 4096) });
@@ -410,6 +413,11 @@ export class PiAgentService implements AgentServiceLike {
     if (value.type === "message_end") {
       const message = value.message as { role?: string; usage?: unknown; model?: string; provider?: string; stopReason?: string; errorMessage?: string } | undefined;
       if (message?.role !== "assistant") return;
+      const calibration = this.inputCalibration.get(task.id);
+      if (calibration && message.usage) {
+        const scale = calibratedInputScale(calibration.scale, calibration.estimate, message.usage);
+        this.inputCalibration.set(task.id, { ...calibration, scale });
+      }
       if (message.stopReason === "error") {
         const record = this.deps.repositories.appendEvent(project.id, task.id, "error", {
           message: redact(message.errorMessage ?? "The model request failed; no response was generated."),

@@ -48,7 +48,9 @@ export class MemoryService {
       if (!selected || selected.status === "candidate") { exclusions.push(`${head.id}: withdrawn, candidate, out of validity or not yet known`); return []; }
       return [selected];
     });
-    const matches = available.filter(r => (!input.subject || r.subject === input.subject) && (!input.predicate || r.predicate === input.predicate) && (!query || `${r.subject} ${r.predicate} ${JSON.stringify(r.value)}`.toLowerCase().includes(query.toLowerCase())));
+    const terms = (this.repos.getTask(p.taskId)!.objective.toLowerCase().match(/[\p{L}\p{N}]{2,}/gu) ?? []).slice(0, 20);
+    const relevance = (r: MemoryRecord) => terms.reduce((score, term) => score + Number(`${r.subject} ${r.predicate} ${JSON.stringify(r.value)}`.toLowerCase().includes(term)), 0) + Number(r.sourceTaskId === p.taskId) + Number(r.kind === "confirmed_decision");
+    const matches = available.filter(r => (!input.subject || r.subject === input.subject) && (!input.predicate || r.predicate === input.predicate) && (!query || `${r.subject} ${r.predicate} ${JSON.stringify(r.value)}`.toLowerCase().includes(query.toLowerCase()))).sort((a, b) => relevance(b) - relevance(a) || b.recordedAt.localeCompare(a.recordedAt));
     const selected: ReturnType<typeof summarizeMemory>[] = [], visited = new Set<string>();
     for (const match of matches) {
       if (visited.has(match.id)) continue;
@@ -147,7 +149,7 @@ export class MemoryService {
     if (!input.reason?.trim() || input.reason.length > 2000 || !["correct", "confirm", "withdraw", "state_change"].includes(input.action)) throw new MemoryError("an action and reason are required");
     if (input.value !== undefined && JSON.stringify(input.value).length > 8000) throw new MemoryError("correction is too large");
     return this.transaction(() => {
-      const previous = this.get(p, id);
+      let previous = this.get(p, id);
       if (previous.revision !== expectedRevision) throw new MemoryError("memory revision changed; reload before editing", "MEMORY_CONFLICT", 409);
       if (["tool_observation", "paper_claim"].includes(previous.kind) && input.action !== "withdraw") throw new MemoryError("raw observations and paper sources cannot be rewritten as user decisions; withdraw or record a separate decision");
       if (input.action === "confirm" && previous.status !== "candidate") throw new MemoryError("only a candidate can be confirmed");
@@ -155,7 +157,14 @@ export class MemoryService {
       if (input.action === "state_change" && !validFrom) throw new MemoryError("state change requires an explicit effective time");
       if (validFrom && previous.validTo && validFrom >= previous.validTo) throw new MemoryError("invalid validity interval");
       const review = this.repos.appendEvent(p.projectId, p.taskId, "memory_reviewed", { id, expectedRevision, ...input, actor: "user" });
-      const record: MemoryRecord = { ...previous, value: input.value === undefined ? previous.value : input.value, kind: input.action === "withdraw" ? previous.kind : "confirmed_decision", status: input.action === "withdraw" ? "withdrawn" : "active", authority: { role: "user", identity: `event:${review.seq}` }, revision: previous.revision + 1, recordedAt: review.createdAt, validFrom, supersedes: [...previous.supersedes, `${id}@${previous.revision}`], conflictsWith: [], sourceRefs: [...previous.sourceRefs, { projectId: p.projectId, taskId: p.taskId, kind: "event", id: String(review.seq), version: sha256(JSON.stringify(review.data)), role: "user" }] };
+      const priorValidTo = previous.validTo;
+      if (input.action === "state_change") {
+        if (previous.validFrom && validFrom! <= previous.validFrom) throw new MemoryError("state change must advance the known effective time; use a correction for earlier facts");
+        const closed = { ...previous, revision: previous.revision + 1, validTo: validFrom, recordedAt: review.createdAt, supersedes: [...previous.supersedes, `${id}@${previous.revision}`] };
+        this.append(closed, previous, "close_interval", p.actor, input.reason);
+        previous = closed;
+      }
+      const record: MemoryRecord = { ...previous, value: input.value === undefined ? previous.value : input.value, kind: input.action === "withdraw" ? previous.kind : "confirmed_decision", status: input.action === "withdraw" ? "withdrawn" : "active", authority: { role: "user", identity: `event:${review.seq}` }, revision: previous.revision + 1, recordedAt: review.createdAt, validFrom, validTo: input.action === "state_change" ? priorValidTo : previous.validTo, supersedes: [...previous.supersedes, `${id}@${previous.revision}`], conflictsWith: [], sourceRefs: [...previous.sourceRefs, { projectId: p.projectId, taskId: p.taskId, kind: "event", id: String(review.seq), version: sha256(JSON.stringify(review.data)), role: "user" }] };
       for (const peer of this.list(p).filter(r => r.id !== id && r.conflictsWith.includes(id) && memoryRelation(r, record) !== "conflict")) {
         const remaining = peer.conflictsWith.filter(other => other !== id);
         this.append({ ...peer, revision: peer.revision + 1, recordedAt: record.recordedAt, conflictsWith: remaining, status: remaining.length ? "disputed" : "active" }, peer, "conflict_reconciled", "host", "source corrected or withdrawn; existing citations need review");

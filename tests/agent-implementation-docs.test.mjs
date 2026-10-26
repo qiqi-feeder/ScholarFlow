@@ -64,6 +64,13 @@ function validateGraph(specText, planText, frontendText) {
   }
 }
 
+function replaceStatus(text, id, value) {
+  return text.split(/\r?\n/).map(line => {
+    if (!line.startsWith(`| ${id} |`)) return line;
+    const cells = line.split("|"); cells[cells.length - 2] = ` ${value} `; return cells.join("|");
+  }).join("\n");
+}
+
 function validateContracts(text) {
   for (const contract of [
     "本次交付文档与测试，不代表功能完成", "本期不实现探索树回放",
@@ -86,11 +93,11 @@ test("implementation graph rejects unknown, cyclic, missing, duplicate and false
     [spec, plan.replace("| IG00 | 无 |", "| IG00 | IG01 |"), frontend, /Cyclic/],
     [spec, plan.replace("| IG02 | IG01 |", "| IG02 | IG99 |"), frontend, /Unknown dependency/],
     [spec, plan.replace("| IG05 | IG04 |", "| IG05 | IG00 |"), frontend, /prerequisite gate/],
-    [spec, plan.replace("RT15、RT16 | 待实施", "RT15 | 待实施"), frontend, /Unassigned/],
-    [spec, plan.replace("RT15、RT16 | 待实施", "RT15、RT99 | 待实施"), frontend, /Unknown acceptance/],
+    [spec, plan.replace("RT15、RT16 |", "RT15 |"), frontend, /Unassigned/],
+    [spec, plan.replace("RT15、RT16 |", "RT15、RT99 |"), frontend, /Unknown acceptance/],
     [spec.replace("| RT01 |", "| RT02 |"), plan, frontend, /Duplicate RT/],
-    [spec.replace("| 待实施 |", "| 通过 |"), plan, frontend, /falsely promoted/],
-    [spec, plan.replace("RT15、RT16 | 待实施", "RT15、RT16 | 已完成"), frontend, /falsely promoted/],
+    [replaceStatus(spec, "RT01", "通过"), plan, frontend, /falsely promoted/],
+    [spec, replaceStatus(plan, "IG07", "已完成"), frontend, /falsely promoted/],
     [spec, plan, frontend.replace("RT14、RT16 |", "RT14、RT99 |"), /Unknown UI/],
   ]) assert.throws(() => validateGraph(s, p, f), error);
 });

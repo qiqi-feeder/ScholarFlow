@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-27",
+  "timezone": "Asia/Taipei",
+  "node": "v24.21.0",
+  "commands": [
+    {
+      "command": "npm run verify",
+      "exitCode": 0,
+      "tests": 85,
+      "passed": 82,
+      "skipped": 3,
+      "note": "All three opt-in real API checks ran separately with zero failures"
+    },
+    {
+      "command": "npm run test:browser",
+      "exitCode": 0,
+      "passed": 3
+    },
+    {
+      "command": "node --test tests/*.test.mjs",
+      "exitCode": 0,
+      "passed": 23
+    },
+    {
+      "command": "SCHOLARFLOW_REAL_AGENT_TEST=1 npm run test:agent-evaluation",
+      "exitCode": 0,
+      "passed": 2,
+      "methodCriterionPassed": false,
+      "baselineRetained": true
+    },
+    {
+      "command": "SCHOLARFLOW_REAL_CAPABILITY_TEST=1 dynamic activation test",
+      "exitCode": 0,
+      "passed": 1
+    },
+    {
+      "command": "SCHOLARFLOW_REAL_WORKSPACE_TEST=1 npm run test:real-workspace",
+      "exitCode": 0,
+      "passed": 1
+    },
+    {
+      "command": "SCHOLARFLOW_REAL_MODEL_TEST=1 WT16",
+      "exitCode": 0,
+      "passed": 1,
+      "actualModels": [
+        "deepseek-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    {
+      "command": "PowerShell doc checks",
+      "exitCode": 0,
+      "files": [
+        "mvp-plan",
+        "workspace-baseline-docs",
+        "workspace-product-docs",
+        "frontend-product-docs",
+        "discovery-docs",
+        "architecture-docs"
+      ]
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "publicDownloadSmoke": {
+    "url": "https://example.com",
+    "status": 200,
+    "bytes": 577,
+    "note": "Validated named TLS origin on proxy fake DNS; local/private HTTP endpoints remain blocked"
+  },
+  "scientificAcceptance": "not performed; no approved target experiment",
+  "methodOutcome": "negative; no measured improvement or publication",
+  "price": "unknown"
+}

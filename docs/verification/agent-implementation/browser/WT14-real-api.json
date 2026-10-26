@@ -1,0 +1,18 @@
+{
+  "check": "WT14/WT15",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "projectId": "prj_01m5wf3dtxmq1dqgv6c3",
+  "taskId": "tsk_01m5wf3dzwy2z8gt88c0",
+  "sourceId": "mat_01m5wf3e0am1my8qkvrp",
+  "sourceHash": "350cb0c152579a6f89d8cca627419d06e4c655dce8f07db88f179e679168e8d2",
+  "tool": "read_artifact",
+  "toolCalls": 1,
+  "witnessMatched": true,
+  "sessionReopened": true,
+  "resumedPrompt": true,
+  "logicalMessages": 2,
+  "draftRestored": true,
+  "automaticResubmission": false,
+  "pageErrors": []
+}

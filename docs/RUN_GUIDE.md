@@ -1,5 +1,11 @@
 # ScholarFlow 运行指南（MVP）
 
+2026-10-27：Agent IG00–IG07 软件实现及验证见 [最终报告](verification/agent-implementation/IG07.md)。任务页新增“研究记忆”和“方法改进”：来源记忆先候选、用户确认后可供项目其他任务召回；更正/撤回保留历史。方法候选查看差异、独立配对评测后才可确认发布，失败保留基线；已有任务保持旧方法，可明确迁移或回退正式指针。新任务先启用基础发现/读取/恢复工具，通过 activate_capability 或 load_skill 按需加载；缺依赖会拒绝。
+
+数据库当前 schema v3。旧库升级前执行完整性检查并生成 `scholarflow.sqlite.before-v3.<time>.sqlite` 及恢复清单；升级失败回滚。恢复时关闭宿主和 worker，将备份恢复到新的数据库路径，并保留原项目文件和 Pi 会话，再启动核对。禁止直接覆盖仍在使用的数据库；重开不会自动发消息、提交实验或发布方法。
+
+普通验证：`npm run verify`、`npm run test:browser`、`node --test tests/*.test.mjs`。真实外部检查需现有 DeepSeek 配置：设置 `SCHOLARFLOW_REAL_AGENT_TEST=1` 后执行 `npm run test:agent-evaluation`（一次协议最多 12 请求，512 输出 token/请求，无实验），`SCHOLARFLOW_REAL_CAPABILITY_TEST=1` 运行同文件的动态工具测试；`SCHOLARFLOW_REAL_WORKSPACE_TEST=1 npm run test:real-workspace` 和 `SCHOLARFLOW_REAL_MODEL_TEST=1` 的 WT16 检查保持。执行证据可通过 `SCHOLARFLOW_AGENT_EVIDENCE_DIR` 或浏览器的 `SCHOLARFLOW_EVIDENCE_DIR` 写到指定目录，避免指向用户私有资料。
+
 本指南对应 2026-10-22 的软件切片。真实 DeepSeek 流式工具循环已通过；Conda 目标实验和科研验收尚未执行，限制见 [验证记录](VERIFICATION.md) 与 [W00 基线](verification/workspace-redesign/W00-baseline.md)。
 
 ## 1. 前置条件

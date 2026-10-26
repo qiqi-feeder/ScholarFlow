@@ -8,6 +8,7 @@ import {
   type MaterialRecord,
 } from "@scholarflow/research";
 import type { CrossrefSearch, SearchHit } from "./search.js";
+import { downloadPublic } from "./public-download.js";
 
 const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
 
@@ -85,7 +86,7 @@ function bibKey(input: { authors: string[]; year?: number; title: string; fallba
 export class MaterialService {
   private readonly fetchImpl: typeof fetch;
   constructor(private readonly options: MaterialServiceOptions) {
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl = options.fetchImpl ?? ((url) => downloadPublic(new URL(String(url)))) as typeof fetch;
   }
 
   private materialsDir(projectRoot: string): string {
