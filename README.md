@@ -29,6 +29,7 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 
 ## 文档
 
+- [Agent 实施规格](docs/AGENT_IMPLEMENTATION_PLAN.md)：本轮实现入口；IG00–IG07 顺序、动态能力/上下文、跨任务记忆与冲突、受控 Skill 进化、迁移及 RT01–RT16 验收；功能待实施，文档校验为 `node --test tests/agent-implementation-docs.test.mjs`。
 - [Agent 能力亮点与简历选材](docs/AGENT_RESUME_HIGHLIGHTS.md)：按技术含金量排序，展开核心实现、代码与测试证据、开源参考及简历候选措辞，区分已讨论、已有实现与待评测部分。
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
 - [工作台改版最终验收](docs/verification/workspace-redesign/W05-regression.md)：W00–W05、WT01–WT19、真实 API/恢复和最终截图；[科研执行卡](docs/RESEARCH_ACCEPTANCE_CARD.md) 等待确认目标。

@@ -19,8 +19,8 @@ function Read-DiscussionRows([string]$text, [string]$prefix, [int]$width) {
 }
 
 function Assert-Discussion([string]$text) {
-    if (-not $text.Contains('本轮授权：仅文档与文档验证测试。')) { throw 'Missing documentation-only authorization' }
-    if (-not $text.Contains('产品方向已确认，交互细节与实施方式待定；本轮仅记录文档，未实施界面改版。')) {
+    if (-not $text.Contains('用户已要求进入实现阶段；本次交付仅更新文档与相关测试，未修改业务代码。')) { throw 'Missing implementation handoff boundary' }
+    if (-not $text.Contains('不将实施授权或文档检查当作功能完成。')) {
         throw 'Missing product/implementation status boundary'
     }
     if ($text.Contains([string][char]0xFFFD)) { throw 'Invalid text encoding' }
@@ -116,8 +116,8 @@ function Assert-Rejected([scriptblock]$action, [string]$expected) {
     if (-not $caught -or $caught -notmatch $expected) { throw "Negative case did not reject as expected: $expected" }
 }
 
-Assert-Rejected { Assert-Discussion ($document.Replace('本轮授权：仅文档与文档验证测试。', '本轮授权业务开发。')) } 'documentation-only authorization'
-Assert-Rejected { Assert-Discussion ($document.Replace('产品方向已确认，交互细节与实施方式待定；本轮仅记录文档，未实施界面改版。', '界面已实现。')) } 'implementation status boundary'
+Assert-Rejected { Assert-Discussion ($document.Replace('用户已要求进入实现阶段；本次交付仅更新文档与相关测试，未修改业务代码。', '本轮授权业务开发。')) } 'implementation handoff boundary'
+Assert-Rejected { Assert-Discussion ($document.Replace('不将实施授权或文档检查当作功能完成。', '界面已实现。')) } 'implementation status boundary'
 Assert-Rejected { Assert-Discussion ($document + "`n| D01 | 已确认 | duplicate | S1 |") } 'Duplicate discussion ID'
 Assert-Rejected { Assert-Discussion ($document.Replace('| S1、S2 |', '| S99 |')) } 'Unknown decision source'
 Assert-Rejected { Assert-Discussion ($document.Replace('| S1、S2 |', '| 未说明 |')) } 'no provenance'

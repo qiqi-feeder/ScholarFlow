@@ -27,8 +27,8 @@ function Read-RequirementRows([string]$text, [string]$prefix, [int]$width) {
 }
 
 function Assert-FrontendRequirements([string]$text, [string]$implementationPlan) {
-    if (-not $text.Contains('本轮仅编写文档与文档校验，不实施功能代码。') -or
-        -not $text.Contains('视觉方向已确认，布局和交互问题在实现中修正，未实施新前端。')) {
+    if (-not $text.Contains('本次交付仅更新需求文档与测试，后续按实施规格推进功能。') -or
+        -not $text.Contains('新增 Agent 需求进入实施准备，既有工作台状态以 PLAN 和原始证据为准。')) {
         throw 'Missing requirements-only implementation boundary'
     }
     if (-not $text.Contains('这是全局模块 G01，不是只在“任务页面”才能看到的一张独立页面。')) {
@@ -163,7 +163,7 @@ function Assert-Rejected([scriptblock]$action, [string]$expected) {
     $script:negativeCaseCount += 1
 }
 
-Assert-Rejected { Assert-FrontendRequirements ($document.Replace('本轮仅编写文档与文档校验，不实施功能代码。', '立即实施功能。')) $plan } 'requirements-only implementation boundary'
+Assert-Rejected { Assert-FrontendRequirements ($document.Replace('本次交付仅更新需求文档与测试，后续按实施规格推进功能。', '立即实施功能。')) $plan } 'requirements-only implementation boundary'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('这是全局模块 G01，不是只在“任务页面”才能看到的一张独立页面。', '仅在任务页面显示会话。')) $plan } 'persistent workspace scope'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('视觉以 Stitch 原稿为准，不采用最后一轮改乱后的变体。', '直接采用最新变体。')) $plan } 'accepted visual baseline'
 Assert-Rejected { Assert-FrontendRequirements ($document.Replace('不再等待新一轮原型确认', '继续等待新一轮原型确认')) $plan } 'implementation handoff'

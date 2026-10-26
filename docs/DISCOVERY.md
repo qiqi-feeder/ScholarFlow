@@ -1,5 +1,7 @@
 # ScholarFlow 需求探索记录
 
+> 2026-10-26 当前入口：用户已要求进入实现阶段并同步 Agent 讨论，后续按 [Agent 实施规格](AGENT_IMPLEMENTATION_PLAN.md) 和 PLAN 第 10 节推进。本次交付文档与测试；下文“尚未授权/仅讨论”等保留为历史来源，不覆盖本次指令，不作为已实现声明。
+
 > 2026-10-21 接续：本文保留 2026-10-20 的历史探索/规划叙述，不作为当前实现状态声明；现有软件及验证以 [PLAN](../PLAN.md) 与 [VERIFICATION](VERIFICATION.md) 为准。最新界面共识及改动范围见 [工作台产品形态记录](WORKSPACE_PRODUCT_DISCUSSION.md)（C19–C20），本轮仅更新文档，未实施界面改版。
 
 更新：2026-10-20（Asia/Shanghai）。阶段：MVP 实施规划。本轮用户已授权编写 [PLAN](../PLAN.md)，尚未开始业务实现，尚无真实 Server、Agent/Skill 集成、实验执行或排版服务。
