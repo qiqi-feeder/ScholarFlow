@@ -149,8 +149,8 @@ Publication:
 | RT06 | 压缩后查回条件、版本与 runId | 忘记就重跑、约束静默丢失 | 通过（[IG02](verification/agent-implementation/IG02.md)） |
 | RT07 | 事件去重、来源身份与范围一致 | 助理建议升级为确认、跨项目按 ID 读写 | 通过（[IG03](verification/agent-implementation/IG03.md)） |
 | RT08 | 修订/争议/不同条件并存及并发控制 | 最后写入覆盖、未知时间猜造 | 通过（[IG03](verification/agent-implementation/IG03.md)） |
-| RT09 | 当前、历史与当时已知查询正确 | 晚到旧值污染当前、隐藏争议 | 待实施 |
-| RT10 | 跨任务召回与 UI 查看/更正/撤回 | 缓存越权、错来源、未落盘即成功 | 待实施 |
+| RT09 | 当前、历史与当时已知查询正确 | 晚到旧值污染当前、隐藏争议 | 通过（[IG04](verification/agent-implementation/IG04.md)） |
+| RT10 | 跨任务召回与 UI 查看/更正/撤回 | 缓存越权、错来源、未落盘即成功 | 通过（[IG04](verification/agent-implementation/IG04.md)） |
 | RT11 | 经验有条件与证据、候选范围受限 | 经验变规则、修改审批或验证器 | 待实施 |
 | RT12 | 版本、候选状态和评测预算持久化 | 候选即正式、自动扩大训练预算 | 待实施 |
 | RT13 | 基线参与、开发/留出隔离与全尝试记录 | 选择性报告、答案泄漏、只靠自评分 | 待实施 |

@@ -29,3 +29,10 @@ export function memoryRelation(a: MemoryRecord, b: MemoryRecord): "independent" 
   if (a.status === "candidate" || b.status === "candidate") return "candidate";
   return canonicalJson(a.value) === canonicalJson(b.value) ? "same" : "conflict";
 }
+
+/** Corrections apply retroactively once known; state changes keep earlier values. */
+export function memoryAt(versions: MemoryRecord[], asOf: string, knownAt: string): MemoryRecord | undefined {
+  const known = versions.filter(v => v.recordedAt <= knownAt).sort((a, b) => b.revision - a.revision);
+  if (known[0]?.status === "withdrawn") return undefined;
+  return known.find(v => (!v.validFrom || v.validFrom <= asOf) && (!v.validTo || asOf < v.validTo));
+}

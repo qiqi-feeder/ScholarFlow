@@ -167,7 +167,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
   const search = options.search ?? new CrossrefSearch({ contactEmail: config.searchEmail });
   const materials = new MaterialService({ crossref: search });
   const skills = new SkillService(repositories, resourcesDir);
-  const context = new ContextService(repositories, skills);
+  const context = new ContextService(repositories, skills, memory);
   const manuscript = new ManuscriptService(
     repositories,
     path.join(resourcesDir, "templates", "paper"),
@@ -474,6 +474,8 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
               .catch((error) => logger(`agent message failed: ${(error as Error).message}`));
             return json(res, 202, { accepted: true, duplicate: false, latestSeq: repositories.latestEventSeq(task.id) });
           }
+          if (action === "memories/recall" && method === "POST") return json(res, 200, memory.recall({ projectId: project.id, taskId: task.id, actor: "user" }, await readJson(req)));
+          if (action === "memory-recalls" && method === "GET") return json(res, 200, { snapshots: memory.snapshots({ projectId: project.id, taskId: task.id, actor: "user" }) });
           const memoryMatch = action.match(/^memories(?:\/([^/]+)(?:\/(history|changes))?)?$/);
           if (memoryMatch) {
             const principal = { projectId: project.id, taskId: task.id, actor: "user" as const };

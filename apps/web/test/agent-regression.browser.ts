@@ -80,5 +80,26 @@ test("RT01: delayed saves, canonical selection and lost-ack retries across reloa
     const context = events.filter(e => e.type === "message_context"); assert.equal(context.length, 1);
     assert.equal((context[0]!.data as any).references[0].text, originalText);
     assert.equal((context[0]!.data as any).references[0].id, material.id);
+    // RT10: user-visible provenance, confirmation, correction, history and withdrawal.
+    await page.getByRole("tab", { name: "任务", exact: true }).click();
+    const panel = page.getByLabel("研究记忆", { exact: true });
+    await panel.locator("summary").first().click();
+    await panel.getByText("从已保存来源建立候选", { exact: true }).click();
+    await panel.getByLabel("记忆来源事件").selectOption(String(events.find(e => e.type === "user_message")!.seq));
+    await panel.getByLabel("记忆对象").fill("retry objective"); await panel.getByLabel("记忆属性").fill("decision");
+    await panel.getByRole("button", { name: "保存来源记忆", exact: true }).click();
+    await panel.getByRole("button", { name: "确认候选", exact: true }).waitFor();
+    await panel.getByLabel("记忆更正理由").fill("Reviewed the actual source");
+    await panel.getByRole("button", { name: "确认候选", exact: true }).click();
+    await panel.getByRole("button", { name: "确认候选", exact: true }).waitFor({ state: "detached" });
+    await panel.getByLabel("记忆更正内容").fill("Corrected objective");
+    await panel.getByRole("button", { name: "更正记忆", exact: true }).click();
+    await panel.getByText('"Corrected objective"', { exact: true }).waitFor();
+    await panel.getByRole("button", { name: "查看历史", exact: true }).click();
+    await panel.getByLabel(/^记忆历史 /).waitFor();
+    assert.match(await panel.getByLabel(/^记忆历史 /).innerText(), /Retry after lost acknowledgement/);
+    await panel.getByRole("button", { name: "查询记忆依据", exact: true }).click();
+    await panel.getByRole("button", { name: "撤回记忆", exact: true }).click();
+    await panel.getByText(/withdrawn · user/).waitFor();
   } finally { await browser.close(); await app.close(); rmSync(root, { recursive: true, force: true }); }
 });

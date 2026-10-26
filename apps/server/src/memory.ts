@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { canonicalJson, createId, memoryRelation, sha256, type MemoryRecord, type MemoryChange } from "@scholarflow/research";
+import { canonicalJson, createId, memoryRelation, memoryAt, sha256, estimateTokens, type MemoryRecord, type MemoryChange, type RecallSnapshot } from "@scholarflow/research";
 import type { Repositories, EventRecord } from "./repos.js";
 import type { EventHub } from "./events.js";
 
@@ -34,6 +34,52 @@ export class MemoryService {
   changes(p: MemoryPrincipal, id: string): MemoryChange[] {
     this.get(p, id);
     return this.db.prepare("SELECT data_json FROM memory_changes WHERE memory_id=? ORDER BY rowid").all(id).map(r => JSON.parse(String(r.data_json)));
+  }
+  recall(p: MemoryPrincipal, input: { query?: string; subject?: string; predicate?: string; asOf?: string; knownAt?: string; budget?: number } = {}) {
+    this.authorize(p);
+    const query = input.query ?? "";
+    if (typeof query !== "string" || query.length > 500) throw new MemoryError("invalid recall query");
+    const asOf = this.time(input.asOf) ?? new Date().toISOString(), knownAt = this.time(input.knownAt) ?? new Date().toISOString();
+    const budget = input.budget ?? 2000;
+    if (!Number.isInteger(budget) || budget < 200 || budget > 4000) throw new MemoryError("recall budget must be 200–4000 estimated tokens");
+    const exclusions: string[] = [];
+    const available = this.list(p).flatMap(head => {
+      const selected = memoryAt(this.history(p, head.id), asOf, knownAt);
+      if (!selected || selected.status === "candidate") { exclusions.push(`${head.id}: withdrawn, candidate, out of validity or not yet known`); return []; }
+      return [selected];
+    });
+    const matches = available.filter(r => (!input.subject || r.subject === input.subject) && (!input.predicate || r.predicate === input.predicate) && (!query || `${r.subject} ${r.predicate} ${JSON.stringify(r.value)}`.toLowerCase().includes(query.toLowerCase())));
+    const selected: ReturnType<typeof summarizeMemory>[] = [], visited = new Set<string>();
+    for (const match of matches) {
+      if (visited.has(match.id)) continue;
+      const group = [match];
+      for (let i = 0; i < group.length; i++) for (const id of group[i]!.conflictsWith) {
+        const peer = available.find(r => r.id === id);
+        if (peer && !group.some(r => r.id === id)) group.push(peer);
+      }
+      group.forEach(r => visited.add(r.id));
+      const summaries = group.map(summarizeMemory);
+      if (estimateTokens([...selected, ...summaries]) > budget) { exclusions.push(`${group.map(r => r.id).join(",")}: entire evidence/conflict group excluded by budget; narrow query or read by ID`); continue; }
+      selected.push(...summaries);
+    }
+    const boundedExclusions = exclusions.slice(0, 20);
+    if (exclusions.length > 20) boundedExclusions.push(`${exclusions.length - 20} additional exclusions; narrow the query for details`);
+    const snapshot: RecallSnapshot = { id: createId("rcl"), destinationProjectId: p.projectId, destinationTaskId: p.taskId, query, asOf: input.asOf, knownAt: input.knownAt, selectedMemoryVersions: selected.map(r => ({ id: r.id, revision: r.revision })), exclusions: boundedExclusions, budgetEstimate: estimateTokens(selected) };
+    this.transaction(() => {
+      this.db.prepare("INSERT INTO recall_snapshots VALUES (?, ?, ?, ?)").run(snapshot.id, p.projectId, p.taskId, JSON.stringify(snapshot));
+      return { result: snapshot, event: this.repos.appendEvent(p.projectId, p.taskId, "memory_recalled", { snapshotId: snapshot.id, versions: snapshot.selectedMemoryVersions, estimated: true }) };
+    });
+    return { snapshot, memories: selected, estimated: true };
+  }
+  snapshots(p: MemoryPrincipal) {
+    this.authorize(p);
+    return this.db.prepare("SELECT data_json FROM recall_snapshots WHERE project_id=? AND task_id=? ORDER BY rowid DESC LIMIT 10").all(p.projectId, p.taskId).map(r => JSON.parse(String(r.data_json)) as RecallSnapshot);
+  }
+  snapshot(p: MemoryPrincipal, id: string) {
+    this.authorize(p);
+    const row = this.db.prepare("SELECT data_json FROM recall_snapshots WHERE id=? AND project_id=? AND task_id=?").get(id, p.projectId, p.taskId);
+    if (!row) throw new MemoryError("recall snapshot not found in this task", "MEMORY_SCOPE", 404);
+    return JSON.parse(String(row.data_json)) as RecallSnapshot;
   }
   private time(value?: string) {
     if (value !== undefined && (typeof value !== "string" || !/^\d{4}-\d\d-\d\dT/.test(value) || !Number.isFinite(Date.parse(value)))) throw new MemoryError("use an explicit ISO timestamp or leave time unknown");
@@ -119,4 +165,9 @@ export class MemoryService {
       return { result: record, event: this.repos.appendEvent(p.projectId, p.taskId, "memory_changed", { id: record.id, revision: record.revision, status: record.status, action: input.action, needsCitationReview: true }) };
     });
   }
+}
+
+function summarizeMemory(record: MemoryRecord) {
+  const value = JSON.stringify(record.value);
+  return { id: record.id, revision: record.revision, subject: record.subject, predicate: record.predicate, value: value.slice(0, 700), complete: value.length <= 700, scope: record.scope, scopeId: record.scopeId, kind: record.kind, status: record.status, conditions: record.conditions, sourceRefs: record.sourceRefs.slice(-3), authority: record.authority, validFrom: record.validFrom, validTo: record.validTo, validityUnknown: !record.validFrom, conflictsWith: record.conflictsWith, read: `read_memory ${record.id}` };
 }

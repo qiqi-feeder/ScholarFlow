@@ -71,3 +71,38 @@ test("RT08: revisions, contradictory evidence, independent conditions and transa
     assert.ok(h.memory.changes(h.p, a.id).every(c => c.newVersion.sourceRefs.length > 0));
   } finally { h.close(); }
 });
+
+test("RT09/RT10: effective time, known-at correction, late facts, bounded disputes and restart", async () => {
+  const h = memoryHarness();
+  try {
+    let m = h.ingest("old state", { validFrom: "2025-01-01T00:00:00Z" });
+    m = h.memory.revise(h.p, m.id, 1, { action: "confirm", reason: "review" });
+    const beforeCorrection = m.recordedAt;
+    await new Promise(resolve => setTimeout(resolve, 5));
+    m = h.memory.revise(h.p, m.id, m.revision, { action: "correct", value: "corrected state", reason: "original source corrected" });
+    assert.match(h.memory.recall(h.p, { asOf: "2025-02-01T00:00:00Z", knownAt: beforeCorrection }).memories[0]!.value, /old state/);
+    assert.match(h.memory.recall(h.p, { asOf: "2025-02-01T00:00:00Z" }).memories[0]!.value, /corrected state/);
+    m = h.memory.revise(h.p, m.id, m.revision, { action: "state_change", value: "new state", reason: "reality changed", validFrom: "2025-06-01T00:00:00Z" });
+    assert.match(h.memory.recall(h.p, { asOf: "2025-03-01T00:00:00Z" }).memories[0]!.value, /corrected state/);
+    assert.match(h.memory.recall(h.p, { asOf: "2025-07-01T00:00:00Z" }).memories[0]!.value, /new state/);
+    const late = h.ingest("old late fact", { predicate: "historical fact", validFrom: "2020-01-01T00:00:00Z", validTo: "2021-01-01T00:00:00Z" }, "tool_end");
+    assert.ok(!h.memory.recall(h.p).memories.some(r => r.id === late.id));
+    let conflicting = h.ingest("other state", { validFrom: "2025-06-01T00:00:00Z" });
+    conflicting = h.memory.revise(h.p, conflicting.id, 1, { action: "confirm", reason: "contradiction" });
+    const recall = h.memory.recall({ ...h.p, taskId: h.otherTask.id }, { query: "new state", budget: 4000 });
+    assert.equal(recall.memories.filter(r => r.status === "disputed").length, 2, "value match must expand to both sides");
+    const tiny = h.memory.recall(h.p, { query: "state", budget: 200 });
+    assert.equal(tiny.memories.length, 0); assert.match(tiny.snapshot.exclusions.join(" "), /entire evidence\/conflict group/);
+    assert.throws(() => h.memory.snapshot(h.p, recall.snapshot.id), /not found in this task/);
+    const reopened = openDatabase(h.file);
+    try {
+      const restored = new MemoryService(reopened, new Repositories(reopened), new EventHub());
+      assert.equal(restored.get(h.p, m.id).revision, h.memory.get(h.p, m.id).revision);
+      assert.equal(restored.snapshots(h.p)[0]!.id, tiny.snapshot.id);
+    } finally { reopened.close(); }
+    conflicting = h.memory.revise(h.p, conflicting.id, conflicting.revision, { action: "withdraw", reason: "source retracted" });
+    assert.equal(conflicting.status, "withdrawn");
+    assert.equal(h.memory.get(h.p, m.id).status, "active");
+    assert.ok(h.memory.recall(h.p).memories.every(r => r.id !== conflicting.id));
+  } finally { h.close(); }
+});

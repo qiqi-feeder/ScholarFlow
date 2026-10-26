@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Icon } from "./Icon";
 import { sourceSelection } from "./text-selection";
+import { MemoryPanel } from "./MemoryPanel";
 import { PdfPreview } from "./PdfPreview";
 import { activityChanges, transitionKey, type RunActivity } from "./activity";
 import { closeObject, emptyWorkspace, objectKey, openObject, readPreference, selectView, validWorkspace, writePreference, type WorkObject, type WorkView } from "./workspace";
@@ -799,6 +800,7 @@ export default function App() {
               <textarea id="review-draft" rows={9} placeholder="围绕这条意见整理回应草稿…" aria-label="审稿回应草稿" value={drafts[`${draftKey}/review/${activeObject?.id ?? "none"}`] ?? ""} onChange={(e) => setDrafts((s) => ({ ...s, [`${draftKey}/review/${activeObject?.id ?? "none"}`]: e.target.value }))} />
             </section>}
             <div className="workspace-content">
+              {tab === "work" && projectId && taskId && <MemoryPanel key={`${projectId}.${taskId}`} projectId={projectId} taskId={taskId} events={events} />}
               {tab === "work" && (
                 <OverviewPanel
                   overview={overview}

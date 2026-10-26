@@ -53,6 +53,23 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
   const capabilities = new CapabilityController(pi, ctx);
   pi.on("model_select", async () => { capabilities.reset(); });
   pi.registerTool(defineTool({
+    name: "recall_memory", label: "Recall source memories",
+    description: "Scope-authorized current/historical memory lookup. asOf is effective time; knownAt is when the system knew it. Disputes return both sides; snapshots pin exact versions. Candidate suggestions are excluded.",
+    parameters: Type.Object({ query: Type.Optional(Type.String()), subject: Type.Optional(Type.String()), predicate: Type.Optional(Type.String()), asOf: Type.Optional(Type.String()), knownAt: Type.Optional(Type.String()), budget: Type.Optional(Type.Integer({ minimum: 200, maximum: 4000 })) }),
+    execute: async (_id, p) => ok(JSON.stringify(ctx.memory.recall({ projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" }, p))),
+  }));
+  pi.registerTool(defineTool({
+    name: "read_memory", label: "Read memory version",
+    description: "Read a scope-authorized exact memory version/history by ID, paged with source hash. revision omitted reads current head. Does not revise memory.",
+    parameters: Type.Object({ id: Type.String(), revision: Type.Optional(Type.Integer({ minimum: 1 })), offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 6000 })) }),
+    execute: async (_id, p) => {
+      const principal = { projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" as const };
+      const record = p.revision ? ctx.memory.history(principal, p.id).find(r => r.revision === p.revision) : ctx.memory.get(principal, p.id);
+      if (!record) throw new Error("memory version not found");
+      return ok(JSON.stringify(recordPage(record, p.offset ?? 0, p.limit ?? 4000, { memoryId: p.id, revision: record.revision })));
+    },
+  }));
+  pi.registerTool(defineTool({
     name: "remember_source", label: "Remember persisted source",
     description: "Create source-labelled memory from an existing task event. Chat extraction remains candidate; cannot confirm decisions, edit observations or authorize experiments. Repeated source/subject/predicate/conditions is idempotent.",
     parameters: Type.Object({ sourceEventSeq: Type.Integer({ minimum: 1 }), scope: Type.Union([Type.Literal("task"), Type.Literal("project")]), subject: Type.String(), predicate: Type.String(), conditions: Type.Optional(Type.Record(Type.String(), Type.String())) }),
@@ -681,6 +698,7 @@ export function toolNames(): string[] {
     "read_research_record",
     "list_research_records",
     "remember_source",
+    "recall_memory", "read_memory",
     "get_research_context",
     "list_skills",
     "load_skill",
