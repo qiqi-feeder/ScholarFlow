@@ -29,6 +29,7 @@ node --import tsx scripts/verify-pi-session.ts   # Pi 1.3.0 生命周期与 Skil
 
 ## 文档
 
+- [Agent 能力亮点与简历选材](docs/AGENT_RESUME_HIGHLIGHTS.md)：按技术含金量排序，展开核心实现、代码与测试证据、开源参考及简历候选措辞，区分已讨论、已有实现与待评测部分。
 - [第一版 MVP 计划](PLAN.md)：M0–M6 实施顺序、V01–V16 验证矩阵、真实科研验收与完成定义。
 - [工作台改版最终验收](docs/verification/workspace-redesign/W05-regression.md)：W00–W05、WT01–WT19、真实 API/恢复和最终截图；[科研执行卡](docs/RESEARCH_ACCEPTANCE_CARD.md) 等待确认目标。
 - [W00 工作台基线](docs/verification/workspace-redesign/W00-baseline.md)：Stitch SB01–SB07 证据、旧库备份、权限/模型基线、WT01 结果与 W01 入口；实施默认值见同目录文档。
