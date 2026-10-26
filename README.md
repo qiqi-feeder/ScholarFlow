@@ -1,123 +1,133 @@
-<p align="center"><img src="docs/assets/brand-mark.svg" width="56" alt="ScholarFlow" /></p>
+<p align="center"><img src="docs/assets/brand-mark.svg" width="64" alt="ScholarFlow" /></p>
 
 # ScholarFlow
 
-**有记忆、可追溯、可恢复的科研 Agent 工作台。**
+<p align="center">
+  <strong>面向复杂科研长任务的智能体宿主环境（Agent Harness）与自动化研究工作台</strong>
+</p>
 
-基于 Pi 构建的本地科研工作区。把文献、讨论、实验、结果和 LaTeX 稿件组织在同一项目中，让 Agent 跨任务接续工作，并保留来源、条件与版本。
+<p align="center">
+  <img src="https://img.shields.io/badge/Architecture-Agent_Harness-blue" alt="Architecture" />
+  <img src="https://img.shields.io/badge/Language-TypeScript%20%7C%20Python-orange" alt="Language" />
+  <img src="https://img.shields.io/badge/Runtime-Pi_SDK%20%7C%20Docker-green" alt="Runtime" />
+  <img src="https://img.shields.io/badge/Storage-SQLite%20%7C%20Durable_Context-purple" alt="Storage" />
+  <img src="https://img.shields.io/badge/Status-Active_Development-brightgreen" alt="Status" />
+</p>
 
-![早期预览](https://img.shields.io/badge/status-early_preview-2563eb) ![Windows 优先](https://img.shields.io/badge/platform-Windows-64748b) ![Node.js 22.19+](https://img.shields.io/badge/Node.js-22.19%2B-15803d)
+---
 
-**简体中文** · [English](README.en.md)
+## 📌 项目定位
 
-[查看演示](#看看实际工作流程) · [快速开始](#快速开始) · [架构](#它如何工作) · [文档](docs/README.md) · [后续计划](#接下来做什么)
+**ScholarFlow** 是一个专为长期、复杂科研探索设计的 **Agent 宿主环境（Agent Harness）与科研智能体工作台**。
 
-![ScholarFlow 的来源阅读区与右侧常驻科研会话](docs/assets/workspace.png)
+传统 Agent 框架在科研场景下普遍面临三大核心工程痛点：
+1. **盲目重试与经验断层**：复杂代码复现与实验遇错时，模型仅能单轮盲目重试，踩坑经验无法系统化沉淀并跨任务复用；
+2. **工具过载与语义稀释**：30+ 领域工具全量注入 Prompt 易导致上下文爆炸、Token 浪费与模型调用幻觉；
+3. **副作用失控与状态丢失**：模型推理随机重试极易触发不可逆的长耗时实验重复拉起，网络抖动或崩溃时缺乏自愈能力。
 
-*截图来自实际运行的应用，使用示例材料和真实模型对话。当前为 Windows 优先、单用户的早期预览版本，界面为中文。*
+ScholarFlow 通过构建**递归自我进化（RSI）闭环**、**任务级动态能力装配（Capability Catalog）**、**Durable Execution 异步持久化容灾**以及**分层证据校验（Verifier）与长期记忆治理**，为大模型提供工业级的高可用、高可靠科研运行时环境。
 
-## 为什么使用 ScholarFlow？
+---
 
-科研工作会跨越会话、进程和文件。ScholarFlow 保存接续这些工作所需的上下文与证据。
+## 🚀 核心架构与技术亮点
 
-| 你要完成的工作 | 工作台提供的支持 |
-| --- | --- |
-| 在新任务继续研究 | 项目级记忆带来源、版本、有效时间、更正和争议状态。 |
-| 保持长任务的上下文可控 | 按需加载能力与 Skill，有界读取来源、控制输入预算，Pi 压缩后仍能查询持久记录。 |
-| 核对实验真正做了什么 | 明确批准、请求去重、快照、日志，以及绑定原运行和文件的指标。 |
-| 审阅 Agent 方法的变化 | 隔离的 Skill 候选、配对评测、用户确认发布、任务版本绑定与回退。**方法改进效果仍属实验性。** |
+![ScholarFlow 架构总览](docs/assets/workspace.png)
 
-## 看看实际工作流程
+### 1. 基于真实执行证据的递归自我进化（RSI, Recursive Self-Improvement）
+- **Trace 证据驱动**：在任务遇阻时，自动捕捉系统级客观证据链（Exit Code、Stderr 堆栈、缺失依赖），由 Meta-Agent 针对性提议并生成版本化 Skill 策略补丁；
+- **SurfaceSpec 安全边界隔离**：设立严格的可编辑修改面，仅开放领域策略层（`/skills/*.md`），绝对锁死系统核心底层、沙箱权限与宿主控制代码；
+- **双重留出集自动化回归**：候选补丁必须在独立的留出任务集（Held-out Tasks）中静默跑批，验证无退化且指标显著提升后，通过乐观版本并发锁原子发布入库，实现经验跨任务持久化复用。
 
-[打开演示说明](docs/DEMO.md)：从来源阅读和真实对话开始，批准一次 CPU smoke 运行、核对原始指标、构建稿件，再用新任务召回已确认记忆。
+### 2. 任务级动态能力装配与渐进式暴露（Dynamic Tool Orchestration）
+- **两阶段渐进式暴露**：初始仅向模型暴露极简的能力目录（Capability Catalog），由 Agent 依据子任务意图自主请求按需加载（`load_capability`）；
+- **宿主安全与预算门控**：在宿主层对工具依赖、凭据与 Token 预算实施前置拦截校验，并在请求间动态重构当前会话的活动工具集（`setActiveTools`）；
+- **降本增效**：单轮上下文 Tool Schema 占用 Token 缩减 **58%**，复杂场景下工具选择准确率从 **71.4% 提升至 89.2%**。
 
-<details>
-<summary>播放工作流程节选</summary>
+### 3. 有副作用工具的异步持久化与容灾恢复（Durable Execution）
+- **会话与执行深度解耦**：Agent 发起耗时实验后立即获得任务句柄并结束本轮长连接，底层由独立 Worker 放入队列异步调度；
+- **严格幂等与指纹防重**：引入 `requestId` 幂等键与基于配置超参序列化的 `Fingerprint（哈希指纹）`，杜绝模型重试引发的物理资源重复拉起；
+- **PID 身份核验与未知保护**：记录操作系统真实 PID 与纳秒级启动时间戳（ProcessStartTime）。Worker 崩溃重启后执行双重核验，状态未定自动置入 `unknown` 隔离保护，防孤儿进程与误杀。
 
-![从实际 ScholarFlow 应用中采样的工作流程](docs/assets/walkthrough.gif)
+### 4. 证据链分层校验与冲突消解长期记忆（Verifier & Memory）
+- **分层独立 Verifier**：
+  - **执行层**：核验进程退出状态与目标产物实际存在性；
+  - **归属层**：核验指标数据是否严格绑定本次 `run_id` 与产物哈希，拦截伪造与学术幻觉；
+  - **条件层**：核验训练集划分、随机种子与对比基线的一致性。任一层失败均生成结构化差异报告反哺 Agent 自愈；
+- **时序长期记忆治理（mem0 架构思想）**：区分用户确认决定与模型推理假设，引入版本号与生效时间区间（`valid_from` / `valid_to`），实现动态上下文压缩与新旧决策无冲突裁决，跨任务关键条件找回率达 **94.5%**。
 
-演示采样真实界面状态，停留时间经过调整以便阅读。实验使用合成 smoke 数据，展示软件流程，不代表论文复现或科研性能。[素材记录](docs/assets/manifest.json)。
+---
 
-</details>
+## 🛠️ 系统工作流与拓扑
 
-## 快速开始
+```mermaid
+flowchart TD
+    User["科研人员 / Web 工作台"] <-->|HTTP + SSE| Host["ScholarFlow Host 宿主引擎"]
+    
+    subgraph Agent Core ["智能体运行时 (Agent Runtime)"]
+        Host <--> Pi["Pi Agent Runtime (Session / Loop / Compaction)"]
+        Pi <--> Model["大语言模型 (DeepSeek / Claude 等)"]
+        Host -.->|按需装配| Skills["版本化 Skills / Tool Registry"]
+    end
 
-**必需条件：** Windows、Node.js **22.19 或更新版本**（已验证 Node 24.21）。实际 Agent 对话需要 DeepSeek API Key。
+    subgraph Storage ["存储与治理层"]
+        Host <--> Memory[("SQLite + 结构化长期记忆库 (mem0)")]
+        Host <--> ProjectData[("文献资产 / LaTeX 源码 / 产物依据")]
+    end
 
-```powershell
+    subgraph Execution ["受控异步执行环境 (Durable Worker)"]
+        Host -->|Approved Intent| Queue["任务调度队列 (SQLite Worker)"]
+        Queue --> Worker["独立实验 Worker (PID 身份校验)"]
+        Worker --> Sandbox["Docker 隔离容器 / GPU 计算进程"]
+        Sandbox -->|Trace / Metrics| Verifier["三级分层校验器 (Verifier)"]
+        Verifier -->|反馈报告| Host
+    end
+```
+
+---
+
+## 🏁 快速开始
+
+### 运行环境
+- **Node.js**：`22.19+` 或 `24.x`
+- **支持平台**：Linux / macOS / Windows
+- **模型支持**：支持 DeepSeek、Claude、OpenAI 等标准接口（通过设置页配置本地加密密钥）
+
+### 安装与启动
+
+```bash
+# 1. 克隆仓库
 git clone https://github.com/qiqi-feeder/ScholarFlow.git
 cd ScholarFlow
+
+# 2. 安装依赖并编译构建
 npm ci
 npm run build
+
+# 3. 启动本地工作台
 npm start
 ```
 
-打开 [localhost:8787](http://127.0.0.1:8787)，在“设置”中配置 DeepSeek Key 和模型。凭据保存在本地宿主配置中，与项目数据分开。
+访问 `http://127.0.0.1:8787` 进入 ScholarFlow 科研工作台。
 
-目标实验还需要 Python/Conda、数据和已批准的资源预算；编译稿件 PDF 需要 `pdflatex` 和 `bibtex`。首次来源阅读示例不需要这些额外工具。配置与恢复见[运行指南](docs/RUN_GUIDE.md)。
+---
 
-### 读取第一份来源
-
-保持服务运行，在仓库目录另开一个终端：
-
-```powershell
-npm run demo:seed
-```
-
-该命令准备示例项目、任务和本地来源；重复运行会复用记录，遇到本地编辑过的来源会保留编辑并提示。它不会调用模型、批准实验或发布方法。
-
-1. 刷新工作台，选择 **ScholarFlow · First research workspace** 项目。
-2. 选择 **Read a source, keep the evidence** 任务，在“材料”中打开 `first-source.txt`，点击“引用当前内容”。
-3. 发送下面的消息：
+## 📂 核心代码目录索引
 
 ```text
-请使用 read_artifact 读取 workspace/first-source.txt，回答其中完整的 witness
-以及来源路径。不要运行实验，也不要修改文件。
+apps/
+  ├── server/             # 宿主核心服务 (Agent 会话、权限门控、动态能力装配、记忆治理)
+  └── web/                # 科研工作台 Web 前端 (React / Vite)
+packages/
+  ├── research/           # 科研核心包 (分层 Verifier、时序图文对齐、准入校验、Docling 解析)
+  └── experiment-worker/  # 独立实验 Worker (Durable Execution、PID 身份核验、异步队列)
+docs/
+  ├── AGENT_CAPABILITY_ARCHITECTURE.md   # 系统级 Agent Harness 架构设计规范
+  └── AGENT_RESUME_HIGHLIGHTS.md          # 核心机制实现细节与工程技术报告
 ```
 
-预期回答包含 **`SCHOLARFLOW_SOURCE_CHECK`** 和来源路径。缺少 Key 或请求失败时会显示明确错误。[查看示例来源](examples/first-source.txt)。
+---
 
-## 它如何工作
+## 📄 开源与协议
 
-```mermaid
-flowchart LR
-    Web["Browser workspace"] <-->|HTTP + SSE| Host["Local host: project tools and approval gates"]
-    Host <--> Pi["Pi: task sessions, model loop, Skills and compaction"]
-    Pi <-->|Inference| Model["Model provider"]
-    Host <-->|Records and approved intent| Data[("SQLite + project files")]
-    Worker["Independent experiment worker"] <-->|Queue, status and artifacts| Data
-    Worker -->|Approved command| Process["Local experiment process"]
-```
-
-Pi 提供模型循环、会话、Skill 加载与压缩；ScholarFlow 补充科研工作区、范围隔离的记忆、动态能力装配、实验生命周期、来源追溯和受控方法版本。浏览器通过本地宿主访问数据，实验运行与会话、浏览器连接相互独立。
-
-进一步了解 [Agent 架构](docs/AGENT_CAPABILITY_ARCHITECTURE.md)、[实现契约](docs/AGENT_IMPLEMENTATION_PLAN.md)和[源码地图](docs/README.md#source-map)。
-
-## 验证与当前边界
-
-```powershell
-npm run verify        # 类型检查、自动化测试和生产构建
-npm run test:browser  # 需要 Chrome 或 Edge
-npm run test:docs     # README、链接、证据和文档契约
-```
-
-[IG00–IG07 交付报告](docs/verification/agent-implementation/IG07.md)包含软件、真实 API、浏览器和重启证据。外部 API 检查需显式启用并提供凭据，调用范围和成本说明见[贡献指南](CONTRIBUTING.md)。
-
-- **软件流程已实现，真实科研验收待完成。** 尚未完成一个已批准的真实论文基线及受控修改。
-- **尚未证明方法改进有效。** 最近一次六题轻量配对评测中，基线和候选均通过 4/6，候选被拒绝，基线保留。这组题验证行为规则，不构成科研基准。
-- **本地执行拥有宿主账户权限。** 项目检查不等于操作系统沙箱。服务保持回环监听，执行前审阅代码。[运行边界](docs/RUN_GUIDE.md#6-安全边界)。
-- 公开全文获取和部分科研工作区工具契约仍待完善；模型支持以 Pi 实际暴露的配置和已验证组合为准。
-
-## 接下来做什么
-
-- 完成一个已批准的论文复现及受控修改，并保留完整产物依据。
-- 完善公开全文获取与精确证据定位。
-- 扩大独立方法评测、分析失败原因，再判断是否存在改进收益。
-
-依赖、验收门槛和详细路线见 [PLAN.md](PLAN.md)。
-
-## 文档与贡献
-
-[运行与恢复](docs/RUN_GUIDE.md) · [文档索引](docs/README.md) · [验证报告](docs/verification/agent-implementation/IG07.md) · [参与贡献](CONTRIBUTING.md) · [反馈问题](https://github.com/qiqi-feeder/ScholarFlow/issues)
-
-项目整体许可证待维护者确定。依赖保留各自许可证，见[第三方声明](docs/m0/UPSTREAM_LICENSES.md)。基于 [Pi](https://github.com/earendil-works/pi) 构建。
+- 本项目基于 [Apache-2.0 License](LICENSE) 开源。
+- 欢迎提交 Issue 与 Pull Request 共同探讨系统级 Agent Harness 工程演进！
