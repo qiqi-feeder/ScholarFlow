@@ -56,6 +56,42 @@ test("document links resolve and primary upstream references use immutable revis
       assert.ok(existsSync(path.resolve(root, path.dirname(filename), target.split("#")[0])), `Broken local link: ${target}`);
     }
   }
-  assert.equal(upstream.size, 8, "Expected eight specific upstream projects");
+  assert.deepEqual([...upstream].sort(), [
+    "earendil-works/pi", "langchain-ai/deepagents", "bytedance/deer-flow", "anomalyco/opencode",
+    "langchain-ai/langgraph", "OpenHands/software-agent-sdk", "harbor-framework/harbor", "Future-House/paper-qa",
+    "google-research/harness2", "mem0ai/mem0", "getzep/graphiti",
+  ].sort(), "Expected pinned references for the original and newly researched projects");
   assert.ok(readFileSync(path.join(root, "README.md"), "utf8").includes("docs/AGENT_RESUME_HIGHLIGHTS.md"));
+});
+
+function validateExtensions(text) {
+  for (const id of ["E01", "E02"]) {
+    const heading = new RegExp(`^## \\d+\\. 扩展选材 ${id}：.+$`, "m").exec(text);
+    assert.ok(heading, `Missing extension ${id}`);
+    const section = text.slice(heading.index + heading[0].length).split(/^## /m)[0];
+    assert.ok(section.includes("已调研，待实施，未验证收益"), `Extension ${id} falsely promoted`);
+    for (const fragment of ["待实现伪代码", "面试需要回答", "当前可用简历措辞", "实现并"]) {
+      assert.ok(section.includes(fragment), `Missing ${id} boundary: ${fragment}`);
+    }
+  }
+  for (const fragment of [
+    "selection_pool` 排除了基线", "chooseIncludingBaseline", "heldOutTasks", "expectedBaselineVersion",
+    "当前默认 ADD 流程不等于自动冲突裁决", "ADDITIVE_EXTRACTION_PROMPT", "reference_date",
+    "fcntl", "sourceRefs", "recordedAt", "supersedes", "conflictsWith", "expectedRevision",
+    "不覆盖正式方案", "不能因晚写入变成当前值",
+  ]) assert.ok(text.includes(fragment), `Missing implementation safeguard: ${fragment}`);
+  const cases = [...text.matchAll(/^\| (MC\d{2}) \|/gm)].map((match) => match[1]);
+  assert.deepEqual(cases, Array.from({ length: 7 }, (_, i) => `MC0${i + 1}`), "Conflict cases must be complete and unique");
+}
+
+test("evolution and cross-task memory preserve source findings and proposed implementation contracts", () => {
+  validateExtensions(document);
+});
+
+test("extension validation rejects false completion and missing conflict or publication safeguards", () => {
+  assert.throws(() => validateExtensions(document.replace("已调研，待实施，未验证收益", "已实现且效果显著")), /falsely promoted/);
+  for (const fragment of ["chooseIncludingBaseline", "expectedRevision", "当前默认 ADD 流程不等于自动冲突裁决"]) {
+    assert.throws(() => validateExtensions(document.replaceAll(fragment, "omitted")), /safeguard/);
+  }
+  assert.throws(() => validateExtensions(document.replace("| MC07 |", "| MC06 |")), /complete and unique/);
 });

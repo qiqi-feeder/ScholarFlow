@@ -24,6 +24,8 @@
 
 相关依据：[当前产品共识](WORKSPACE_PRODUCT_DISCUSSION.md)、[Agent 能力架构](AGENT_CAPABILITY_ARCHITECTURE.md)、[实施与验收计划](../PLAN.md)、[上游调研与固定快照](research/HARNESS_SURVEY_2026-10-20.md)。
 
+新增选材见第 12–14 节：自我进化，以及跨任务长期记忆与冲突消解。它们具有较高技术潜力，属于已调研、待实施的扩展方向；前面的七项排序保留为原有能力选材基线，不因上游开源而提升本项目完成状态。
+
 ## 2. A01：动态能力装配与渐进式工具暴露
 
 ### 为什么排第一
@@ -318,3 +320,216 @@ Agent 需要知道“这段信息属于哪篇论文、哪个版本、哪次运�
 真实科研目标实验、压缩后模型行为、完整权限绕过检查和机制收益目前仍有证据缺口。现有[验证记录](VERIFICATION.md)、[科研执行卡](RESEARCH_ACCEPTANCE_CARD.md)与 PLAN 的阶段说明存在不同更新时间，应按具体用例的原始证据判断，本文不宣布科研全流程通过。
 
 本文相关检查：`node --test tests/agent-resume-highlights.test.mjs`。检查排名完整、各项实现/证据边界、源码链接和固定上游参考；文档检查通过不代表方案已实施或 Agent 效果已验证。
+
+## 12. 扩展选材 E01：基于执行证据的自我进化
+
+状态：**已调研，待实施，未验证收益**。本节整理候选设计与关键实现，不表示 ScholarFlow 已接入 Harness²，不扩展现有业务实施授权。若后续完成独立任务集验证，可作为高优先级简历亮点，与 A01/A05 组合。
+
+### 12.1 亮点应体现什么
+
+让系统从执行轨迹中发现可复用的问题，提出方法改进，并用真实任务验证改进是否有效。模型权重可以不变；进化对象是版本化 Skill、工具使用指引与上下文策略。
+
+面试中应区分三种行为：重试同一任务、总结一段经验，以及经验证后发布可复用的新方法。第三种才形成完整的工程闭环。“Agent 会反思”不足以证明系统持续改善。
+
+### 12.2 Harness²：已公开的关键实现
+
+核对快照：`google-research/harness2@1cfe254e8d25b15f37048c3730134686abe60335`。仓库采用 Apache-2.0，第三方材料仍遵循各自许可。[发布说明与运行要求](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/README.md)。
+
+| 文件 / 函数 | 上游实现 | 借鉴点 |
+| --- | --- | --- |
+| `core/recursion.py`：`run_parallel`、`run_sequential` | 提议修改、实际执行探测、依据差异组合配置；支持并行探索与顺序改进 | 将修改方案和执行证据配对保存 |
+| `core/recursion.py`：`_run_stage` | 检查候选修改，非法提议有限重试，失败继承原配置 | 给出结构化拒绝原因，保留回退配置 |
+| `core/tree.py`：`SurfaceSpec`、`validate` | 声明可编辑文件范围并校验修改 | 对允许进化的能力设明确边界 |
+| `core/selection.py`：`run_selection`、`reflect_adoption`、`_distil` | 比较匿名候选产物，解释采用原因并提炼经验 | 记录采用依据，避免只保存一条总分 |
+| `core/library.py`：`Library.add` | 按领域保存完整采用配置、经验文件和索引 | 持久化方法及适用条件，供后续任务查询 |
+| `core/ledger.py`：`Ledger` | 分别记录任务执行与改进阶段的预算 | 避免把多次尝试收益当作无额外成本的改善 |
+
+源码：[递归流程](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/harness2/core/recursion.py)、[修改范围](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/harness2/core/tree.py)、[候选选择与经验提炼](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/harness2/core/selection.py)。
+
+经验至少包含 `cue`（适用线索）、`lesson`（可迁移方法）、`evidence`（执行依据）；可附 `confidence`。`Library.add` 缺少必要经验字段就不入库，完整方法文件与经验分别保留。检索按领域目录组织，由索引引导查阅，不等于已经具备通用语义冲突消解。[经验库实现](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/harness2/core/library.py)
+
+上游预算账本中，每种递归模式计入 `4k` 次 rollout 和 `3k` 个改进阶段；选择与反思另行计数，重试也要计入实际调用成本。不能只用 k 代替总体预算。[预算实现](https://github.com/google-research/harness2/blob/1cfe254e8d25b15f37048c3730134686abe60335/harness2/core/ledger.py)
+
+特别边界：该版本 `selection_pool` 排除了基线，仅在最终候选中选择。因此“修改非法时回退原配置”不等于“收益不足时自动保留旧版本”。在线改进不读取标准答案，也不能保证候选实际正确或优于原版；正式质量评测应与改进过程分开。
+
+本轮曾在 Windows 尝试运行上游 `tests/test_workflow.py`，因 Unix 模块 `fcntl` 不可用而失败并产生后续断言/文件缺失错误；官方要求 Linux。未改造上游以强行通过，未运行真实模型基准，不能登记为上游测试或性能已复现。
+
+### 12.3 ScholarFlow 的关键实现示意
+
+以下是**待实现伪代码**，接口和文件路径均未定稿。宿主权限、审批、预算与验证器不属于自动进化范围。
+
+```text
+improveSkill(skillId, failureCases, budget):
+    baseline = loadPublishedVersion(skillId)
+    evidence = collectSourceLinkedTraces(failureCases)
+    candidates = proposeEdits(baseline, evidence, editableSurface)
+    for candidate in candidates:
+        validatePathsDependenciesAndImmutablePolicy(candidate)
+        trial = evaluate(candidate, developmentTasks, budget)
+        saveCandidateDiffAndTrace(candidate, trial)
+
+    chosen = chooseIncludingBaseline(baseline, candidates)
+    regression = evaluate(chosen, heldOutTasks, remainingBudget)
+    if not passesPredeclaredCriteria(regression):
+        recordRejection(chosen, regression)
+        return baseline
+    return publishNewVersionAtomically(chosen, expectedBaselineVersion)
+```
+
+实现时需要补齐的细节：
+
+1. **受控修改范围**：先允许研究方法和工具说明的候选修改；未经审核的脚本或依赖不能直接进入生产。内容校验与真实执行权限分别控制。
+2. **可比较试验**：同任务输入、数据、模型配置和预算，区别仅在候选方法；保存全部尝试。用历史轨迹回放、已有产物或批准的轻量任务先验证，不能因进化需要自动重复目标训练。
+3. **独立验证**：开发集用于提议和筛选；留出集仅用于受控验证，不能把其答案、评分细则或逐样本反馈重新注入提议器。反复使用同一留出集仍会产生适应，需要限制轮次并保留最终独立测试。
+4. **发布与回退**：候选与正式版本分开；发布以预期基线版本做并发检查，避免两个改进任务互相覆盖。旧任务继续绑定原 Skill 版本，主动迁移才改变后续行为。
+5. **证据驱动入库**：保存适用线索、方法、证据位置和限制；模型自报 confidence 只是辅助信号，不能作为自动发布凭证。
+
+建议经验记录结构（设计示意）：
+
+```typescript
+type ImprovementExperience = {
+  id: string;
+  projectId: string;
+  domain: string;
+  sourceTaskIds: string[];
+  baselineSkillVersion: string;
+  candidateSkillVersion: string;
+  cue: string;
+  lesson: string;
+  evidenceRefs: string[]; // 指向真实 trace、run 或产物版本
+  applicableConditions: Record<string, string>;
+  limitations: string[];
+  evaluationRef: string;
+  status: "candidate" | "validated" | "published" | "rejected" | "retired";
+};
+```
+
+### 12.4 面试讲法与失败案例
+
+贯穿例子：某类复现反复误用评估脚本 → 定位轨迹及配置证据 → 提出“先检查目标表格对应脚本”的 Skill 修改 → 在其他任务上验证错误是否减少 → 通过后发布新版本；不能把用户未确认的猜测直接沉淀为通用方法。
+
+面试需要回答：改进什么、不允许改什么？如何避免只适应某篇论文？为什么在选优池保留基线？遇到新版本退化、并发发布或预算不足怎么办？更多执行次数是否解释了全部收益？
+
+**当前可用简历措辞：**“调研 Harness² 并设计基于执行证据的 Skill 迭代方案，覆盖候选生成、同条件对照、独立回归、版本发布与回退。”
+
+**实现并评测后可升级：**“实现基于执行轨迹的版本化 Skill 进化闭环，通过留出任务回归与受控发布验证跨任务迁移效果。”若没有实际迁移证据，不能使用后半句。
+
+## 13. 扩展选材 E02：跨任务长期记忆与冲突消解
+
+状态：**已调研，待实施，未验证收益**。已有 A02 保存研究状态并组装上下文；自动提取跨任务记忆、系统化冲突裁决及记忆晋升不应计为已有能力。E02 可与 A02/A07 合成一条更深入的简历主线。
+
+### 13.1 三类长期信息与跨任务范围
+
+| 类别 | 示例 | 如何复用 |
+| --- | --- | --- |
+| 事实 / 决策记忆 | 项目已确认预算、研究目标、数据约束 | 同项目任务按来源与有效版本查询 |
+| 情节 / 执行记忆 | 某任务发生过什么、何时失败、用了哪次运行 | 查任务与运行记录，保留原始证据 |
+| 方法 / 经验记忆 | 哪类问题应先检查哪些条件 | 按适用条件检索，经 E01 验证后进入正式 Skill |
+
+聊天摘要是短期工作上下文；长期记录存储完整来源，每轮只读取有界且相关的视图。跨任务共享不等于跨项目共享，更不等于复制所有历史聊天。
+
+### 13.2 mem0：当前开源代码可借鉴什么
+
+核对快照：`mem0ai/mem0@2c81af3bbe27d9bccb09c772d583df9e9be72ee5`，Apache-2.0。[仓库说明与许可](https://github.com/mem0ai/mem0/blob/2c81af3bbe27d9bccb09c772d583df9e9be72ee5/README.md)。
+
+`Memory.add()` 的默认推断写入：作用域与近期消息 → 相关旧记忆召回 → 抽取新条目 → 批量 embedding → 去重与保存。`search()` 支持身份/元数据过滤、有界结果及可选重排；`update(memory_id, ...)` 提供显式修改，更新时保留身份字段并写入变更历史。[写入与查询实现](https://github.com/mem0ai/mem0/blob/2c81af3bbe27d9bccb09c772d583df9e9be72ee5/mem0/memory/main.py)
+
+身份范围包括 `user_id`、`agent_id`、`run_id`。跨任务查询不能始终限定当前 run；反过来，省略 run 也不会自动检查项目权限。当前写入前召回与实体辅助路径主要使用这些标准身份字段，不能假定加入自定义 `project_id` metadata 就使所有内部路径按项目隔离。接入前应逐路径验证，必要时采用服务端项目命名空间或隔离集合。
+
+**版本差异必须保留：当前默认 ADD 流程不等于自动冲突裁决。** 此快照仍有 `DEFAULT_UPDATE_MEMORY_PROMPT`，但默认写入调用的是 `ADDITIVE_EXTRACTION_PROMPT`。后者提取新增记忆，并要求为相关/矛盾信息提出关联；提示词存在关联要求，不代表已经实现可依赖的事实替代链。[抽取与旧更新提示词](https://github.com/mem0ai/mem0/blob/2c81af3bbe27d9bccb09c772d583df9e9be72ee5/mem0/configs/prompts.py)
+
+值得借鉴的是来源角色区分、时间表述锚定、抽取去重及显式变更历史。助理提出的方案应记为“曾建议”，不能升级为用户确认。相同文本去重也不等于语义冲突消解。[历史持久化](https://github.com/mem0ai/mem0/blob/2c81af3bbe27d9bccb09c772d583df9e9be72ee5/mem0/memory/storage.py)
+
+OSS 与云平台分开判断：该版本明确拒绝部分时间参数，如 `reference_date`；不能把平台介绍中的时间能力算作本地开源已有实现。[OSS 时间功能边界](https://github.com/mem0ai/mem0/blob/2c81af3bbe27d9bccb09c772d583df9e9be72ee5/mem0/memory/notices.py)。本轮未运行 mem0 的模型/向量库集成测试，不宣称已验证召回或冲突处理效果。
+
+### 13.3 Graphiti：参考事实有效区间与失效机制
+
+补充快照：`getzep/graphiti@5c27edfa8d3e0f49b2571bcebb4261bcc89ee037`。其边处理代码区分重复关系和可能矛盾的关系，再按有效时间处理失效；旧事实保留 `valid_at`、`invalid_at`、`expired_at` 等时间信息。相关入口包括 `_dedupe_extracted_edge`、`resolve_edge_contradictions` 和 `resolve_extracted_edge`。[固定版本实现](https://github.com/getzep/graphiti/blob/5c27edfa8d3e0f49b2571bcebb4261bcc89ee037/graphiti_core/utils/maintenance/edge_operations.py)
+
+可借鉴“旧事实失效但保留历史”的语义，无须立即引入完整图数据库。候选矛盾识别和时间抽取依然可能出错，本轮只查代码，未运行其测试。
+
+### 13.4 ScholarFlow 的候选记忆结构
+
+以下是**待实现伪代码**，用于说明核心字段，不是已经提交到业务代码的接口。
+
+```typescript
+type ResearchMemory = {
+  id: string;
+  ownerId: string;
+  scope: "account" | "project" | "task" | "domain";
+  scopeId: string;
+  sourceProjectId: string;
+  sourceTaskId: string;
+  kind: "decision" | "paper_claim" | "observation" | "hypothesis" | "experience";
+  subject: string;
+  predicate: string;
+  value: unknown;
+  conditions: Record<string, string>;
+  sourceRefs: string[];
+  authority: "user_confirmed" | "tool_observed" | "paper_reported" | "model_proposed";
+  validFrom: string | null; // 事实生效时间；无法确定时保持未知
+  validTo: string | null;
+  recordedAt: string;      // 系统获知时间，与事实生效时间分开
+  supersedes: string[];
+  conflictsWith: string[];
+  revision: number;
+  status: "candidate" | "active" | "disputed" | "superseded" | "retracted";
+};
+```
+
+`authority` 表示信息身份，不能简单排成适用于所有问题的总分：用户确认决定可以更新方案，但不能因此篡改原始实测指标。原始运行与文件仍是事实依据，记忆只是可检索的派生视图。项目来源信息即便在晋升为领域经验后也须保留，跨项目晋升需明确授权并检查敏感信息。
+
+### 13.5 冲突裁决：先判断范围，再判断能否替代
+
+| 编号 | 情况 | 示例 | 候选规则 |
+| --- | --- | --- | --- |
+| MC01 | 不同项目 / 任务范围 | 项目 A 用 X，项目 B 用 Y | 并存，不互相替代 |
+| MC02 | 同对象的明确决定修订 | 用户确认将预算从 30 改为 60 分钟 | 新版本替代旧版本，保留确认依据与历史 |
+| MC03 | 不同实验条件 | 同模型在两个划分上得到不同指标 | 并存，按 runId 与条件分别查询 |
+| MC04 | 同条件证据相互矛盾 | 两个来源对同一事实给出不同说法 | 标记争议，保留双方证据，不自动删除 |
+| MC05 | 模型建议与已确认方案不一致 | 助理建议换数据集，用户尚未确认 | 保持候选，不覆盖正式方案 |
+| MC06 | 补录历史事实 | 今天导入上个月已失效的约束 | 按生效区间保存，不能因晚写入变成当前值 |
+| MC07 | 并发修改 | 两任务同时修订同一项目决定 | 以 revision 并发检查，失败后重读裁决 |
+
+```text
+ingestMemory(message, principal, expectedRevision):
+    candidate = extractWithSource(message)
+    scope = hostResolveAndAuthorizeScope(principal, candidate)
+    related = lookupSameSubjectPredicate(scope, candidate.conditions)
+    relation = classifyDuplicateCorrectionOrDispute(candidate, related)
+    decision = hostApplyTypeAuthorityAndTimeRules(relation)
+    transaction:
+        assert currentRevision == expectedRevision
+        append new record and decision evidence
+        if confirmed correction: close old validity and move current pointer
+        if unresolved contradiction: retain both and mark disputed
+        increment revision
+    return persisted decision and source references
+```
+
+LLM 可以提出冲突分类，不能决定项目权限或伪造用户确认。完整原文、运行指标和修改证据独立保存；更新记忆不直接改原始材料。没有明确适用时间或确认依据时，默认不静默替代。
+
+跨任务读取则先鉴权并限定范围，再做相关性召回与排序；“现在”的查询只选择当前有效版本并显式提示争议，“当时”的查询按有效区间取历史。还应保留获知时间，以区分“当时真实是什么”和“系统当时知道什么”。最后按共同 token 预算组装有界片段，返回来源和继续读取入口。
+
+### 13.6 面试讲法与验证
+
+面试需要回答：同用户不同项目如何隔离？什么记忆能跨任务？晚到数据为何不能一律覆盖？模型建议如何与确认决定区分？当前答案和历史答案如何查询？并发更新如何避免丢失？
+
+验证重点：MC01–MC07 的行为、作用域泄漏、旧值错误召回、合法新事实被误拒，以及争议是否被隐藏。指标包括当前值准确率、历史问答准确率、错误替代率、跨任务召回率、来源正确率和单次输入量；不能只报告向量相似度。
+
+**当前可用简历措辞：**“基于 mem0 与 Graphiti 源码调研，设计跨任务研究记忆方案，区分事实、决策与经验，通过作用域、来源、有效时间和版本替代关系处理记忆更新及冲突。”
+
+**实现并验收后可升级：**“实现带来源与有效区间的跨任务记忆，支持显式纠错、争议保留、历史查询及并发版本控制。”效果数字需来自独立任务评测。
+
+## 14. 两个扩展方向怎样形成完整面试案例
+
+建议贯穿案例：任务一发现某模型复现时必须使用特定评估脚本，保存运行证据及适用条件；任务二在同项目召回这条经验，并检查目标条件；用户修订方案后新决定替代旧决定，原实验结果保留；之后提出通用 Skill 修改，通过独立任务回归才发布。这样能同时解释“如何记住”“如何处理冲突”和“怎样证明学到的方法有用”。
+
+| 扩展方向 | 上游可借鉴 | ScholarFlow 应负责 | 当前可主张 |
+| --- | --- | --- | --- |
+| E01 自我进化 | Harness² 的候选、探测、组合及经验库 | 科研任务评价、保留基线、不可变策略、受控发布 | 调研与设计，不能声称已自我进化 |
+| E02 跨任务记忆 | mem0 的抽取/检索/变更记录，Graphiti 的时间失效 | 项目权限、证据身份、修订与争议规则、并发一致性 | 调研与设计，不能声称已解决记忆冲突 |
+
+建议的实现验证顺序：先做有来源、可隔离和可修订的记忆，再做经验提炼，最后增加候选 Skill 的自动评测与发布。错误记忆进入进化过程后可能变成可重复传播的方法错误，因此读取到某条记忆不能自动赋予其执行或规则权限。
+
+这些示意均未引入新运行时、依赖或业务行为。文档测试只检查引用、设计契约和状态边界；不代表上游性能复现或 ScholarFlow 功能已完成。
