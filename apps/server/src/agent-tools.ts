@@ -21,6 +21,7 @@ import type { MaterialService } from "./materials.js";
 import type { SkillService } from "./skills.js";
 import type { ManuscriptService } from "./latex.js";
 import type { EventHub } from "./events.js";
+import { CAPABILITIES, CapabilityController } from "./capabilities.js";
 
 export interface ResearchToolContext {
   repositories: Repositories;
@@ -46,6 +47,16 @@ function summarize(value: unknown, max = 12000): string {
 }
 
 export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext): void {
+  const capabilities = new CapabilityController(pi, ctx);
+  pi.on("model_select", async () => { capabilities.reset(); });
+  for (const action of ["discover_capabilities", "activate_capability", "unload_capability"]) {
+    pi.registerTool(defineTool({
+      name: action, label: action,
+      description: action === "discover_capabilities" ? "List task capability groups, exact method versions, dependencies and failure reasons." : `${action}: read method text and update the next model request's tools; retains recovery tools. Does not authorize experiments.`,
+      parameters: Type.Object({ id: Type.Optional(Type.String()) }),
+      execute: async (_id, params) => ok(JSON.stringify(action === "discover_capabilities" ? capabilities.catalog() : action === "activate_capability" ? capabilities.activate(params.id ?? "") : capabilities.unload(params.id ?? ""))),
+    }));
+  }
   pi.registerTool(
     defineTool({
       name: "get_research_context",
@@ -84,9 +95,11 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
       promptSnippet: "Load a project skill body and record provenance.",
       parameters: Type.Object({ name: Type.String({ description: "Skill name, for example result-analysis" }) }),
       execute: async (_id, params) => {
+        const group = CAPABILITIES.find(c => (c.skills as readonly string[]).includes(params.name));
+        const activated = group ? capabilities.activate(group.id) : null;
         const skill = ctx.skills.readForTask(ctx.project.id, ctx.task.id, params.name);
         return ok(
-          `Skill ${skill.name} v${skill.version} (${skill.license}, sha256 ${skill.sha256.slice(0, 16)}…)\n\n${skill.body}`,
+          `Skill ${skill.name} v${skill.version} (${skill.license}, sha256 ${skill.sha256.slice(0, 16)}…)\n\n${skill.body}${activated ? `\n\nCapability methods:\n${JSON.stringify(activated.methods)}` : ""}`,
           { name: skill.name, version: skill.version, license: skill.license, sha256: skill.sha256 },
         );
       },
@@ -642,6 +655,7 @@ export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext
 
 export function toolNames(): string[] {
   return [
+    "discover_capabilities", "activate_capability", "unload_capability",
     "get_research_context",
     "list_skills",
     "load_skill",

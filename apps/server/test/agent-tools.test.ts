@@ -74,8 +74,12 @@ test("research tools are registered and execute against real project records", a
     writeFileSync(path.join(project.dataDir, "workspace", "notes.txt"), "Readable notes", "utf8");
 
     const tools = new Map<string, any>();
+    let active: string[] = [];
     const fakePi = {
       registerTool: (tool: any) => tools.set(tool.name, tool),
+      getAllTools: () => [...tools.values()],
+      getActiveTools: () => active,
+      setActiveTools: (names: string[]) => { active = names; },
       on: () => undefined,
     } as unknown as ExtensionAPI;
     registerResearchTools(fakePi, {
@@ -104,6 +108,27 @@ test("research tools are registered and execute against real project records", a
     const skill = await call("load_skill", { name: "result-analysis" });
     assert.match(skill.content[0].text, /Import metrics/);
     assert.equal(skill.details.sha256.length, 64);
+    assert.ok(active.includes("analyze_results"), "same-message load enables tools");
+    const otherTask = app.services.repositories.createTask({ projectId: project.id, title: "isolated", objective: "isolated" });
+    assert.equal(app.services.repositories.listEvents(otherTask.id).filter(e => e.type === "capability_activated").length, 0);
+    const catalog = await call("discover_capabilities", {});
+    assert.match(catalog.content[0].text, /sha256/);
+    await assert.rejects(() => call("activate_capability", { id: "unknown" }), /unknown capability/);
+    await call("unload_capability", { id: "analysis" });
+    assert.ok(!active.includes("analyze_results"));
+    assert.ok(active.includes("query_run") && active.includes("cancel_run"));
+    const oldActive = [...active];
+    const setTools = fakePi.setActiveTools;
+    fakePi.setActiveTools = (names: string[]) => setTools.call(fakePi, names.filter(n => n !== "search_literature"));
+    await assert.rejects(() => call("activate_capability", { id: "literature" }), /complete requested tool set/);
+    assert.deepEqual(active, oldActive, "failed assembly rolls back");
+    fakePi.setActiveTools = setTools;
+    const savedSkill = { ...app.services.repositories.getSkill(project.id, "literature-review")!, projectId: project.id };
+    app.services.repositories.upsertSkill({ ...savedSkill, requires: ["missing-scholarflow-tool-rt03"] });
+    await assert.rejects(() => call("activate_capability", { id: "literature" }), /missing dependency/);
+    assert.deepEqual(active, oldActive);
+    app.services.repositories.upsertSkill(savedSkill);
+    assert.throws(() => app.services.skills.readForTask("wrong-project", task.id, "literature-review"), /scope mismatch/);
 
     const search = await call("search_literature", { query: "tool paper" });
     assert.match(search.content[0].text, /Tool Paper/);

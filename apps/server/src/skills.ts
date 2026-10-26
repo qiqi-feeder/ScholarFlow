@@ -101,8 +101,11 @@ export class SkillService {
   }
 
   readForTask(projectId: string, taskId: string, name: string): { name: string; path: string; body: string; sha256: string; version: string; license: string } {
+    if (this.repos.getTask(taskId)?.projectId !== projectId) throw new Error("skill task scope mismatch");
     const skill = this.repos.getSkill(projectId, name);
     if (!skill) throw new Error(`skill not found in this project: ${name}`);
+    const missing = checkSkillDependencies(skill.requires, commandAvailable);
+    if (missing.length) throw new Error(`missing skill dependencies: ${missing.join(", ")}`);
     this.repos.recordSkillLoad(projectId, taskId, name, skill.sha256);
     return {
       name: skill.name,
