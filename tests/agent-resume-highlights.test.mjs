@@ -10,15 +10,22 @@ const document = readFileSync(path.join(root, filename), "utf8");
 
 function validateSelection(text) {
   const rows = [...text.matchAll(/^\| (\d+) \| (A\d{2}) \| (.+) \| (.+) \| (.+) \|$/gm)];
-  assert.equal(rows.length, 7, "Expected seven ranked highlights");
-  const expected = Array.from({ length: 7 }, (_, i) => `A0${i + 1}`);
+  assert.equal(rows.length, 9, "Expected nine ranked highlights");
+  const expected = ["A08", "A09", "A02", "A01", "A03", "A04", "A05", "A06", "A07"];
   assert.deepEqual(rows.map((row) => row[2]), expected, "Ranks must be unique and ordered");
   rows.forEach((row, i) => assert.equal(Number(row[1]), i + 1, "Rank sequence is invalid"));
-  assert.match(rows[0][5], /已讨论待实施.*只读取说明/, "Dynamic loading must remain pending");
-  assert.match(rows[4][5], /待评测.*不能填写提升数字/, "Evaluation must remain unmeasured");
+  const byId = new Map(rows.map(row => [row[2], row]));
+  assert.match(byId.get("A01")[5], /已讨论待实施.*只读取说明/, "Dynamic loading must remain pending");
+  assert.match(byId.get("A05")[5], /待评测.*不能填写提升数字/, "Evaluation must remain unmeasured");
+  for (const id of ["A08", "A09"]) assert.match(byId.get(id)[5], /已调研待实施/, "Top-ranked design falsely promoted");
+  const sections = [...text.matchAll(/^## (\d+)\. /gm)].map(match => Number(match[1]));
+  assert.deepEqual(sections, Array.from({length: 14}, (_, i) => i + 1), "Section numbers must remain sequential");
+  let previousHeading = -1;
   for (const id of expected) {
     const heading = new RegExp(`^## \\d+\\. ${id}：.+$`, "m").exec(text);
     assert.ok(heading, `Missing detail for ${id}`);
+    assert.ok(heading.index > previousHeading, "Detail order must match the ranking");
+    previousHeading = heading.index;
     const tail = text.slice(heading.index + heading[0].length);
     const section = tail.split(/^## /m)[0];
     assert.match(section, /面试需要回答/, `Missing interview questions for ${id}`);
@@ -38,9 +45,9 @@ test("ranked resume candidates distinguish architecture, implementation and unme
 });
 
 test("selection validator rejects missing, duplicate and falsely promoted candidates", () => {
-  assert.throws(() => validateSelection(document.replace(/^\| 7 \| A07 \|.+\r?\n/m, "")), /seven/);
-  assert.throws(() => validateSelection(document.replace("| 7 | A07 |", "| 7 | A06 |")), /ordered/);
-  assert.throws(() => validateSelection(document.replace("| 2 | A02 |", "| 3 | A02 |")), /sequence/);
+  assert.throws(() => validateSelection(document.replace(/^\| 9 \| A07 \|.+\r?\n/m, "")), /nine/);
+  assert.throws(() => validateSelection(document.replace("| 9 | A07 |", "| 9 | A06 |")), /ordered/);
+  assert.throws(() => validateSelection(document.replace("| 2 | A09 |", "| 3 | A09 |")), /sequence/);
   assert.throws(() => validateSelection(document.replace("已讨论待实施；现有 load_skill 只读取说明", "已完成")), /pending/);
   assert.throws(() => validateSelection(document.replace("待评测；已有方案，不能填写提升数字", "成功率提升 30%")), /unmeasured/);
 });
@@ -65,8 +72,8 @@ test("document links resolve and primary upstream references use immutable revis
 });
 
 function validateExtensions(text) {
-  for (const id of ["E01", "E02"]) {
-    const heading = new RegExp(`^## \\d+\\. 扩展选材 ${id}：.+$`, "m").exec(text);
+  for (const id of ["A08", "A09"]) {
+    const heading = new RegExp(`^## \\d+\\. ${id}：.+$`, "m").exec(text);
     assert.ok(heading, `Missing extension ${id}`);
     const section = text.slice(heading.index + heading[0].length).split(/^## /m)[0];
     assert.ok(section.includes("已调研，待实施，未验证收益"), `Extension ${id} falsely promoted`);
@@ -94,4 +101,16 @@ test("extension validation rejects false completion and missing conflict or publ
     assert.throws(() => validateExtensions(document.replaceAll(fragment, "omitted")), /safeguard/);
   }
   assert.throws(() => validateExtensions(document.replace("| MC07 |", "| MC06 |")), /complete and unique/);
+});
+
+test("unified ranking replaces appendices without confusing technical depth with current delivery", () => {
+  assert.doesNotMatch(document, /扩展选材 E0[12]|前面的七项排序|### 为什么排第一/);
+  assert.match(document, /如果现在投递，优先采用已有证据的 A03、A04、A02/);
+  assert.match(document, /A08 排第一的前提是有独立任务迁移与回归证据/);
+  assert.match(document, /含金量第 1 不代表应最先写自动进化循环/);
+  assert.throws(() => validateSelection(document.replace("| 1 | A08 |", "| 1 | A01 |")), /ordered/);
+  const swapped = document.replace("## 2. A08：", "## 2. TEMP：")
+    .replace("## 3. A09：", "## 3. A08：").replace("## 2. TEMP：", "## 2. A09：");
+  assert.throws(() => validateSelection(swapped), /Detail order/);
+  assert.throws(() => validateSelection(document.replace("已调研待实施；未验证跨任务改进收益", "已验证迁移收益")), /falsely promoted/);
 });
