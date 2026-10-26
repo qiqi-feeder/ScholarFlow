@@ -32,6 +32,7 @@ import { ExperimentService, RunValidationError } from "./runs.js";
 import { CrossrefSearch } from "./search.js";
 import { SkillService } from "./skills.js";
 import { ReferenceError, resolveReferences, materialReferenceText } from "./references.js";
+import { MemoryError, MemoryService, type IngestMemory } from "./memory.js";
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
@@ -61,6 +62,7 @@ export interface CreatedApp {
     context: ContextService;
     events: EventHub;
     store: RunStore;
+    memory: MemoryService;
   };
 }
 
@@ -123,6 +125,7 @@ function requireArray<T>(value: unknown, name: string): T[] {
 }
 
 function mapError(error: unknown): { status: number; body: { error: string; code: string } } {
+  if (error instanceof MemoryError) return { status: error.status, body: { error: error.message, code: error.code } };
   if (error instanceof HttpError) return { status: error.status, body: { error: error.message, code: error.code } };
   if (error instanceof PathGuardError) return { status: 400, body: { error: error.message, code: error.code } };
   if (error instanceof RunValidationError) return { status: 409, body: { error: error.message, code: error.code } };
@@ -160,6 +163,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
   const db = openDatabase(paths.databaseFile);
   const repositories = new Repositories(db);
   const events = new EventHub();
+  const memory = new MemoryService(db, repositories, events);
   const search = options.search ?? new CrossrefSearch({ contactEmail: config.searchEmail });
   const materials = new MaterialService({ crossref: search });
   const skills = new SkillService(repositories, resourcesDir);
@@ -184,6 +188,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
       skills,
       experiments,
       manuscript,
+      memory,
     });
   const logger = options.logger ?? (() => undefined);
 
@@ -468,6 +473,15 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
               .sendMessage(project, task, text, clientId, references)
               .catch((error) => logger(`agent message failed: ${(error as Error).message}`));
             return json(res, 202, { accepted: true, duplicate: false, latestSeq: repositories.latestEventSeq(task.id) });
+          }
+          const memoryMatch = action.match(/^memories(?:\/([^/]+)(?:\/(history|changes))?)?$/);
+          if (memoryMatch) {
+            const principal = { projectId: project.id, taskId: task.id, actor: "user" as const };
+            const id = memoryMatch[1];
+            if (method === "GET") return json(res, 200, id ? memoryMatch[2] === "history" ? { versions: memory.history(principal, id) } : memoryMatch[2] === "changes" ? { changes: memory.changes(principal, id) } : { memory: memory.get(principal, id) } : { memories: memory.list(principal) });
+            const body = await readJson(req);
+            if (method === "POST" && !id) return json(res, 201, { memory: memory.ingest(principal, body as unknown as IngestMemory) });
+            if (method === "PUT" && id) return json(res, 200, { memory: memory.revise(principal, id, Number(body.expectedRevision), body as any) });
           }
           if (method === "POST" && action === "references/resolve") {
             const body = await readJson(req);
@@ -970,7 +984,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Created
     close,
     worker,
     agent,
-    services: { repositories, experiments, manuscript, skills, materials, context, events, store },
+    services: { repositories, experiments, manuscript, skills, materials, context, events, store, memory },
   };
 }
 

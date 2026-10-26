@@ -24,7 +24,7 @@ export function openDatabase(file: string): DatabaseSync {
   return db;
 }
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Restore to a new path only, so recovery cannot overwrite a live database. */
 export function restoreDatabase(backup: string, destination: string): void {
@@ -216,6 +216,18 @@ export function ensureSchema(db: DatabaseSync): void {
   // Old task rows keep NULL and inherit the host default until the user switches.
   ensureColumn(db, "tasks", "model_provider", "model_provider TEXT");
   ensureColumn(db, "tasks", "model_id", "model_id TEXT");
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS memory_versions (
+      memory_id TEXT NOT NULL, revision INTEGER NOT NULL, project_id TEXT NOT NULL,
+      task_id TEXT NOT NULL, scope TEXT NOT NULL, data_json TEXT NOT NULL, recorded_at TEXT NOT NULL,
+      PRIMARY KEY(memory_id, revision)
+    );
+    CREATE INDEX IF NOT EXISTS idx_memory_scope ON memory_versions(project_id, task_id, scope);
+    CREATE TABLE IF NOT EXISTS memory_heads (memory_id TEXT PRIMARY KEY, revision INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS memory_changes (id TEXT PRIMARY KEY, memory_id TEXT NOT NULL, data_json TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS memory_ingestions (project_id TEXT NOT NULL, task_id TEXT NOT NULL, source_key TEXT NOT NULL, memory_id TEXT NOT NULL, PRIMARY KEY(project_id, task_id, source_key));
+    CREATE TABLE IF NOT EXISTS recall_snapshots (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, task_id TEXT NOT NULL, data_json TEXT NOT NULL);
+  `);
   db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
   db.exec("COMMIT");
   } catch (error) { db.exec("ROLLBACK"); throw error; }

@@ -324,7 +324,7 @@ AF 批次是后续能力工作，不能自动并入 W01–W05 的完成声明。
 | IG00 | 无 | 重现并关闭 WR-R01–R03，复验受影响 W/WT；记录数据备份、schema 迁移/恢复与当前基线 | RT01、RT02 | 通过（[IG00](docs/verification/agent-implementation/IG00.md)） |
 | IG01 | IG00 | 任务级能力发现、依赖校验、Skill/工具装配及恢复；对应 AF01 | RT03、RT04 | 通过（[IG01](docs/verification/agent-implementation/IG01.md)） |
 | IG02 | IG01 | 相关记录选择、有界读取、共同输入预算及 Pi 压缩恢复；对应 AF02 | RT05、RT06 | 通过（[IG02](docs/verification/agent-implementation/IG02.md)） |
-| IG03 | IG02 | 来源记忆/变更、项目/任务范围、确认身份、事件去重及冲突事务 | RT07、RT08 | 待实施 |
+| IG03 | IG02 | 来源记忆/变更、项目/任务范围、确认身份、事件去重及冲突事务 | RT07、RT08 | 通过（[IG03](docs/verification/agent-implementation/IG03.md)） |
 | IG04 | IG03 | 当前/历史/当时已知查询、跨任务召回、记忆依据/争议/更正/撤回 UI | RT09、RT10 | 待实施 |
 | IG05 | IG04 | 经验提炼、Skill 候选/正式版本隔离、可编辑范围和评测预算记录 | RT11、RT12 | 待实施 |
 | IG06 | IG05 | 基线参与、开发/留出隔离、确认发布、并发版本检查及回退 | RT13、RT14 | 待实施 |

@@ -215,6 +215,11 @@ export class Repositories {
     return Number(row.seq ?? 0);
   }
 
+  getEvent(seq: number): EventRecord | undefined {
+    const row = this.db.prepare("SELECT * FROM events WHERE seq = ?").get(seq);
+    return row ? this.mapEvent(row as Record<string, unknown>) : undefined;
+  }
+
   private mapEvent(row: Record<string, unknown>): EventRecord {
     return {
       seq: Number(row.seq),

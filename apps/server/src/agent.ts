@@ -24,6 +24,7 @@ import type { MaterialService } from "./materials.js";
 import type { SkillService } from "./skills.js";
 import type { ManuscriptService } from "./latex.js";
 import { CORE_TOOLS } from "./capabilities.js";
+import type { MemoryService } from "./memory.js";
 
 export class AgentConfigurationError extends Error {
   readonly code = "AGENT_NOT_CONFIGURED";
@@ -70,6 +71,7 @@ export interface AgentServiceDependencies {
   skills: SkillService;
   experiments: ExperimentService;
   manuscript: ManuscriptService;
+  memory: MemoryService;
 }
 
 interface LoadedTask {
@@ -256,6 +258,7 @@ export class PiAgentService implements AgentServiceLike {
       experiments: this.deps.experiments,
       manuscript: this.deps.manuscript,
       events: this.deps.events,
+      memory: this.deps.memory,
     };
   }
 

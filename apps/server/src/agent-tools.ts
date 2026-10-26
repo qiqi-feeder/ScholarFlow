@@ -23,6 +23,7 @@ import type { ManuscriptService } from "./latex.js";
 import type { EventHub } from "./events.js";
 import { CAPABILITIES, CapabilityController } from "./capabilities.js";
 import { recordPage } from "./context.js";
+import type { MemoryService } from "./memory.js";
 
 export interface ResearchToolContext {
   repositories: Repositories;
@@ -36,6 +37,7 @@ export interface ResearchToolContext {
   experiments: ExperimentService;
   manuscript: ManuscriptService;
   events: EventHub;
+  memory: MemoryService;
 }
 
 function ok(text: string, details: Record<string, unknown> = {}) {
@@ -50,6 +52,12 @@ function summarize(value: unknown, max = 12000): string {
 export function registerResearchTools(pi: ExtensionAPI, ctx: ResearchToolContext): void {
   const capabilities = new CapabilityController(pi, ctx);
   pi.on("model_select", async () => { capabilities.reset(); });
+  pi.registerTool(defineTool({
+    name: "remember_source", label: "Remember persisted source",
+    description: "Create source-labelled memory from an existing task event. Chat extraction remains candidate; cannot confirm decisions, edit observations or authorize experiments. Repeated source/subject/predicate/conditions is idempotent.",
+    parameters: Type.Object({ sourceEventSeq: Type.Integer({ minimum: 1 }), scope: Type.Union([Type.Literal("task"), Type.Literal("project")]), subject: Type.String(), predicate: Type.String(), conditions: Type.Optional(Type.Record(Type.String(), Type.String())) }),
+    execute: async (_id, p) => ok(JSON.stringify(ctx.memory.ingest({ projectId: ctx.project.id, taskId: ctx.task.id, actor: "agent" }, p))),
+  }));
   pi.registerTool(defineTool({
     name: "list_research_records", label: "Research directory",
     description: "Page through source IDs beyond the brief context directory. kind: material/run/result/plan. Read bodies with read_research_record.",
@@ -672,6 +680,7 @@ export function toolNames(): string[] {
     "discover_capabilities", "activate_capability", "unload_capability",
     "read_research_record",
     "list_research_records",
+    "remember_source",
     "get_research_context",
     "list_skills",
     "load_skill",

@@ -94,6 +94,7 @@ test("research tools are registered and execute against real project records", a
       experiments: app.services.experiments,
       manuscript: app.services.manuscript,
       events: app.services.events,
+      memory: app.services.memory,
     });
     assert.deepEqual([...tools.keys()].sort(), [...toolNames()].sort());
 

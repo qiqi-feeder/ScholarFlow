@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ResearchToolContext } from "./agent-tools.js";
 
-export const CORE_TOOLS = ["get_research_context", "read_research_record", "list_research_records", "list_skills", "load_skill", "discover_capabilities", "activate_capability", "unload_capability", "list_runs", "query_run", "read_artifact", "cancel_run"];
+export const CORE_TOOLS = ["get_research_context", "read_research_record", "list_research_records", "remember_source", "list_skills", "load_skill", "discover_capabilities", "activate_capability", "unload_capability", "list_runs", "query_run", "read_artifact", "cancel_run"];
 export const CAPABILITIES = [
   { id: "literature", purpose: "Find and import source-labelled papers", skills: ["literature-review"], tools: ["search_literature", "import_material"] },
   { id: "planning", purpose: "Assess reproduction evidence and draft bounded plans", skills: ["experiment-design", "reproduction-admission"], tools: ["save_research_plan", "assess_admission", "propose_experiment"] },
